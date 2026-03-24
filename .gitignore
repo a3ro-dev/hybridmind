@@ -1,102 +1,77 @@
-# Byte-compiled / optimized / DLL files
+# ── Python ──────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
 *.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+wheels/
 
-# PyInstaller
-*.manifest
-*.spec
+# ── Virtual environments ─────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
 
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
+# ── Environment & secrets ────────────────────────────────────────
+.env
+.env.*
+!.env.example
 
-# Unit test / coverage reports
-htmlcov/
-.tox/
+# ── Testing & coverage ───────────────────────────────────────────
+.pytest_cache/
 .coverage
 .coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
+htmlcov/
+.tox/
 .hypothesis/
-.pytest_cache/
 
-# Translations
-*.mo
-*.pot
+# ── HybridMind runtime data ──────────────────────────────────────
+# The .mind database (contains embeddings, vectors, live graph)
+data/hybridmind.mind/
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# Snapshots & backups (can be large; regenerate with POST /snapshot)
+data/backups/
 
-# pyenv
-.python-version
+# ChromaDB comparison store
+data/chromadb/
+data/chromadb_benchmark/
 
-# Environment
-.env
-.venv
-env/
-venv/
-venv311/
-ENV/
-env.bak/
-venv.bak/
+# ── Stress test artifacts (generated, not source) ────────────────
+STRESS_TEST_REPORT.md
+STRESS_TEST_OUTPUT.txt
+stress_test_p2_output.txt
+stress_test.py
+stress_test_p2.py
+stress_test_sections_3_7.py
 
-# IDE
-.idea/
+# ── Sentence-transformers model cache ────────────────────────────
+.cache/
+models/
+
+# ── IDE ──────────────────────────────────────────────────────────
 .vscode/
+.idea/
 *.swp
 *.swo
 *~
 
-# HybridMind specific - Data files
-hybridmind/data/*.db
-hybridmind/data/*.db-shm
-hybridmind/data/*.db-wal
-hybridmind/data/*.index
-hybridmind/data/*.faiss
-hybridmind/data/*.pkl
-hybridmind/data/*.json
-hybridmind/data/chromadb/
-hybridmind/data/chromadb_benchmark/
-hybridmind/ui/data/
-hybridmind/snapshots/
-hybridmind/test_data/
-*.db-journal
-*.db-wal
-*.db-shm
-
-# Model cache
-.cache/
-
-
-# OS
+# ── OS ───────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Logs
+# ── Logs ─────────────────────────────────────────────────────────
 *.log
 logs/
 
+# ── Jupyter ──────────────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ── SQLite WAL/SHM side-files ────────────────────────────────────
+*.db-wal
+*.db-shm
+*.db-journal
