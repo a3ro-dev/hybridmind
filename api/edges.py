@@ -10,7 +10,8 @@ from models.edge import (
     EdgeCreate,
     EdgeUpdate,
     EdgeResponse,
-    EdgeDeleteResponse
+    EdgeDeleteResponse,
+    EdgeType
 )
 from api.dependencies import (
     get_sqlite_store,
@@ -82,6 +83,14 @@ async def create_edge(
         metadata=result["metadata"],
         created_at=result["created_at"]
     )
+
+
+@router.get("/types", response_model=List[str])
+async def list_edge_types() -> List[str]:
+    """
+    Get list of all supported edge relationship types in the agent taxonomy.
+    """
+    return [e.value for e in EdgeType]
 
 
 @router.get("/{edge_id}", response_model=EdgeResponse)

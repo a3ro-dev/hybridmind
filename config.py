@@ -38,6 +38,8 @@ class Settings(BaseSettings):
     # Embedding
     embedding_model: str = "all-MiniLM-L6-v2"
     embedding_dimension: int = 384
+    use_graph_conditioned_embeddings: bool = True
+    embedding_timeout_seconds: int = 30
     
     # Search Defaults
     default_top_k: int = 10

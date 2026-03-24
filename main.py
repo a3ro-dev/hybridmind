@@ -26,7 +26,7 @@ from api.nodes import router as nodes_router
 from api.edges import router as edges_router
 from api.search import router as search_router
 from api.bulk import router as bulk_router
-# Comparison router has been removed.
+from api.comparison import router as comparison_router
 from api.dependencies import get_db_manager
 from engine.cache import get_query_cache
 from middleware.rate_limit import RateLimitMiddleware
@@ -44,6 +44,64 @@ _startup_time: Optional[float] = None
 _model_loaded: bool = False
 
 
+def verify_integrity(mind_path: str) -> str:
+    from storage.mindfile import MindFile
+    import hashlib
+    from pathlib import Path
+    import zipfile
+    import shutil
+    
+    mind = MindFile(mind_path)
+    if not mind.exists:
+        return "New database"
+        
+    manifest = mind.read_manifest()
+    if not manifest or "checksums" not in manifest:
+        return "No checksums to verify"
+        
+    corrupted = False
+    paths = mind.get_paths()
+    for comp, expected_hash in manifest["checksums"].items():
+        comp_path = Path(mind_path) / comp
+        if comp == "vectors" and not comp_path.exists() and Path(str(comp_path) + ".faiss").exists():
+            comp_path = Path(str(comp_path) + ".faiss")
+            
+        if not comp_path.exists() and comp != "vectors.map":
+            logger.warning(f"  Component {comp} missing")
+            corrupted = True
+            break
+            
+        if comp_path.exists():
+            sha_hash = hashlib.sha256()
+            with open(comp_path, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    sha_hash.update(chunk)
+            if sha_hash.hexdigest() != expected_hash:
+                logger.warning(f"  Checksum mismatch for {comp}")
+                corrupted = True
+                break
+                
+    if not corrupted:
+        return "PASSED"
+        
+    logger.warning("  Database corrupted! Attempting to restore from backup...")
+    backup_dir = Path("data/backups")
+    if backup_dir.exists():
+        backups = sorted(backup_dir.glob("snapshot_*.mind.zip"))
+        if backups:
+            latest = backups[-1]
+            logger.info(f"  Restoring from {latest}")
+            shutil.rmtree(mind_path, ignore_errors=True)
+            with zipfile.ZipFile(latest, 'r') as zip_ref:
+                zip_ref.extractall(Path(mind_path).parent)
+            return "PASSED (Restored from backup)"
+            
+    logger.error("  No valid backup found. Starting with empty indexes.")
+    Path(paths["vector_index"]).unlink(missing_ok=True)
+    Path(paths["vector_index"] + ".faiss").unlink(missing_ok=True)
+    Path(paths["graph"]).unlink(missing_ok=True)
+    return "FAILED"
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -59,6 +117,9 @@ async def lifespan(app: FastAPI):
     
     startup_start = time.perf_counter()
     logger.info("Warming up HybridMind...")
+    
+    # Step 0: Integrity Check
+    integrity_status = verify_integrity(settings.mind_file_path)
     
     # Step 1: Get database manager (triggers all component initialization)
     logger.info("  Initializing storage components...")
@@ -85,15 +146,26 @@ async def lifespan(app: FastAPI):
         ttl=300  # 5 minute TTL
     )
     
-    # Step 4: Log stats
+    # Step 4: Log stats summary
     stats = db_manager.get_stats()
     total_startup = (time.perf_counter() - startup_start) * 1000
     _startup_time = time.time()
     
-    logger.info(f"HybridMind ready in {total_startup:.0f}ms")
-    logger.info(f"   Loaded: {stats['total_nodes']} nodes, {stats['total_edges']} edges")
-    logger.info(f"   Vector index: {stats['vector_index_size']} embeddings")
-    logger.info(f"   Graph index: {stats['graph_node_count']} nodes, {stats['graph_edge_count']} edges")
+    manifest = db_manager.mind_file.read_manifest() or {}
+    version = manifest.get('snapshot_version', 0)
+    timestamp = manifest.get('modified', 'Unknown')
+    soft_deleted = db_manager.sqlite_store.get_deleted_nodes_count()
+    
+    graph_embeddings_enabled = getattr(settings, "USE_GRAPH_CONDITIONED_EMBEDDINGS", False)
+    
+    print(f"\nHybridMind starting up")
+    print(f"- Nodes: {stats['total_nodes']} ({soft_deleted} pending compaction)")
+    print(f"- Edges: {stats['total_edges']}")
+    print(f"- FAISS index: {stats['vector_index_size']} vectors")
+    print(f"- Graph nodes: {stats['graph_node_count']}")
+    print(f"- Snapshot manifest: v{version} @ {timestamp}")
+    print(f"- Checksum verification: {integrity_status}")
+    print(f"- Graph-conditioned embeddings: {'ENABLED' if graph_embeddings_enabled else 'DISABLED'}\n")
     
     yield
     
@@ -191,7 +263,7 @@ app.include_router(nodes_router)
 app.include_router(edges_router)
 app.include_router(search_router)
 app.include_router(bulk_router)
-# comparison_router removed
+app.include_router(comparison_router)
 
 
 # ==================== Health & Utility Endpoints ====================
@@ -479,6 +551,45 @@ async def export_database(compress: bool = True):
         return JSONResponse(
             status_code=500,
             content={"error": str(e)}
+        )
+
+
+@app.post("/admin/compact", tags=["Admin"])
+async def compact_database():
+    """
+    Compact the database by rebuilding FAISS index and hard-deleting soft-deleted nodes.
+    """
+    try:
+        db_manager = get_db_manager()
+        
+        # 1. Rebuild FAISS index from scratch using only non-deleted nodes
+        embeddings = db_manager.sqlite_store.get_all_node_embeddings()
+        db_manager.vector_index.rebuild_from_embeddings(embeddings)
+        
+        # 2. Save indexes atomically
+        stats = db_manager.get_stats()
+        db_manager.mind_file.create_snapshot(
+            sqlite_conn=db_manager.sqlite_store._get_connection(),
+            vector_index=db_manager.vector_index,
+            graph_index=db_manager.graph_index,
+            nodes_count=stats["total_nodes"],
+            edges_count=stats["total_edges"]
+        )
+        
+        # 3. Hard-delete soft-deleted rows from SQLite
+        deleted_count = db_manager.sqlite_store.hard_delete_soft_deleted_nodes()
+        db_manager.vector_index.deleted_ids.clear()
+        
+        return {
+            "status": "success", 
+            "message": "Database compacted successfully",
+            "compacted_nodes": deleted_count
+        }
+    except Exception as e:
+        logger.error(f"Compaction failed: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "message": str(e)}
         )
 
 

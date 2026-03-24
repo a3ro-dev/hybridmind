@@ -1,0 +1,500 @@
+{
+  "queries": [
+    {
+      "query": "and Benchmark for Visual Intuitive",
+      "ground_truth_ids": [
+        "arxiv-0028",
+        "arxiv-0038",
+        "arxiv-0084",
+        "arxiv-0108",
+        "arxiv-0058"
+      ]
+    },
+    {
+      "query": "367 Panama St., Rm.",
+      "ground_truth_ids": [
+        "arxiv-0062",
+        "arxiv-0105",
+        "arxiv-0045",
+        "arxiv-0122",
+        "arxiv-0050"
+      ]
+    },
+    {
+      "query": "Lu, and Karl Henrik Johansson Abstract\u2014Wireless",
+      "ground_truth_ids": [
+        "arxiv-0026",
+        "arxiv-0146",
+        "arxiv-0102",
+        "arxiv-0100",
+        "arxiv-0078"
+      ]
+    },
+    {
+      "query": "Francesco Silvestri\u22c6\u22c6 ,",
+      "ground_truth_ids": [
+        "arxiv-0008"
+      ]
+    },
+    {
+      "query": "for Computer Science",
+      "ground_truth_ids": [
+        "arxiv-0095",
+        "arxiv-0006",
+        "arxiv-0110",
+        "arxiv-0039",
+        "arxiv-0141"
+      ]
+    },
+    {
+      "query": "CEA/DAM/VA, F\u201321120, Is-sur-Tille, France 4 CEA/DAM/DIF,",
+      "ground_truth_ids": [
+        "arxiv-0143",
+        "arxiv-0036",
+        "arxiv-0064",
+        "arxiv-0027",
+        "arxiv-0018"
+      ]
+    },
+    {
+      "query": "rapidly. Looking toward mid-decade and",
+      "ground_truth_ids": [
+        "arxiv-0056",
+        "arxiv-0041",
+        "arxiv-0114",
+        "arxiv-0043",
+        "arxiv-0030"
+      ]
+    },
+    {
+      "query": "in the literature, including those which",
+      "ground_truth_ids": [
+        "arxiv-0001",
+        "arxiv-0027",
+        "arxiv-0013",
+        "arxiv-0132",
+        "arxiv-0096"
+      ]
+    },
+    {
+      "query": "the subject deal with",
+      "ground_truth_ids": [
+        "arxiv-0087",
+        "arxiv-0071",
+        "arxiv-0094",
+        "arxiv-0034",
+        "arxiv-0105"
+      ]
+    },
+    {
+      "query": "address this issue by presenting",
+      "ground_truth_ids": [
+        "arxiv-0055",
+        "arxiv-0137",
+        "arxiv-0105",
+        "arxiv-0001",
+        "arxiv-0102"
+      ]
+    },
+    {
+      "query": "and Karl Henrik Johansson Abstract\u2014Wireless networked",
+      "ground_truth_ids": [
+        "arxiv-0026",
+        "arxiv-0030",
+        "arxiv-0051",
+        "arxiv-0114",
+        "arxiv-0043"
+      ]
+    },
+    {
+      "query": "vaccination and school closures), deciding",
+      "ground_truth_ids": [
+        "arxiv-0024",
+        "arxiv-0105",
+        "arxiv-0099",
+        "arxiv-0004",
+        "arxiv-0107"
+      ]
+    },
+    {
+      "query": "RESIDUAL NETWORKS FOR DEPLOYMENT USING A",
+      "ground_truth_ids": [
+        "arxiv-0067",
+        "arxiv-0121",
+        "arxiv-0026",
+        "arxiv-0133",
+        "arxiv-0040"
+      ]
+    },
+    {
+      "query": "This paper proposes an efficient and",
+      "ground_truth_ids": [
+        "arxiv-0137",
+        "arxiv-0117",
+        "arxiv-0005",
+        "arxiv-0011",
+        "arxiv-0017"
+      ]
+    },
+    {
+      "query": "concept of depth in an",
+      "ground_truth_ids": [
+        "arxiv-0020",
+        "arxiv-0084",
+        "arxiv-0064",
+        "arxiv-0141",
+        "arxiv-0127"
+      ]
+    },
+    {
+      "query": "proposed conditions not",
+      "ground_truth_ids": [
+        "arxiv-0147",
+        "arxiv-0130",
+        "arxiv-0022",
+        "arxiv-0025",
+        "arxiv-0142"
+      ]
+    },
+    {
+      "query": "well-formed Adams\u2019 grammars for elimination",
+      "ground_truth_ids": [
+        "arxiv-0011",
+        "arxiv-0007",
+        "arxiv-0130",
+        "arxiv-0124",
+        "arxiv-0041"
+      ]
+    },
+    {
+      "query": "extend a recurrent",
+      "ground_truth_ids": [
+        "arxiv-0020",
+        "arxiv-0076",
+        "arxiv-0016",
+        "arxiv-0055",
+        "arxiv-0090"
+      ]
+    },
+    {
+      "query": "context of the genome-wide association studies",
+      "ground_truth_ids": [
+        "arxiv-0097",
+        "arxiv-0082",
+        "arxiv-0067",
+        "arxiv-0030",
+        "arxiv-0002"
+      ]
+    },
+    {
+      "query": "two input strings A and",
+      "ground_truth_ids": [
+        "arxiv-0093",
+        "arxiv-0030",
+        "arxiv-0029",
+        "arxiv-0020",
+        "arxiv-0092"
+      ]
+    },
+    {
+      "query": "2O(n) randomly chosen vectors in",
+      "ground_truth_ids": [
+        "arxiv-0090",
+        "arxiv-0134",
+        "arxiv-0073",
+        "arxiv-0044",
+        "arxiv-0052"
+      ]
+    },
+    {
+      "query": "A compact metric space",
+      "ground_truth_ids": [
+        "arxiv-0018",
+        "arxiv-0037",
+        "arxiv-0061",
+        "arxiv-0009",
+        "arxiv-0087"
+      ]
+    },
+    {
+      "query": "dependencies. Perhaps surprisingly, our",
+      "ground_truth_ids": [
+        "arxiv-0136",
+        "arxiv-0127",
+        "arxiv-0008",
+        "arxiv-0010",
+        "arxiv-0029"
+      ]
+    },
+    {
+      "query": "statistical accuracy geometrically fast. Our",
+      "ground_truth_ids": [
+        "arxiv-0118",
+        "arxiv-0105",
+        "arxiv-0087",
+        "arxiv-0084",
+        "arxiv-0067"
+      ]
+    },
+    {
+      "query": "the oracle rate of convergence.",
+      "ground_truth_ids": [
+        "arxiv-0142",
+        "arxiv-0070",
+        "arxiv-0029",
+        "arxiv-0118",
+        "arxiv-0082"
+      ]
+    },
+    {
+      "query": "small number of",
+      "ground_truth_ids": [
+        "arxiv-0014",
+        "arxiv-0041",
+        "arxiv-0003",
+        "arxiv-0124",
+        "arxiv-0080"
+      ]
+    },
+    {
+      "query": "any positive rate. In contrast,",
+      "ground_truth_ids": [
+        "arxiv-0080",
+        "arxiv-0047",
+        "arxiv-0029",
+        "arxiv-0082",
+        "arxiv-0059"
+      ]
+    },
+    {
+      "query": "Technologies (CSLT), RIIT, Tsinghua University",
+      "ground_truth_ids": [
+        "arxiv-0016",
+        "arxiv-0095",
+        "arxiv-0130",
+        "arxiv-0116",
+        "arxiv-0061"
+      ]
+    },
+    {
+      "query": "of GA. Travelling Salesperson Problem (TSP)",
+      "ground_truth_ids": [
+        "arxiv-0054",
+        "arxiv-0062",
+        "arxiv-0120",
+        "arxiv-0093",
+        "arxiv-0069"
+      ]
+    },
+    {
+      "query": "Student, Department of Information Technology",
+      "ground_truth_ids": [
+        "arxiv-0117",
+        "arxiv-0061",
+        "arxiv-0013",
+        "arxiv-0023",
+        "arxiv-0012"
+      ]
+    },
+    {
+      "query": "corpora. We develop a new",
+      "ground_truth_ids": [
+        "arxiv-0035",
+        "arxiv-0128",
+        "arxiv-0059",
+        "arxiv-0087",
+        "arxiv-0123"
+      ]
+    },
+    {
+      "query": "which may also be viewed as",
+      "ground_truth_ids": [
+        "arxiv-0149",
+        "arxiv-0102",
+        "arxiv-0112",
+        "arxiv-0092",
+        "arxiv-0044"
+      ]
+    },
+    {
+      "query": "We argue that causal",
+      "ground_truth_ids": [
+        "arxiv-0092",
+        "arxiv-0138",
+        "arxiv-0081",
+        "arxiv-0015",
+        "arxiv-0018"
+      ]
+    },
+    {
+      "query": "considering whether the",
+      "ground_truth_ids": [
+        "arxiv-0130",
+        "arxiv-0079",
+        "arxiv-0026",
+        "arxiv-0054",
+        "arxiv-0047"
+      ]
+    },
+    {
+      "query": "over all dynamic executions.",
+      "ground_truth_ids": [
+        "arxiv-0012",
+        "arxiv-0079",
+        "arxiv-0004",
+        "arxiv-0107",
+        "arxiv-0032"
+      ]
+    },
+    {
+      "query": "as motor vessels)",
+      "ground_truth_ids": [
+        "arxiv-0040",
+        "arxiv-0108",
+        "arxiv-0007",
+        "arxiv-0054",
+        "arxiv-0085"
+      ]
+    },
+    {
+      "query": "Let R := K[xij , yj",
+      "ground_truth_ids": [
+        "arxiv-0098",
+        "arxiv-0094",
+        "arxiv-0072",
+        "arxiv-0081",
+        "arxiv-0009"
+      ]
+    },
+    {
+      "query": "classifying 2-fusion systems",
+      "ground_truth_ids": [
+        "arxiv-0135",
+        "arxiv-0125",
+        "arxiv-0026",
+        "arxiv-0011",
+        "arxiv-0111"
+      ]
+    },
+    {
+      "query": "of patches. To the best",
+      "ground_truth_ids": [
+        "arxiv-0029",
+        "arxiv-0024",
+        "arxiv-0118",
+        "arxiv-0019",
+        "arxiv-0117"
+      ]
+    },
+    {
+      "query": "originating in [26], to \u201ccomputation-friendly\u201d",
+      "ground_truth_ids": [
+        "arxiv-0087",
+        "arxiv-0117",
+        "arxiv-0077",
+        "arxiv-0099",
+        "arxiv-0107"
+      ]
+    },
+    {
+      "query": "habitats via ensemble clustering framework Peng",
+      "ground_truth_ids": [
+        "arxiv-0111",
+        "arxiv-0041",
+        "arxiv-0087",
+        "arxiv-0110",
+        "arxiv-0038"
+      ]
+    },
+    {
+      "query": "for optimizing a relaxation",
+      "ground_truth_ids": [
+        "arxiv-0000",
+        "arxiv-0085",
+        "arxiv-0058",
+        "arxiv-0037",
+        "arxiv-0123"
+      ]
+    },
+    {
+      "query": "LeBlanc2 Abstract\u2014 Analyzing and reconstructing",
+      "ground_truth_ids": [
+        "arxiv-0129",
+        "arxiv-0020",
+        "arxiv-0019",
+        "arxiv-0051",
+        "arxiv-0114"
+      ]
+    },
+    {
+      "query": "conflicts at unprotected intersections",
+      "ground_truth_ids": [
+        "arxiv-0129",
+        "arxiv-0015",
+        "arxiv-0116",
+        "arxiv-0069",
+        "arxiv-0134"
+      ]
+    },
+    {
+      "query": "Technologies president@iscatech.com Eamonn",
+      "ground_truth_ids": [
+        "arxiv-0095",
+        "arxiv-0016",
+        "arxiv-0130",
+        "arxiv-0028",
+        "arxiv-0075"
+      ]
+    },
+    {
+      "query": "with high probability.",
+      "ground_truth_ids": [
+        "arxiv-0082",
+        "arxiv-0008",
+        "arxiv-0002",
+        "arxiv-0052",
+        "arxiv-0057"
+      ]
+    },
+    {
+      "query": "inputs in terms of permanent,",
+      "ground_truth_ids": [
+        "arxiv-0028",
+        "arxiv-0147",
+        "arxiv-0143",
+        "arxiv-0040",
+        "arxiv-0035"
+      ]
+    },
+    {
+      "query": "with minimum weight.",
+      "ground_truth_ids": [
+        "arxiv-0078",
+        "arxiv-0096",
+        "arxiv-0050",
+        "arxiv-0067",
+        "arxiv-0113"
+      ]
+    },
+    {
+      "query": "metric on the",
+      "ground_truth_ids": [
+        "arxiv-0061",
+        "arxiv-0037",
+        "arxiv-0060",
+        "arxiv-0018",
+        "arxiv-0006"
+      ]
+    },
+    {
+      "query": "prediction formulas and",
+      "ground_truth_ids": [
+        "arxiv-0021",
+        "arxiv-0084",
+        "arxiv-0014",
+        "arxiv-0136",
+        "arxiv-0114"
+      ]
+    }
+  ]
+}

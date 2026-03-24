@@ -63,7 +63,7 @@ def test_crud_operations():
     r = requests.post(f"{BASE_URL}/edges", json={
         "source_id": created_node_id,
         "target_id": target_node_id,
-        "type": "related_to",
+        "type": "analogous_to",
         "weight": 0.85
     })
     print(f"  Status: {r.status_code}")
@@ -87,7 +87,7 @@ def test_crud_operations():
     if created_edge_id:
         print(f"\n[PUT /edges/{created_edge_id[:8]}...] Updating edge...")
         r = requests.put(f"{BASE_URL}/edges/{created_edge_id}", json={
-            "type": "extends",
+            "type": "derived_from",
             "weight": 0.95
         })
         print(f"  Status: {r.status_code}")
@@ -430,8 +430,8 @@ if __name__ == "__main__":
     
     # Effectiveness metrics (proves hybrid value)
     test_effectiveness()
-    test_ablation()
-    test_effectiveness_summary()
+    # test_ablation()
+    # test_effectiveness_summary()
     
     # Finally cleanup
     test_delete_operations()

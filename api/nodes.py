@@ -43,22 +43,50 @@ async def create_node(
     If no embedding is provided, one will be generated automatically
     using the configured embedding model (all-MiniLM-L6-v2 by default).
     """
+    if len(node.text) > 50000:
+        raise HTTPException(status_code=422, detail="Text exceeds maximum length of 50,000 characters")
+
     # Generate node ID
     node_id = str(uuid.uuid4())
     
     # Generate or use provided embedding
+    import numpy as np
+    from config import settings
     if node.embedding:
-        import numpy as np
-        embedding = np.array(node.embedding, dtype=np.float32)
+        raw_embedding = np.array(node.embedding, dtype=np.float32)
+        embedding = raw_embedding
     else:
-        embedding = embedding_engine.embed(node.text)
+        raw_embedding = embedding_engine.embed(node.text)
+        embedding = raw_embedding
+        
+        if getattr(settings, "use_graph_conditioned_embeddings", False):
+            # Query vector index for top-5 semantically similar existing nodes
+            results = vector_index.search(raw_embedding, top_k=5)
+            if results:
+                neighbor_embeddings = []
+                for sim_node_id, score in results:
+                    n = sqlite_store.get_node(sim_node_id)
+                    if n:
+                        n_emb = n.get("raw_embedding")
+                        if n_emb is None:
+                            n_emb = n.get("embedding")
+                        if n_emb is not None:
+                            neighbor_embeddings.append(n_emb)
+                            
+                if neighbor_embeddings:
+                    embedding = embedding_engine.embed_with_graph_context(
+                        node.text,
+                        neighbor_embeddings,
+                        alpha=0.7
+                    )
     
     # Store in SQLite
     result = sqlite_store.create_node(
         node_id=node_id,
         text=node.text,
         metadata=node.metadata or {},
-        embedding=embedding
+        embedding=embedding,
+        raw_embedding=raw_embedding
     )
     
     # Add to vector index
@@ -133,6 +161,9 @@ async def update_node(
     """
     Update node content and optionally regenerate embedding.
     """
+    if update.text is not None and len(update.text) > 50000:
+        raise HTTPException(status_code=422, detail="Text exceeds maximum length of 50,000 characters")
+
     # Check if node exists
     existing = sqlite_store.get_node(node_id)
     if existing is None:
@@ -144,15 +175,42 @@ async def update_node(
     
     # Regenerate embedding if requested and text changed
     new_embedding = existing["embedding"]
+    new_raw_embedding = existing.get("raw_embedding")
+    
     if update.regenerate_embedding and update.text is not None:
-        new_embedding = embedding_engine.embed(new_text)
+        new_raw_embedding = embedding_engine.embed(new_text)
+        new_embedding = new_raw_embedding
+        
+        from config import settings
+        if getattr(settings, "use_graph_conditioned_embeddings", False):
+            results = vector_index.search(new_raw_embedding, top_k=6)
+            # exclude self
+            results = [(n_id, s) for n_id, s in results if n_id != node_id][:5]
+            if results:
+                neighbor_embeddings = []
+                for sim_node_id, score in results:
+                    n = sqlite_store.get_node(sim_node_id)
+                    if n:
+                        n_emb = n.get("raw_embedding")
+                        if n_emb is None:
+                            n_emb = n.get("embedding")
+                        if n_emb is not None:
+                            neighbor_embeddings.append(n_emb)
+                            
+                if neighbor_embeddings:
+                    new_embedding = embedding_engine.embed_with_graph_context(
+                        new_text,
+                        neighbor_embeddings,
+                        alpha=0.7
+                    )
     
     # Update in SQLite
     result = sqlite_store.update_node(
         node_id=node_id,
         text=new_text,
         metadata=new_metadata,
-        embedding=new_embedding
+        embedding=new_embedding,
+        raw_embedding=new_raw_embedding
     )
     
     # Update vector index if embedding changed
@@ -206,11 +264,10 @@ async def delete_node(
     if existing is None:
         raise HTTPException(status_code=404, detail=f"Node {node_id} not found")
     
-    # Delete from SQLite (cascades to edges)
+    # Soft delete from SQLite (and hard delete its edges)
     deleted, edges_removed = sqlite_store.delete_node(node_id)
     
-    # Remove from vector index
-    vector_index.remove(node_id)
+    # Do NOT remove from FAISS yet (handled by compaction)
     
     # Remove from graph index
     graph_index.remove_node(node_id)

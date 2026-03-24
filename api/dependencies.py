@@ -132,18 +132,33 @@ class DatabaseManager:
     def save_indexes(self):
         """Save indexes to disk and update .mind manifest."""
         try:
-            self.vector_index.save()
-            self.graph_index.save()
-            
-            # Update manifest with current stats
             stats = self.get_stats()
-            self.mind_file.update_stats(
-                nodes=stats["total_nodes"],
-                edges=stats["total_edges"],
-                vectors=stats["vector_index_size"]
+            self.mind_file.create_snapshot(
+                sqlite_conn=self.sqlite_store._get_connection(),
+                vector_index=self.vector_index,
+                graph_index=self.graph_index,
+                nodes_count=stats["total_nodes"],
+                edges_count=stats["total_edges"]
             )
             
-            logger.info("Indexes saved to disk")
+            # Backup rotation
+            import os
+            from pathlib import Path
+            from datetime import datetime
+            
+            backup_dir = Path("data/backups")
+            backup_dir.mkdir(parents=True, exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            export_path = str(backup_dir / f"snapshot_{timestamp}")
+            self.mind_file.export(export_path, compress=True)
+            
+            # Keep last 3
+            backups = sorted(backup_dir.glob("snapshot_*.mind.zip"))
+            if len(backups) > 3:
+                for old_backup in backups[:-3]:
+                    old_backup.unlink(missing_ok=True)
+                    
+            logger.info("Indexes saved to disk and backed up")
         except Exception as e:
             logger.error(f"Error saving indexes: {e}")
     

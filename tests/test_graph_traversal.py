@@ -19,10 +19,9 @@ class TestGraphTraversalBFS:
         node_c = client.post("/nodes", json={"text": "Node C - Depth 2", "metadata": {}}).json()
         node_d = client.post("/nodes", json={"text": "Node D - Depth 3", "metadata": {}}).json()
         
-        # Create edges forming chain
-        client.post("/edges", json={"source_id": node_a["id"], "target_id": node_b["id"], "type": "next"})
-        client.post("/edges", json={"source_id": node_b["id"], "target_id": node_c["id"], "type": "next"})
-        client.post("/edges", json={"source_id": node_c["id"], "target_id": node_d["id"], "type": "next"})
+        client.post("/edges", json={"source_id": node_a["id"], "target_id": node_b["id"], "type": "led_to"})
+        client.post("/edges", json={"source_id": node_b["id"], "target_id": node_c["id"], "type": "led_to"})
+        client.post("/edges", json={"source_id": node_c["id"], "target_id": node_d["id"], "type": "led_to"})
         
         # Query with depth=2 from A
         response = client.get("/search/graph", params={"start_id": node_a["id"], "depth": 2})
@@ -53,21 +52,21 @@ class TestGraphTraversalEdgeTypeFilter:
         paper1 = client.post("/nodes", json={"text": "Paper written by author", "metadata": {}}).json()
         cited = client.post("/nodes", json={"text": "Paper cited by author", "metadata": {}}).json()
         
-        client.post("/edges", json={"source_id": author["id"], "target_id": paper1["id"], "type": "author_of"})
-        client.post("/edges", json={"source_id": author["id"], "target_id": cited["id"], "type": "cites"})
+        client.post("/edges", json={"source_id": author["id"], "target_id": paper1["id"], "type": "caused_by"})
+        client.post("/edges", json={"source_id": author["id"], "target_id": cited["id"], "type": "supports"})
         
         response = client.get("/search/graph", params={
             "start_id": author["id"],
             "depth": 1,
-            "edge_types": "author_of"
+            "edge_types": "caused_by"
         })
         
         assert response.status_code == 200
         results = response.json()["results"]
         result_ids = [r["node_id"] for r in results]
         
-        assert paper1["id"] in result_ids, "Paper (author_of) should be found"
-        assert cited["id"] not in result_ids, "Cited paper should NOT be found with author_of filter"
+        assert paper1["id"] in result_ids, "Paper (caused_by) should be found"
+        assert cited["id"] not in result_ids, "Cited paper should NOT be found with caused_by filter"
         
         # Cleanup
         for node in [author, paper1, cited]:
@@ -86,9 +85,9 @@ class TestGraphTraversalCycleHandling:
         node_b = client.post("/nodes", json={"text": "Cycle Node B", "metadata": {}}).json()
         node_c = client.post("/nodes", json={"text": "Cycle Node C", "metadata": {}}).json()
         
-        client.post("/edges", json={"source_id": node_a["id"], "target_id": node_b["id"], "type": "next"})
-        client.post("/edges", json={"source_id": node_b["id"], "target_id": node_c["id"], "type": "next"})
-        client.post("/edges", json={"source_id": node_c["id"], "target_id": node_a["id"], "type": "next"})
+        client.post("/edges", json={"source_id": node_a["id"], "target_id": node_b["id"], "type": "led_to"})
+        client.post("/edges", json={"source_id": node_b["id"], "target_id": node_c["id"], "type": "led_to"})
+        client.post("/edges", json={"source_id": node_c["id"], "target_id": node_a["id"], "type": "led_to"})
         
         # This should complete without hanging
         response = client.get("/search/graph", params={"start_id": node_a["id"], "depth": 5})

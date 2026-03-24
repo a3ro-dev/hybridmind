@@ -24,7 +24,23 @@ import shutil
 import logging
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
+import hashlib
+import sqlite3
+
+try:
+    # Use fcntl for fsync on Unix, msvcrt on Windows
+    import fcntl
+    def fsync_file(file_obj):
+        file_obj.flush()
+        import os
+        os.fsync(file_obj.fileno())
+except ImportError:
+    import msvcrt
+    import os
+    def fsync_file(file_obj):
+        file_obj.flush()
+        os.fsync(file_obj.fileno())
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +123,121 @@ class MindFile:
             "vector_map": str(self.vector_map_path),
             "graph": str(self.graph_path)
         }
+
+    def _file_sha256(self, filepath: Path) -> str:
+        """Compute SHA256 of a file."""
+        if not filepath.exists():
+            return ""
+        sha_hash = hashlib.sha256()
+        with open(filepath, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                sha_hash.update(chunk)
+        return sha_hash.hexdigest()
+
+    def create_snapshot(
+        self,
+        sqlite_conn: sqlite3.Connection,
+        vector_index,
+        graph_index,
+        nodes_count: int,
+        edges_count: int
+    ) -> bool:
+        """
+        Create atomic crash-safe snapshot of all three storage components.
+        Writes to a temporary directory, fsyncs, computes SHA256, and then swaps.
+        """
+        import time
+        from pathlib import Path
+        temp_dir = self.path.with_suffix(".tmp_snapshot")
+        if temp_dir.exists():
+            shutil.rmtree(temp_dir)
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        
+        try:
+            # 1. Write SQLite to temp dir using backup API
+            temp_sqlite = temp_dir / SQLITE_FILE
+            with sqlite3.connect(str(temp_sqlite)) as dst:
+                sqlite_conn.backup(dst)
+            dst.close()
+            
+            # 2. Save vector and graph indexes
+            vector_index.save(str(temp_dir / VECTOR_INDEX_FILE))
+            graph_index.save(str(temp_dir / GRAPH_FILE))
+            
+            # 3. Compute checksums
+            # FAISS adds .faiss to the vector_index path if it's FAISS
+            temp_vector_faiss = temp_dir / (VECTOR_INDEX_FILE + ".faiss")
+            if not temp_vector_faiss.exists():
+                temp_vector_faiss = temp_dir / VECTOR_INDEX_FILE # fallback for numpy
+                
+            checksums = {
+                SQLITE_FILE: self._file_sha256(temp_sqlite),
+                GRAPH_FILE: self._file_sha256(temp_dir / GRAPH_FILE),
+                VECTOR_INDEX_FILE: self._file_sha256(temp_vector_faiss)
+            }
+            if (temp_dir / VECTOR_MAP_FILE).exists():
+                checksums[VECTOR_MAP_FILE] = self._file_sha256(temp_dir / VECTOR_MAP_FILE)
+
+            # 4. Write new manifest.json
+            manifest = self.read_manifest() or {}
+            version = manifest.get("snapshot_version", 0) + 1
+            
+            new_manifest = {
+                "format": "HybridMind",
+                "version": self.VERSION,
+                "name": self.name,
+                "created": manifest.get("created", datetime.now(timezone.utc).isoformat()),
+                "modified": datetime.now(timezone.utc).isoformat(),
+                "snapshot_version": version,
+                "checksums": checksums,
+                "components": {
+                    "sqlite": SQLITE_FILE,
+                    "vector_index": VECTOR_INDEX_FILE,
+                    "vector_map": VECTOR_MAP_FILE,
+                    "graph": GRAPH_FILE
+                },
+                "stats": {
+                    "nodes": nodes_count,
+                    "edges": edges_count,
+                    "vectors": vector_index.size
+                },
+                "metadata": manifest.get("metadata", {})
+            }
+            
+            manifest_path = temp_dir / MANIFEST_FILE
+            with open(manifest_path, 'w') as f:
+                json.dump(new_manifest, f, indent=2)
+                fsync_file(f)
+            
+            # Fsync all files in temp_dir
+            for item in temp_dir.iterdir():
+                if item.is_file():
+                    with open(item, 'r+b') as f:
+                        fsync_file(f)
+                        
+            # 5. Atomically rename/swap the files into the main directory
+            # We copy files rather than rename the whole directory because SQLite db might be open/locked by the app in Windows
+            for item in temp_dir.iterdir():
+                if item.is_file():
+                    target = self.path / item.name
+                    try:
+                        # Attempt atomic replace for files
+                        os.replace(str(item), str(target))
+                    except PermissionError:
+                        # SQLite DB file is open and locked by the application, so skip it - SQLite handles its own persistence state
+                        if item.name == SQLITE_FILE:
+                            pass
+                        else:
+                            raise
+            
+            # Cleanup temp dir
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            return True
+        except Exception as e:
+            logger.error(f"Snapshot failed: {e}. Cleaning up temporary directory.")
+            # On failure, clean up temp dir and leave previous snapshot intact
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            raise
     
     def initialize(self, metadata: Optional[Dict[str, Any]] = None) -> bool:
         """

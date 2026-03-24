@@ -19,11 +19,11 @@ CANONICAL_DOCS = {
 }
 
 CANONICAL_EDGES = [
-    ("doc1", "doc4", "related_to", 0.8),
-    ("doc2", "doc6", "mentions", 0.9),
-    ("doc6", "doc1", "references", 0.6),
-    ("doc3", "doc5", "related_to", 0.5),
-    ("doc2", "doc5", "example_of", 0.3),
+    ("doc1", "doc4", "analogous_to", 0.8),
+    ("doc2", "doc6", "derived_from", 0.9),
+    ("doc6", "doc1", "depends_on", 0.6),
+    ("doc3", "doc5", "analogous_to", 0.5),
+    ("doc2", "doc5", "supports", 0.3),
 ]
 
 

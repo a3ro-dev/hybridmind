@@ -109,14 +109,24 @@ class EmbeddingEngine:
     
     def embed(self, text: str, normalize: bool = True) -> np.ndarray:
         """
-        Generate embedding for a single text.
+        Generate embedding for a single text with a timeout.
+        """
+        import concurrent.futures
+        from config import settings
+        from fastapi import HTTPException
         
-        Args:
-            text: Input text
-            normalize: Whether to L2-normalize the embedding
-            
-        Returns:
-            Embedding vector as numpy array
+        timeout = getattr(settings, "embedding_timeout_seconds", 30)
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(self._do_embed, text, normalize)
+            try:
+                return future.result(timeout=timeout)
+            except concurrent.futures.TimeoutError:
+                raise HTTPException(status_code=503, detail="Embedding model unavailable")
+
+    def _do_embed(self, text: str, normalize: bool = True) -> np.ndarray:
+        """
+        Actual embedding generation logic.
         """
         if self.model is not None:
             embedding = self.model.encode(
@@ -128,6 +138,30 @@ class EmbeddingEngine:
         else:
             # Mock embedding for testing without model
             return self._mock_embed(text, normalize)
+            
+    def embed_with_graph_context(
+        self, 
+        text: str, 
+        neighbor_embeddings: List[np.ndarray], 
+        alpha: float = 0.7
+    ) -> np.ndarray:
+        """
+        Generate a graph-conditioned embedding using CRS logic: alpha * V + beta * G.
+        """
+        own_embedding = self._do_embed(text, normalize=False)
+        if not neighbor_embeddings:
+            norm = np.linalg.norm(own_embedding)
+            if norm > 0:
+                return own_embedding / norm
+            return own_embedding
+            
+        neighbor_mean = np.mean(neighbor_embeddings, axis=0)
+        final = alpha * own_embedding + (1.0 - alpha) * neighbor_mean
+        
+        norm = np.linalg.norm(final)
+        if norm > 0:
+            return (final / norm).astype(np.float32)
+        return final.astype(np.float32)
     
     def embed_batch(
         self,

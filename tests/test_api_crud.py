@@ -64,7 +64,7 @@ class TestReadNodeWithRelationships:
         client.post("/edges", json={
             "source_id": node_a_id,
             "target_id": node_b_id,
-            "type": "references",
+            "type": "depends_on",
             "weight": 0.75
         })
         
@@ -134,7 +134,7 @@ class TestDeleteNodeCascade:
         edge = client.post("/edges", json={
             "source_id": node_a["id"],
             "target_id": node_b["id"],
-            "type": "links_to",
+            "type": "supports",
             "weight": 0.5
         }).json()
         
@@ -175,7 +175,7 @@ class TestEdgeCRUD:
         response = client.post("/edges", json={
             "source_id": node1_id,
             "target_id": node2_id,
-            "type": "cites",
+            "type": "supports",
             "weight": 0.9
         })
         
@@ -183,7 +183,7 @@ class TestEdgeCRUD:
         edge = response.json()
         assert edge["source_id"] == node1_id
         assert edge["target_id"] == node2_id
-        assert edge["type"] == "cites"
+        assert edge["type"] == "supports"
         assert edge["weight"] == 0.9
         
         # Cleanup
@@ -197,7 +197,7 @@ class TestEdgeCRUD:
         create_response = client.post("/edges", json={
             "source_id": node1_id,
             "target_id": node2_id,
-            "type": "mentions",
+            "type": "derived_from",
             "weight": 0.7
         })
         edge_id = create_response.json()["id"]
@@ -206,7 +206,7 @@ class TestEdgeCRUD:
         assert get_response.status_code == 200
         edge = get_response.json()
         assert edge["id"] == edge_id
-        assert edge["type"] == "mentions"
+        assert edge["type"] == "derived_from"
         
         # Cleanup
         client.delete(f"/edges/{edge_id}")
@@ -219,7 +219,7 @@ class TestEdgeCRUD:
         create_response = client.post("/edges", json={
             "source_id": node1_id,
             "target_id": node2_id,
-            "type": "related_to",
+            "type": "analogous_to",
             "weight": 0.5
         })
         edge_id = create_response.json()["id"]
@@ -239,7 +239,7 @@ class TestEdgeCRUD:
         create_response = client.post("/edges", json={
             "source_id": node1_id,
             "target_id": node2_id,
-            "type": "test_edge"
+            "type": "caused_by"
         })
         edge_id = create_response.json()["id"]
         
@@ -257,7 +257,7 @@ class TestEdgeCRUD:
         response = client.post("/edges", json={
             "source_id": "invalid-source-id",
             "target_id": node_id,
-            "type": "test"
+            "type": "invalidated_by"
         })
         assert response.status_code == 404
 

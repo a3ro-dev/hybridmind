@@ -27,8 +27,7 @@ def load_arxiv_from_huggingface(num_papers: int = 200):
     # Load ArXiv dataset - CS papers
     dataset = load_dataset(
         "ccdv/arxiv-classification",
-        split="train",
-        trust_remote_code=True
+        split="train"
     )
     
     # Filter for CS papers and limit
@@ -82,9 +81,7 @@ def generate_citation_edges(papers: list, edge_ratio: float = 2.5):
         if cat not in by_category:
             by_category[cat] = []
         by_category[cat].append(p["id"])
-    
-    edge_types = ["cites", "extends", "related_to", "same_topic", "uses_method"]
-    
+    edge_types = ["supports", "derived_from", "analogous_to", "depends_on", "led_to"]
     for _ in range(num_edges):
         # 70% chance: cite within same category
         if random.random() < 0.7:
@@ -181,18 +178,17 @@ def generate_semantic_edges(papers: list, embeddings: dict, similarity_threshold
             
             target_id = paper_ids[j]
             
-            # Determine edge type based on similarity strength
             if sim >= 0.85:
-                edge_type = "highly_similar"
+                edge_type = "analogous_to"
                 weight = 1.0
             elif sim >= 0.75:
-                edge_type = "extends"
+                edge_type = "derived_from"
                 weight = 0.9
             elif sim >= 0.65:
-                edge_type = "related_to"
+                edge_type = "depends_on"
                 weight = 0.7
             else:
-                edge_type = "same_topic"
+                edge_type = "supports"
                 weight = 0.5
             
             edge_id = f"sem-{source_id}-{target_id}"
@@ -299,9 +295,10 @@ def load_demo_data(num_papers: int = 150, clear_existing: bool = False, use_sema
                 print("Keeping existing data.")
                 return
         
-        print("Clearing existing data...")
-        for node in sqlite_store.list_nodes(limit=10000):
-            sqlite_store.delete_node(node["id"])
+        with sqlite_store._get_connection() as conn:
+            conn.execute("DELETE FROM edges")
+            conn.execute("DELETE FROM nodes")
+            conn.commit()
         vector_index.clear()
         graph_index.clear()
     

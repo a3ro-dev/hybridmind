@@ -68,10 +68,22 @@ class SQLiteStore:
                     text TEXT NOT NULL,
                     metadata TEXT DEFAULT '{}',
                     embedding BLOB,
+                    raw_embedding BLOB,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    deleted_at TIMESTAMP DEFAULT NULL
                 )
             """)
+            
+            # Migrations for existing databases
+            try:
+                cursor.execute("ALTER TABLE nodes ADD COLUMN deleted_at TIMESTAMP DEFAULT NULL")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                cursor.execute("ALTER TABLE nodes ADD COLUMN raw_embedding BLOB")
+            except sqlite3.OperationalError:
+                pass
             
             # Edges table
             cursor.execute("""
@@ -117,21 +129,24 @@ class SQLiteStore:
         node_id: str,
         text: str,
         metadata: Dict[str, Any],
-        embedding: Optional[np.ndarray] = None
+        embedding: Optional[np.ndarray] = None,
+        raw_embedding: Optional[np.ndarray] = None
     ) -> Dict[str, Any]:
         """Create a new node."""
         now = datetime.utcnow()
         embedding_blob = self._serialize_embedding(embedding)
+        raw_embedding_blob = self._serialize_embedding(raw_embedding) if raw_embedding is not None else embedding_blob
         
         with self._cursor() as cursor:
             cursor.execute("""
-                INSERT INTO nodes (id, text, metadata, embedding, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO nodes (id, text, metadata, embedding, raw_embedding, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (
                 node_id,
                 text,
                 json.dumps(metadata),
                 embedding_blob,
+                raw_embedding_blob,
                 now,
                 now
             ))
@@ -145,11 +160,11 @@ class SQLiteStore:
         }
     
     def get_node(self, node_id: str) -> Optional[Dict[str, Any]]:
-        """Get a node by ID."""
+        """Get a node by ID (ignores soft-deleted nodes)."""
         with self._cursor() as cursor:
             cursor.execute("""
-                SELECT id, text, metadata, embedding, created_at, updated_at
-                FROM nodes WHERE id = ?
+                SELECT id, text, metadata, embedding, raw_embedding, created_at, updated_at
+                FROM nodes WHERE id = ? AND deleted_at IS NULL
             """, (node_id,))
             row = cursor.fetchone()
             
@@ -161,6 +176,7 @@ class SQLiteStore:
                 "text": row["text"],
                 "metadata": json.loads(row["metadata"]),
                 "embedding": self._deserialize_embedding(row["embedding"]),
+                "raw_embedding": self._deserialize_embedding(row["raw_embedding"]) if "raw_embedding" in row.keys() else None,
                 "created_at": row["created_at"],
                 "updated_at": row["updated_at"]
             }
@@ -170,7 +186,8 @@ class SQLiteStore:
         node_id: str,
         text: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
-        embedding: Optional[np.ndarray] = None
+        embedding: Optional[np.ndarray] = None,
+        raw_embedding: Optional[np.ndarray] = None
     ) -> Optional[Dict[str, Any]]:
         """Update a node."""
         # Get current node
@@ -182,19 +199,22 @@ class SQLiteStore:
         new_text = text if text is not None else current["text"]
         new_metadata = metadata if metadata is not None else current["metadata"]
         new_embedding = embedding if embedding is not None else current["embedding"]
+        new_raw_embedding = raw_embedding if raw_embedding is not None else current.get("raw_embedding")
         now = datetime.utcnow()
         
         embedding_blob = self._serialize_embedding(new_embedding)
+        raw_embedding_blob = self._serialize_embedding(new_raw_embedding)
         
         with self._cursor() as cursor:
             cursor.execute("""
                 UPDATE nodes
-                SET text = ?, metadata = ?, embedding = ?, updated_at = ?
-                WHERE id = ?
+                SET text = ?, metadata = ?, embedding = ?, raw_embedding = ?, updated_at = ?
+                WHERE id = ? AND deleted_at IS NULL
             """, (
                 new_text,
                 json.dumps(new_metadata),
                 embedding_blob,
+                raw_embedding_blob,
                 now,
                 node_id
             ))
@@ -210,7 +230,7 @@ class SQLiteStore:
     
     def delete_node(self, node_id: str) -> Tuple[bool, int]:
         """
-        Delete a node and its edges.
+        Soft delete a node and remove its edges.
         Returns (success, edges_removed).
         """
         with self._cursor() as cursor:
@@ -221,16 +241,28 @@ class SQLiteStore:
             """, (node_id, node_id))
             edges_count = cursor.fetchone()[0]
             
-            # Delete edges (cascade should handle this, but explicit for safety)
+            # Delete edges immediately
             cursor.execute("""
                 DELETE FROM edges WHERE source_id = ? OR target_id = ?
             """, (node_id, node_id))
             
-            # Delete node
-            cursor.execute("DELETE FROM nodes WHERE id = ?", (node_id,))
+            # Soft delete node
+            cursor.execute("UPDATE nodes SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?", (node_id,))
             deleted = cursor.rowcount > 0
             
         return deleted, edges_count
+        
+    def get_deleted_nodes_count(self) -> int:
+        """Get the number of soft-deleted nodes waiting for compaction."""
+        with self._cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM nodes WHERE deleted_at IS NOT NULL")
+            return cursor.fetchone()[0]
+            
+    def hard_delete_soft_deleted_nodes(self) -> int:
+        """Permanently delete all soft-deleted nodes."""
+        with self._cursor() as cursor:
+            cursor.execute("DELETE FROM nodes WHERE deleted_at IS NOT NULL")
+            return cursor.rowcount
     
     def list_nodes(
         self,
@@ -238,19 +270,19 @@ class SQLiteStore:
         limit: int = 100,
         include_embeddings: bool = False
     ) -> List[Dict[str, Any]]:
-        """List nodes with pagination."""
+        """List current active nodes with pagination."""
         with self._cursor() as cursor:
             if include_embeddings:
                 cursor.execute("""
                     SELECT id, text, metadata, embedding, created_at, updated_at
-                    FROM nodes
+                    FROM nodes WHERE deleted_at IS NULL
                     ORDER BY created_at DESC
                     LIMIT ? OFFSET ?
                 """, (limit, skip))
             else:
                 cursor.execute("""
                     SELECT id, text, metadata, created_at, updated_at
-                    FROM nodes
+                    FROM nodes WHERE deleted_at IS NULL
                     ORDER BY created_at DESC
                     LIMIT ? OFFSET ?
                 """, (limit, skip))
@@ -271,10 +303,10 @@ class SQLiteStore:
             return nodes
     
     def get_all_node_embeddings(self) -> List[Tuple[str, np.ndarray]]:
-        """Get all node IDs and embeddings for vector index rebuild."""
+        """Get all active node IDs and embeddings for vector index rebuild."""
         with self._cursor() as cursor:
             cursor.execute("""
-                SELECT id, embedding FROM nodes WHERE embedding IS NOT NULL
+                SELECT id, embedding FROM nodes WHERE embedding IS NOT NULL AND deleted_at IS NULL
             """)
             
             results = []
@@ -286,9 +318,9 @@ class SQLiteStore:
             return results
     
     def count_nodes(self) -> int:
-        """Get total node count."""
+        """Get total active node count."""
         with self._cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) FROM nodes")
+            cursor.execute("SELECT COUNT(*) FROM nodes WHERE deleted_at IS NULL")
             return cursor.fetchone()[0]
     
     # ==================== Edge Operations ====================
