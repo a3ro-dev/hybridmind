@@ -1204,12 +1204,7 @@ def render_unstructured_import():
             model = st.selectbox(
                 "Model",
                 [
-                    "google/gemini-3-pro-preview",
-                    "google/gemini-2.5-flash-preview-05-20",
-                    "openai/gpt-4o",
-                    "openai/gpt-4o-mini",
-                    "anthropic/claude-sonnet-4",
-                    "xai/grok-3"
+                    "qwen3.5-397b-a17b"
                 ],
                 index=0,
                 key="llm_model"

@@ -1,7 +1,7 @@
 """
 LLM Engine for processing unstructured data.
 
-Uses OSM API with Google Gemini for intelligent
+Uses OSM API with Qwen3.5 397B A17B for intelligent
 extraction of entities, relationships, and metadata from text.
 """
 
@@ -32,10 +32,10 @@ class LLMEngine:
     Uses OSM API to access various LLM providers
     through a unified OpenAI-compatible API.
     """
-    
     def __init__(
         self,
         api_key: Optional[str] = None,
+        model: str = "qwen3.5-397b-a17b",
         base_url: str = "https://api.osmapi.com/v1"
     ):
         """
@@ -43,7 +43,7 @@ class LLMEngine:
         
         Args:
             api_key: OSM API key (defaults to env var)
-            model: Model to use (default: google/gemini-2.5-pro-preview-05-06)
+            model: Model to use (default: qwen3.5-397b-a17b)
             base_url: OSM API URL
         """
         self.api_key = api_key or os.getenv("OSM_API_KEY")

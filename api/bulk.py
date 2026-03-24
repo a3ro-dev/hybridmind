@@ -98,7 +98,7 @@ class UnstructuredDataRequest(BaseModel):
     """Request for processing unstructured data via LLM."""
     text: str = Field(..., min_length=10, max_length=100000, description="Raw unstructured text to process")
     api_key: Optional[str] = Field(default=None, description="Optional OSM API key")
-    model: str = Field(default="google/gemini-3-pro-preview", description="LLM model to use")
+    model: str = Field(default="qwen3.5-397b-a17b", description="LLM model to use")
 
 
 class UnstructuredDataResult(BaseModel):
@@ -380,7 +380,7 @@ async def process_unstructured_data(
     """
     Process unstructured text using LLM and extract knowledge graph.
     
-    Uses OSM API with Google Gemini to:
+    Uses OSM API with Qwen3.5 397B A17B to:
     - Extract entities, concepts, and facts from raw text
     - Create structured nodes with rich metadata
     - Identify and create relationships between nodes
