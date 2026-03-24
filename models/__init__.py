@@ -9,10 +9,4 @@ from models.search import (
     SearchResponse,
     StatsResponse
 )
-from models.comparison import (
-    ComparisonSearchRequest,
-    ComparisonResponse,
-    BenchmarkRequest,
-    BenchmarkResponse,
-    SystemStatusResponse
-)
+# Comparison models disabled

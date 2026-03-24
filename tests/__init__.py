@@ -1,7 +1,7 @@
 """
 HybridMind Test Suite
 
-Based on Devfolio Hackathon Test Case Markers for:
+Based on Test Case Markers for:
 "Vector + Graph Native Database for Efficient AI Retrieval"
 
 Test Files:

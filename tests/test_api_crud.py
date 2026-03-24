@@ -1,6 +1,6 @@
 """
 API & CRUD Test Cases (TC-API-01 through TC-API-05)
-Based on Devfolio Hackathon Test Case Markers.
+Based on Test Case Markers.
 """
 
 import pytest

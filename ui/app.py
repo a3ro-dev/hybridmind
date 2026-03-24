@@ -279,7 +279,7 @@ def render_sidebar() -> str:
     # Navigation
     page = st.sidebar.radio(
         "Module",
-        ["Search", "Comparison", "System", "Explorer"],
+        ["Search", "System", "Explorer"],
         label_visibility="collapsed"
     )
     
@@ -1368,8 +1368,7 @@ def main():
     
     if page == "Search":
         render_search_page()
-    elif page == "Comparison":
-        render_comparison_page()
+    # Comparison disabled
     elif page == "System":
         render_system_page()
     elif page == "Explorer":

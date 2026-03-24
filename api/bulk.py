@@ -30,8 +30,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/bulk", tags=["Bulk Operations"])
 
-# Default API key for Vercel AI Gateway
-DEFAULT_AI_GATEWAY_KEY = "vck_5Y5hFnC2UbaXHL8q52bxbTaTJyl8GlQv7BxTmbqwJEeVIcf1E11nh4kv"
+# Default API key for OSM API
+DEFAULT_OSM_API_KEY = "osm_dkrYgl3rXWDEbmVbDmdn6jKenn8m0KXm5XiMHHBk"
 
 
 # ==================== Request/Response Models ====================
@@ -97,7 +97,7 @@ class BulkImportResult(BaseModel):
 class UnstructuredDataRequest(BaseModel):
     """Request for processing unstructured data via LLM."""
     text: str = Field(..., min_length=10, max_length=100000, description="Raw unstructured text to process")
-    api_key: Optional[str] = Field(default=None, description="Optional Vercel AI Gateway API key")
+    api_key: Optional[str] = Field(default=None, description="Optional OSM API key")
     model: str = Field(default="google/gemini-3-pro-preview", description="LLM model to use")
 
 
@@ -380,7 +380,7 @@ async def process_unstructured_data(
     """
     Process unstructured text using LLM and extract knowledge graph.
     
-    Uses Vercel AI Gateway with Google Gemini to:
+    Uses OSM API with Google Gemini to:
     - Extract entities, concepts, and facts from raw text
     - Create structured nodes with rich metadata
     - Identify and create relationships between nodes
@@ -395,7 +395,7 @@ async def process_unstructured_data(
     errors = []
     
     # Get API key
-    api_key = request.api_key or os.getenv("AI_GATEWAY_API_KEY") or DEFAULT_AI_GATEWAY_KEY
+    api_key = request.api_key or os.getenv("OSM_API_KEY") or DEFAULT_OSM_API_KEY
     
     try:
         from engine.llm import LLMEngine

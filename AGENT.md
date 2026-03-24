@@ -2,8 +2,8 @@
 # HybridMind: Vector + Graph Native Database for AI Retrieval
 
 Version: 1.04 
-Project: DevForge Hackathon - Problem Statement 2  
-Team: CodeHashira  
+Project: HybridMind  
+Team: Solo  
 Stack: Python / FastAPI / FAISS / NetworkX / SQLite
 
 ---

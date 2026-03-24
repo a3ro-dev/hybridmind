@@ -1,6 +1,6 @@
 """
 Shared fixtures for HybridMind test suite.
-Based on Devfolio Hackathon Test Case Markers.
+Based on Test Case Markers.
 """
 
 import pytest

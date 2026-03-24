@@ -1,6 +1,6 @@
 """
 Correctness Tests with Example Dataset (Section 10)
-Based on Devfolio Hackathon Test Case Markers.
+Based on Test Case Markers.
 
 Note: These tests use auto-generated embeddings (not mock embeddings) 
 to ensure compatibility with the existing database.
@@ -166,7 +166,7 @@ class TestHybridCanonical:
 
 
 class TestCRUDCanonical:
-    """CRUD examples from hackathon spec."""
+    """CRUD examples from specification."""
     
     def test_create_node_example(self, client):
         """Test creating a node as per spec example."""

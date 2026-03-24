@@ -1,6 +1,6 @@
 """
 Hybrid Search Test Cases (TC-HYB-01 through TC-HYB-03)
-Based on Devfolio Hackathon Test Case Markers.
+Based on Test Case Markers.
 """
 
 import pytest

@@ -1,7 +1,7 @@
 """
 LLM Engine for processing unstructured data.
 
-Uses Vercel AI Gateway with Google Gemini for intelligent
+Uses OSM API with Google Gemini for intelligent
 extraction of entities, relationships, and metadata from text.
 """
 
@@ -29,28 +29,27 @@ class LLMEngine:
     """
     LLM-powered engine for processing unstructured data.
     
-    Uses Vercel AI Gateway to access various LLM providers
+    Uses OSM API to access various LLM providers
     through a unified OpenAI-compatible API.
     """
     
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "google/gemini-3-pro-preview",
-        base_url: str = "https://ai-gateway.vercel.sh/v1"
+        base_url: str = "https://api.osmapi.com/v1"
     ):
         """
         Initialize the LLM engine.
         
         Args:
-            api_key: Vercel AI Gateway API key (defaults to env var)
+            api_key: OSM API key (defaults to env var)
             model: Model to use (default: google/gemini-2.5-pro-preview-05-06)
-            base_url: Vercel AI Gateway URL
+            base_url: OSM API URL
         """
-        self.api_key = api_key or os.getenv("AI_GATEWAY_API_KEY")
+        self.api_key = api_key or os.getenv("OSM_API_KEY")
         if not self.api_key:
             raise ValueError(
-                "API key required. Set AI_GATEWAY_API_KEY env var or pass api_key"
+                "API key required. Set OSM_API_KEY env var or pass api_key"
             )
         
         self.model = model

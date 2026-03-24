@@ -1,6 +1,6 @@
 # HybridMind
 
-**Vector + Graph Native Database** for AI Retrieval — Devfolio Problem Statement 1
+**Vector + Graph Native Database** for AI Retrieval
 
 > Hybrid retrieval combining semantic vector search with graph relationships using the **CRS Algorithm**.
 
@@ -184,7 +184,7 @@ python -m cli.mind export data/hybridmind.mind backup.mind.zip
 ## Project Structure
 
 ```
-yugaantar/
+hybridmind/
 ├── main.py              # FastAPI application
 ├── config.py            # Configuration settings
 ├── api/                 # REST API endpoints
@@ -232,4 +232,4 @@ python data/test_endpoints.py
 
 ---
 
-**DevForge Hackathon** | Team CodeHashira
+**HybridMind** | A Solo Project

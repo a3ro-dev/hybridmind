@@ -8,7 +8,6 @@ pydantic>=2.7.0
 pydantic-settings>=2.0.0
 
 # Vector Search
-# Note: faiss-gpu not available via pip on Windows. Use faiss-cpu instead.
 # GPU acceleration for embeddings still works via PyTorch CUDA.
 faiss-cpu>=1.7.4
 numpy>=1.24.0
@@ -39,7 +38,7 @@ pandas>=2.0.0
 python-multipart>=0.0.6
 orjson>=3.9.10
 
-# LLM Integration (Vercel AI Gateway)
+# LLM Integration (OSM API)
 openai>=1.0.0
 
 # CLI
@@ -51,7 +50,4 @@ pytest>=7.4.3
 pytest-asyncio>=0.21.1
 httpx>=0.25.1
 
-# Benchmarks (optional)
-neo4j>=5.0.0
-chromadb>=0.4.0
-datasets>=2.14.0
+# No benchmarks needed.

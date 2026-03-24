@@ -1,6 +1,6 @@
 """
 Vector Search Test Cases (TC-VEC-01 through TC-VEC-03)
-Based on Devfolio Hackathon Test Case Markers.
+Based on Test Case Markers.
 """
 
 import pytest
