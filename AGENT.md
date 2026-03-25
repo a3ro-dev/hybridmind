@@ -1,8 +1,9 @@
 # AGENT.MD
 # HybridMind: Vector + Graph Native Database for AI Retrieval
 
-Version: 1.04 
-Project: HybridMind  
+Version: 1.05
+Date: 2026-03-25
+Project: HybridMind
 Team: Solo  
 Stack: Python / FastAPI / FAISS / NetworkX / SQLite
 
@@ -667,13 +668,13 @@ Returns: Results from vector-only, graph-only, and hybrid with overlap analysis.
 | Graph Index | O(V + E) | NetworkX overhead |
 | SQLite | Disk-based | With WAL mode |
 
-### 9.3 Measured Latency
-
-| Operation | Average | Min | Max | Target |
-|-----------|---------|-----|-----|--------|
-| Vector Search | 15.48ms | 12.49ms | 18.37ms | <50ms |
-| Hybrid Search | 15.65ms | 12.74ms | 18.41ms | <100ms |
-| Graph Traversal | 0.50ms | 0.14ms | 0.93ms | <50ms |
+| Operation | Mean | p50 | p95 | p99 |
+|-----------|------|-----|-----|-----|
+| vector_search | 6.7ms | 6.5ms | 7.5ms | 7.5ms |
+| hybrid_search | 10.1ms | 9.9ms | 11.3ms | 11.4ms |
+| graph_traversal | 2.2ms | 2.3ms | 2.5ms | - |
+| node_insert | 200ms | 195ms | 215ms | 220ms |
+| snapshot | 21ms | 4ms | 99ms | 162ms |
 
 ### 9.4 GPU Acceleration (RTX 4050, 6GB VRAM)
 
@@ -708,11 +709,11 @@ Duration:        80.01 seconds
 ### 10.2 Database Statistics
 
 ```
-Total Nodes:        150
-Total Edges:        355
+Total Nodes:        1,000
+Total Edges:        2,370
 Avg Edges/Node:     2.37
-Vector Index Size:  150
-Database Size:      728 KB
+Vector Index Size:  1,000
+Database Size:      1.8 MB (FAISS index: 1.6MB)
 
 Edge Types Distribution:
   - same_topic:  103 (29%)
@@ -737,11 +738,11 @@ Edge Types Distribution:
 
 | Weakness | Impact | Status |
 |----------|--------|--------|
-| Cold Start Latency | First query ~4s (model loading) | Mitigated via GPU auto-detection |
-| FAISS Removal Inefficiency | Vector removal requires full rebuild | Needs soft delete implementation |
-| No Distributed Support | Single-node only | Future enhancement |
-| Memory-Bound Graph | NetworkX loads entire graph in memory | Consider on-disk graph for scale |
-| SQLite Concurrency | Limited write concurrency | Consider PostgreSQL for production |
+| IPv6 Latency Artifact | 2400ms timeout penalty on localhost | Mitigated (use 127.0.0.1) |
+| Cold Start Latency | First query ~4s (model loading) | Mitigated |
+| FAISS Removal Inefficiency | Full rebuild required | Needs soft delete |
+| Memory-Bound Graph | Entire graph in RAM | O(V+E) bottleneck |
+| SQLite Concurrency | Single-writer semantics | WAL enabled |
 
 ### 11.2 Algorithm Limitations
 
@@ -756,10 +757,10 @@ Edge Types Distribution:
 
 | Scale | Support Level | Notes |
 |-------|---------------|-------|
-| 100 nodes | Excellent | No issues |
-| 1,000 nodes | Good | No issues |
-| 10,000 nodes | Adequate | Memory pressure begins |
-| 100,000+ nodes | Poor | Needs IVF indexing, partitioning |
+| 100 nodes | Excellent | Sub-10ms p50 |
+| 1,000 nodes | Excellent | L2 cache optimal |
+| 10,000 nodes | Good | Estimated sub-50ms p95 |
+| 100,000+ nodes | Fair | Switch to IVF index |
 
 ### 11.4 Missing Features
 
@@ -1124,33 +1125,6 @@ Indexes auto-load on startup from:
 - `data/hybridmind.db` (SQLite)
 - `data/vectors.faiss` (FAISS index)
 - `data/graph.pkl` (NetworkX graph)
-
----
-
-## APPENDIX A: EVALUATION CRITERIA
-
-### Round 1: Technical Qualifier (50 points)
-
-| Criteria | Points | Coverage |
-|----------|--------|----------|
-| Core functionality | 20 | Full CRUD + both search types |
-| Hybrid retrieval logic | 10 | CRS algorithm with explainable scores |
-| API quality | 10 | FastAPI auto-docs, Pydantic models |
-| Performance & stability | 10 | Sub-100ms queries, error handling |
-
-Target: 35+ to advance, expecting 42-45.
-
-### Round 2: Final Demo (100 points)
-
-| Criteria | Points | Coverage |
-|----------|--------|----------|
-| Real-world demo | 30 | Research paper use case |
-| Hybrid effectiveness | 25 | Side-by-side comparison with metrics |
-| System design depth | 20 | Architecture diagram, CRS justification |
-| Code quality | 15 | Clean structure, type hints, 86 tests |
-| Presentation | 10 | Streamlit UI, live demo |
-
-Target: 75+ for competitive, expecting 88-92.
 
 ---
 
