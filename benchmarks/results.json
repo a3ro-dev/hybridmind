@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-25T06:56:43.698241+00:00",
+  "timestamp": "2026-03-25T07:32:15.011729+00:00",
   "system": {
     "os": "Windows 11",
     "python": "3.13.5",
@@ -8,190 +8,110 @@
     "ram_gb": 15.71
   },
   "latency": {
-    "vector_search": {
-      "mean": 6.701,
-      "median": 6.486,
-      "p95": 7.451,
-      "p99": 7.528,
-      "min": 6.18,
-      "max": 7.547,
-      "count": 5,
-      "errors": 0
-    },
-    "hybrid_search_default": {
-      "mean": 10.061,
-      "median": 9.889,
-      "p95": 11.256,
-      "p99": 11.348,
-      "min": 9.123,
-      "max": 11.37,
-      "count": 5,
-      "errors": 0
-    },
-    "hybrid_search_anchored": {
-      "mean": 8.819,
-      "median": 9.043,
-      "p95": 10.071,
-      "p99": 10.205,
-      "min": 6.68,
-      "max": 10.238,
-      "count": 5,
-      "errors": 0
-    },
-    "graph_traversal": {
-      "mean": 2.154,
-      "median": 2.329,
-      "p95": 2.531,
-      "p99": 2.557,
-      "min": 1.474,
-      "max": 2.563,
-      "count": 5,
-      "errors": 0
-    },
-    "node_insert": {
-      "mean": 10.049,
-      "median": 8.772,
-      "p95": 14.166,
-      "p99": 37.283,
-      "min": 6.218,
-      "max": 58.78,
-      "count": 50,
-      "errors": 0,
-      "verified_inserts": 53
-    },
-    "node_get": {
-      "mean": 1.954,
-      "median": 1.803,
-      "p95": 3.249,
-      "p99": 3.647,
-      "min": 1.036,
-      "max": 4.701,
-      "count": 200,
-      "errors": 0
-    },
-    "snapshot": {
-      "mean": 21.072,
-      "median": 4.058,
-      "p95": 99.489,
-      "p99": 161.619,
-      "min": 2.574,
-      "max": 177.152,
-      "count": 10,
-      "errors": 0
-    },
-    "compact": {
-      "mean": 0,
-      "median": 0,
-      "p95": 0,
-      "p99": 0,
-      "min": 0,
-      "max": 0,
-      "count": 0,
-      "errors": 8
-    }
+    "error": "'charmap' codec can't encode character '\\u2192' in position 15: character maps to <undefined>"
   },
   "scale": {
     "50": {
-      "actual_node_count": 3053,
+      "actual_node_count": 55,
       "vector_search": {
-        "p50": 7.668,
-        "p95": 11.271
+        "p50": 11.213,
+        "p95": 14.416
       },
       "hybrid_search": {
-        "p50": 9.543,
-        "p95": 13.17
+        "p50": 12.586,
+        "p95": 14.682
       },
       "graph_traversal": {
-        "p50": 1.978,
-        "p95": 2.44
+        "p50": 1.595,
+        "p95": 2.098
       },
-      "faiss_memory_bytes": 4689408,
-      "graph_memory_bytes": 633550
+      "faiss_memory_bytes": 84480,
+      "graph_memory_bytes": 11000
     },
     "150": {
-      "actual_node_count": 3053,
+      "actual_node_count": 159,
       "vector_search": {
-        "p50": 2.129,
-        "p95": 2.646
+        "p50": 12.177,
+        "p95": 16.352
       },
       "hybrid_search": {
-        "p50": 2.312,
-        "p95": 3.013
+        "p50": 12.301,
+        "p95": 14.749
       },
       "graph_traversal": {
-        "p50": 2.179,
-        "p95": 2.811
+        "p50": 1.564,
+        "p95": 1.908
       },
-      "faiss_memory_bytes": 4689408,
-      "graph_memory_bytes": 633550
+      "faiss_memory_bytes": 245760,
+      "graph_memory_bytes": 32000
     },
     "300": {
-      "actual_node_count": 3053,
+      "actual_node_count": 314,
       "vector_search": {
-        "p50": 1.349,
-        "p95": 1.879
+        "p50": 12.223,
+        "p95": 15.334
       },
       "hybrid_search": {
-        "p50": 1.366,
-        "p95": 1.876
+        "p50": 12.375,
+        "p95": 14.093
       },
       "graph_traversal": {
-        "p50": 1.489,
-        "p95": 2.088
+        "p50": 1.613,
+        "p95": 2.116
       },
-      "faiss_memory_bytes": 4689408,
-      "graph_memory_bytes": 633550
+      "faiss_memory_bytes": 483840,
+      "graph_memory_bytes": 63000
     },
     "600": {
-      "actual_node_count": 3053,
+      "actual_node_count": 629,
       "vector_search": {
-        "p50": 1.443,
-        "p95": 2.545
+        "p50": 16.316,
+        "p95": 28.678
       },
       "hybrid_search": {
-        "p50": 1.474,
-        "p95": 2.083
+        "p50": 15.637,
+        "p95": 19.581
       },
       "graph_traversal": {
-        "p50": 1.684,
-        "p95": 3.524
+        "p50": 2.0,
+        "p95": 2.447
       },
-      "faiss_memory_bytes": 4689408,
-      "graph_memory_bytes": 633550
+      "faiss_memory_bytes": 967680,
+      "graph_memory_bytes": 126000
     },
     "1000": {
-      "actual_node_count": 3053,
+      "actual_node_count": 1037,
       "vector_search": {
-        "p50": 1.477,
-        "p95": 2.274
+        "p50": 12.264,
+        "p95": 15.274
       },
       "hybrid_search": {
-        "p50": 1.559,
-        "p95": 2.13
+        "p50": 13.276,
+        "p95": 15.901
       },
       "graph_traversal": {
-        "p50": 1.56,
-        "p95": 2.093
+        "p50": 1.722,
+        "p95": 2.089
       },
-      "faiss_memory_bytes": 4689408,
-      "graph_memory_bytes": 633550
+      "faiss_memory_bytes": 1594368,
+      "graph_memory_bytes": 207600
     }
   },
   "conditioning": {
     "isolated_nodes": {
-      "count": 0,
-      "mean_cosine_diff": 0.0,
-      "min_cosine_diff": 0.0,
-      "max_cosine_diff": 0.0,
-      "nodes_with_diff_gt_0_01": 0
+      "count": 20,
+      "mean_cosine_diff": 0.009774,
+      "min_cosine_diff": 0.005192,
+      "max_cosine_diff": 0.017987,
+      "nodes_with_diff_gt_0_01": 8
     },
     "edged_vs_unedged": {
-      "edged_node_count": 0,
-      "unedged_node_count": 0,
-      "edged_mean_diff": 0.0,
-      "unedged_mean_diff": 0.0,
+      "edged_node_count": 10,
+      "unedged_node_count": 10,
+      "edged_mean_diff": 0.006625,
+      "unedged_mean_diff": 0.008769,
       "edged_higher_than_unedged": false,
-      "difference_in_conditioning": 0.0
+      "difference_in_conditioning": -0.002144
     }
   },
   "eval": {
@@ -285,9 +205,9 @@
         "success_count": 100,
         "error_count": 0,
         "success_rate": 1.0,
-        "mean_latency_ms": 2385.689,
-        "max_latency_ms": 2493.99,
-        "total_elapsed_ms": 24114.043
+        "mean_latency_ms": 487.364,
+        "max_latency_ms": 688.205,
+        "total_elapsed_ms": 4919.593
       },
       {
         "threads": 25,
@@ -296,9 +216,9 @@
         "success_count": 250,
         "error_count": 0,
         "success_rate": 1.0,
-        "mean_latency_ms": 2665.803,
-        "max_latency_ms": 3176.44,
-        "total_elapsed_ms": 27769.285
+        "mean_latency_ms": 1109.327,
+        "max_latency_ms": 1843.324,
+        "total_elapsed_ms": 11843.051
       },
       {
         "threads": 50,
@@ -307,9 +227,9 @@
         "success_count": 500,
         "error_count": 0,
         "success_rate": 1.0,
-        "mean_latency_ms": 3016.793,
-        "max_latency_ms": 4121.848,
-        "total_elapsed_ms": 33857.443
+        "mean_latency_ms": 2357.127,
+        "max_latency_ms": 4647.038,
+        "total_elapsed_ms": 24325.285
       }
     ],
     "concurrent_writes": [
@@ -320,10 +240,10 @@
         "success_count": 25,
         "error_count": 0,
         "success_rate": 1.0,
-        "mean_latency_ms": 2273.951,
-        "max_latency_ms": 2314.888,
-        "total_elapsed_ms": 11392.231,
-        "final_node_count_after": 3118
+        "mean_latency_ms": 384.906,
+        "max_latency_ms": 492.872,
+        "total_elapsed_ms": 2044.176,
+        "final_node_count_after": 1117
       },
       {
         "threads": 10,
@@ -332,10 +252,10 @@
         "success_count": 50,
         "error_count": 0,
         "success_rate": 1.0,
-        "mean_latency_ms": 2377.673,
-        "max_latency_ms": 2504.235,
-        "total_elapsed_ms": 12036.202,
-        "final_node_count_after": 3168
+        "mean_latency_ms": 658.44,
+        "max_latency_ms": 854.659,
+        "total_elapsed_ms": 3394.355,
+        "final_node_count_after": 1168
       },
       {
         "threads": 20,
@@ -344,10 +264,10 @@
         "success_count": 100,
         "error_count": 0,
         "success_rate": 1.0,
-        "mean_latency_ms": 2534.452,
-        "max_latency_ms": 3052.95,
-        "total_elapsed_ms": 13153.968,
-        "final_node_count_after": 3268
+        "mean_latency_ms": 1390.203,
+        "max_latency_ms": 2345.946,
+        "total_elapsed_ms": 7245.466,
+        "final_node_count_after": 1271
       }
     ],
     "mixed_rw": {
@@ -356,8 +276,8 @@
       "error_count": 0,
       "http_500_count": 0,
       "success_rate": 1.0,
-      "mean_latency_ms": 2060.196,
-      "max_latency_ms": 2204.54
+      "mean_latency_ms": 378.779,
+      "max_latency_ms": 1419.703
     }
   }
 }

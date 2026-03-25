@@ -1,499 +1,503 @@
 {
   "queries": [
     {
-      "query": "and Benchmark for Visual Intuitive",
+      "query": "We propose a novel contrastive",
       "ground_truth_ids": [
-        "arxiv-0028",
-        "arxiv-0038",
-        "arxiv-0084",
-        "arxiv-0108",
-        "arxiv-0058"
+        "0a1477b7-97a0-4f66-b7cb-48a94ffa8f08",
+        "bb339eaf-df1d-4a57-b73e-db2db3cd26ce",
+        "8ea33e6b-2780-4d4c-96ae-e654518ddc83",
+        "a7af40d9-79cb-4e04-b6cd-58f8edf17426",
+        "a358ce32-2a2c-44ea-9c55-428c08ed2b80"
       ]
     },
     {
-      "query": "367 Panama St., Rm.",
+      "query": "contrastive with text attention",
       "ground_truth_ids": [
-        "arxiv-0062",
-        "arxiv-0105",
-        "arxiv-0045",
-        "arxiv-0122",
-        "arxiv-0050"
+        "03b756fb-167f-4413-9257-df45ff8f942d",
+        "a4c38d14-cb20-46f7-8331-cd316f280c25",
+        "24c6ae83-6479-4887-a562-56655e743894",
+        "8b9b44e9-d681-402a-9fed-3689a41428a3",
+        "b984c070-5096-47ba-b2b2-4b94ac5c9327"
       ]
     },
     {
-      "query": "Lu, and Karl Henrik Johansson Abstract\u2014Wireless",
+      "query": "structured tasks using",
       "ground_truth_ids": [
-        "arxiv-0026",
-        "arxiv-0146",
-        "arxiv-0102",
-        "arxiv-0100",
-        "arxiv-0078"
+        "cdd36e31-0ad3-407f-a9d7-3d6cb1f6f367",
+        "6206a0de-4e40-4ca7-a66b-9f5aea13ff33",
+        "21150eee-c725-4f33-83c7-f2650199cb4e",
+        "db24429a-dd8c-4543-9258-7b612d3ed1ba",
+        "edc013ab-e674-49ed-8212-2e01fc40ee77"
       ]
     },
     {
-      "query": "Francesco Silvestri\u22c6\u22c6 ,",
+      "query": "concurrency test eb99d30369084d8ea66cf1e232102ac3",
       "ground_truth_ids": [
-        "arxiv-0008"
+        "c1afc261-e2d4-4c38-b759-4402a98ef049",
+        "bcd6516d-b032-44c2-be49-d4f4502e0ff9",
+        "31e1c968-5706-40c2-8c13-7da018a024e1",
+        "ead96105-47d0-455e-aae0-0a09ab8f1b50",
+        "6956af68-be0b-42b2-8065-50a890078d6e"
       ]
     },
     {
-      "query": "for Computer Science",
+      "query": "An analysis of",
       "ground_truth_ids": [
-        "arxiv-0095",
-        "arxiv-0006",
-        "arxiv-0110",
-        "arxiv-0039",
-        "arxiv-0141"
+        "be3c801d-74d5-4589-b97d-d0616dbab23a",
+        "efae6322-d8e7-44d4-a025-da42b5d0ec18",
+        "a54a0dff-8160-4128-a4f7-0f7f40dc6df9",
+        "93f52d07-d3ba-4e96-a100-9642cf2b239f",
+        "1245bf30-4b80-4234-880d-89dfde172c0a"
       ]
     },
     {
-      "query": "CEA/DAM/VA, F\u201321120, Is-sur-Tille, France 4 CEA/DAM/DIF,",
+      "query": "probabilistic estimation under video",
       "ground_truth_ids": [
-        "arxiv-0143",
-        "arxiv-0036",
-        "arxiv-0064",
-        "arxiv-0027",
-        "arxiv-0018"
+        "f4956668-a793-4763-915f-f27ae74c0183",
+        "24d6916a-abbb-4293-a23d-86eccca00a4d",
+        "9b4f3924-a450-4291-9dd4-eb1f985e931b",
+        "4b4735ae-545b-4cd1-bc29-2ca8889fb42f",
+        "b6977645-2f1c-4328-ae5c-5e85a8e31508"
       ]
     },
     {
-      "query": "rapidly. Looking toward mid-decade and",
+      "query": "video uncertainty with",
       "ground_truth_ids": [
-        "arxiv-0056",
-        "arxiv-0041",
-        "arxiv-0114",
-        "arxiv-0043",
-        "arxiv-0030"
+        "f4956668-a793-4763-915f-f27ae74c0183",
+        "f288da1e-c395-4156-9411-898008ef1714",
+        "834b5f63-6c6e-4ff5-8bde-feb10ad05b74",
+        "24d6916a-abbb-4293-a23d-86eccca00a4d",
+        "593101f3-cb46-4c19-be69-afccdeb84f2b"
       ]
     },
     {
-      "query": "in the literature, including those which",
+      "query": "concurrency test 1d6761bcffa64c06ab4703321450765f",
       "ground_truth_ids": [
-        "arxiv-0001",
-        "arxiv-0027",
-        "arxiv-0013",
-        "arxiv-0132",
-        "arxiv-0096"
+        "7fd13069-f4af-47cc-b4a8-63623d9131d2",
+        "bcd6516d-b032-44c2-be49-d4f4502e0ff9",
+        "31e1c968-5706-40c2-8c13-7da018a024e1",
+        "ead96105-47d0-455e-aae0-0a09ab8f1b50",
+        "6956af68-be0b-42b2-8065-50a890078d6e"
       ]
     },
     {
-      "query": "the subject deal with",
+      "query": "privacy and reasoning communication efficiency. (node-100398)",
       "ground_truth_ids": [
-        "arxiv-0087",
-        "arxiv-0071",
-        "arxiv-0094",
-        "arxiv-0034",
-        "arxiv-0105"
+        "d6343032-22ed-400c-a133-2df74af8b084",
+        "c34f7bc8-8ccd-4651-94a9-12505f4650a5",
+        "e0b0add1-581e-4503-a2d8-8a86320371b8",
+        "71139cde-0deb-4f48-af7e-d28105314de7",
+        "76ae7dad-0762-41fd-a204-43153823cd54"
       ]
     },
     {
-      "query": "address this issue by presenting",
+      "query": "with spatial privacy and dataset",
       "ground_truth_ids": [
-        "arxiv-0055",
-        "arxiv-0137",
-        "arxiv-0105",
-        "arxiv-0001",
-        "arxiv-0102"
+        "af402821-6d18-487b-a23e-9ae5dc7b13ed",
+        "31e9d85e-5b75-493f-b7fc-f17f533e126d",
+        "e845fcf0-335e-4579-a32a-3b95af66b5db",
+        "65c8ed76-4ade-428c-9f62-34952ba98bfb",
+        "0dfb20cc-14ff-4ef0-bedb-5216e439a2a6"
       ]
     },
     {
-      "query": "and Karl Henrik Johansson Abstract\u2014Wireless networked",
+      "query": "of diffusion in the context of",
       "ground_truth_ids": [
-        "arxiv-0026",
-        "arxiv-0030",
-        "arxiv-0051",
-        "arxiv-0114",
-        "arxiv-0043"
+        "efae6322-d8e7-44d4-a025-da42b5d0ec18",
+        "a54a0dff-8160-4128-a4f7-0f7f40dc6df9",
+        "2a42b090-38d1-43a9-a9bb-15f491e8a97e",
+        "e590f533-235d-4312-820f-0989fa0685ea",
+        "8a5a965a-d1fa-494c-85dd-2305cc3c6d9f"
       ]
     },
     {
-      "query": "vaccination and school closures), deciding",
+      "query": "hierarchical model for multi-modal",
       "ground_truth_ids": [
-        "arxiv-0024",
-        "arxiv-0105",
-        "arxiv-0099",
-        "arxiv-0004",
-        "arxiv-0107"
+        "b28b5d16-a0a7-4690-940d-f49d7c368514",
+        "3310385a-11f3-4d47-b9c5-219bbdb3b0e5",
+        "c1a68d9f-3fb4-44db-93b6-e51bbe917105",
+        "ae101a25-be2c-44e1-a95f-59f59f6a5722",
+        "472b8eff-2a9e-43c7-a082-47144923d3a5"
       ]
     },
     {
-      "query": "RESIDUAL NETWORKS FOR DEPLOYMENT USING A",
+      "query": "learning with spatial",
       "ground_truth_ids": [
-        "arxiv-0067",
-        "arxiv-0121",
-        "arxiv-0026",
-        "arxiv-0133",
-        "arxiv-0040"
+        "c34f7bc8-8ccd-4651-94a9-12505f4650a5",
+        "af402821-6d18-487b-a23e-9ae5dc7b13ed",
+        "63040918-0470-4f34-ad5a-77e1c8301c2f",
+        "e0b0add1-581e-4503-a2d8-8a86320371b8",
+        "31e9d85e-5b75-493f-b7fc-f17f533e126d"
       ]
     },
     {
-      "query": "This paper proposes an efficient and",
+      "query": "via graph approximation",
       "ground_truth_ids": [
-        "arxiv-0137",
-        "arxiv-0117",
-        "arxiv-0005",
-        "arxiv-0011",
-        "arxiv-0017"
+        "6785cc9b-61d4-4e16-ad45-2e805cae7c64",
+        "97cc9149-5d67-4e19-89f9-1d2cf546d85b",
+        "f8f6b422-daa2-4429-a7e7-5c994c07c1c3",
+        "abf2bb01-935b-4507-a12f-c0691f19b377",
+        "f3c1ea9b-2a48-437f-b4a3-9ea4bc4960ac"
       ]
     },
     {
-      "query": "concept of depth in an",
+      "query": "learning with spatial privacy and",
       "ground_truth_ids": [
-        "arxiv-0020",
-        "arxiv-0084",
-        "arxiv-0064",
-        "arxiv-0141",
-        "arxiv-0127"
+        "c34f7bc8-8ccd-4651-94a9-12505f4650a5",
+        "af402821-6d18-487b-a23e-9ae5dc7b13ed",
+        "63040918-0470-4f34-ad5a-77e1c8301c2f",
+        "e0b0add1-581e-4503-a2d8-8a86320371b8",
+        "31e9d85e-5b75-493f-b7fc-f17f533e126d"
       ]
     },
     {
-      "query": "proposed conditions not",
+      "query": "approximation in high-dimensional knowledge spaces. (node-100085)",
       "ground_truth_ids": [
-        "arxiv-0147",
-        "arxiv-0130",
-        "arxiv-0022",
-        "arxiv-0025",
-        "arxiv-0142"
+        "9d0c79b0-f20b-4b87-9938-f1cd8bab7e9b",
+        "f8f6b422-daa2-4429-a7e7-5c994c07c1c3",
+        "570c955f-2aba-4795-8a87-c7324489ebb5",
+        "399b78fe-034b-4731-b9a2-55dc10f31ccf",
+        "cc0c8092-bfee-479d-86ab-22250aa0dddb"
       ]
     },
     {
-      "query": "well-formed Adams\u2019 grammars for elimination",
+      "query": "concurrency test e8ecb255612b428caca50d78e39a5464",
       "ground_truth_ids": [
-        "arxiv-0011",
-        "arxiv-0007",
-        "arxiv-0130",
-        "arxiv-0124",
-        "arxiv-0041"
+        "351a8963-5f73-4da7-aed4-f1f88191c737",
+        "bcd6516d-b032-44c2-be49-d4f4502e0ff9",
+        "31e1c968-5706-40c2-8c13-7da018a024e1",
+        "ead96105-47d0-455e-aae0-0a09ab8f1b50",
+        "6956af68-be0b-42b2-8065-50a890078d6e"
       ]
     },
     {
-      "query": "extend a recurrent",
+      "query": "text attention mechanism",
       "ground_truth_ids": [
-        "arxiv-0020",
-        "arxiv-0076",
-        "arxiv-0016",
-        "arxiv-0055",
-        "arxiv-0090"
+        "f6cb174b-3d4b-4700-8440-98fc37807fc3",
+        "0dc35447-8e0c-4e80-9f84-927e8eb08fc5",
+        "03b756fb-167f-4413-9257-df45ff8f942d",
+        "95db9821-6b14-401e-9634-015e041e6b26",
+        "e122cc60-6706-4b38-90c1-72c59867a339"
       ]
     },
     {
-      "query": "context of the genome-wide association studies",
+      "query": "concurrency test 7a07a4bd838f46aeb0d72ff57bd2e184",
       "ground_truth_ids": [
-        "arxiv-0097",
-        "arxiv-0082",
-        "arxiv-0067",
-        "arxiv-0030",
-        "arxiv-0002"
+        "1fb3b9ad-9b3a-44b6-8fdc-8e7ada843651",
+        "bcd6516d-b032-44c2-be49-d4f4502e0ff9",
+        "31e1c968-5706-40c2-8c13-7da018a024e1",
+        "ead96105-47d0-455e-aae0-0a09ab8f1b50",
+        "6956af68-be0b-42b2-8065-50a890078d6e"
       ]
     },
     {
-      "query": "two input strings A and",
+      "query": "approximation in high-dimensional benchmark spaces.",
       "ground_truth_ids": [
-        "arxiv-0093",
-        "arxiv-0030",
-        "arxiv-0029",
-        "arxiv-0020",
-        "arxiv-0092"
+        "6785cc9b-61d4-4e16-ad45-2e805cae7c64",
+        "abf2bb01-935b-4507-a12f-c0691f19b377",
+        "8820161f-a792-4e5d-bbc4-efafed106ea2",
+        "29bee444-1a03-4a63-a80f-2f057264d54d",
+        "206a0f2a-982c-41f2-a733-7aa35d006945"
       ]
     },
     {
-      "query": "2O(n) randomly chosen vectors in",
+      "query": "concurrency test 187972a4fb9d45188c1b3254debbb7ee",
       "ground_truth_ids": [
-        "arxiv-0090",
-        "arxiv-0134",
-        "arxiv-0073",
-        "arxiv-0044",
-        "arxiv-0052"
+        "deeaa4f9-e1a3-4023-aca0-794ce23edfb1",
+        "bcd6516d-b032-44c2-be49-d4f4502e0ff9",
+        "31e1c968-5706-40c2-8c13-7da018a024e1",
+        "ead96105-47d0-455e-aae0-0a09ab8f1b50",
+        "6956af68-be0b-42b2-8065-50a890078d6e"
       ]
     },
     {
-      "query": "A compact metric space",
+      "query": "approximation in high-dimensional",
       "ground_truth_ids": [
-        "arxiv-0018",
-        "arxiv-0037",
-        "arxiv-0061",
-        "arxiv-0009",
-        "arxiv-0087"
+        "6785cc9b-61d4-4e16-ad45-2e805cae7c64",
+        "97cc9149-5d67-4e19-89f9-1d2cf546d85b",
+        "f8f6b422-daa2-4429-a7e7-5c994c07c1c3",
+        "abf2bb01-935b-4507-a12f-c0691f19b377",
+        "f3c1ea9b-2a48-437f-b4a3-9ea4bc4960ac"
       ]
     },
     {
-      "query": "dependencies. Perhaps surprisingly, our",
+      "query": "model for multi-modal structured",
       "ground_truth_ids": [
-        "arxiv-0136",
-        "arxiv-0127",
-        "arxiv-0008",
-        "arxiv-0010",
-        "arxiv-0029"
+        "d29898e6-3d9c-4cca-8d2d-000234dfe152",
+        "a571dc5b-cde6-48d1-8003-31c063e9b328",
+        "b28b5d16-a0a7-4690-940d-f49d7c368514",
+        "2c5fcb90-93d5-4508-94e3-a8026c920f46",
+        "a739b249-5e2f-4320-b029-abb1f8e8d4b3"
       ]
     },
     {
-      "query": "statistical accuracy geometrically fast. Our",
+      "query": "Graph-based contrastive with text",
       "ground_truth_ids": [
-        "arxiv-0118",
-        "arxiv-0105",
-        "arxiv-0087",
-        "arxiv-0084",
-        "arxiv-0067"
+        "03b756fb-167f-4413-9257-df45ff8f942d",
+        "a4c38d14-cb20-46f7-8331-cd316f280c25",
+        "24c6ae83-6479-4887-a562-56655e743894",
+        "8b9b44e9-d681-402a-9fed-3689a41428a3",
+        "b984c070-5096-47ba-b2b2-4b94ac5c9327"
       ]
     },
     {
-      "query": "the oracle rate of convergence.",
+      "query": "for text optimization in retrieval",
       "ground_truth_ids": [
-        "arxiv-0142",
-        "arxiv-0070",
-        "arxiv-0029",
-        "arxiv-0118",
-        "arxiv-0082"
+        "5b1ff2be-7117-4358-92a3-749463c4f619",
+        "a33dba6d-277d-4bcd-b8be-9d72cc49472f",
+        "8b86680f-64a0-453c-a17a-9bbd1859140f",
+        "f8f5a9b4-a70e-4713-b081-23c11f9d0e1f",
+        "89b4c238-69ea-4d83-843b-5fff281d44b0"
       ]
     },
     {
-      "query": "small number of",
+      "query": "graph methods with application to",
       "ground_truth_ids": [
-        "arxiv-0014",
-        "arxiv-0041",
-        "arxiv-0003",
-        "arxiv-0124",
-        "arxiv-0080"
+        "eec1ecfb-7a18-4d06-819b-115c9e932238",
+        "ca7ddd63-9e31-4efd-af40-e0dc6d8cb36c",
+        "f7a6fabd-692a-4174-8743-415d1ca57545",
+        "b0219df3-d71b-487c-9823-10f6183c4c3a",
+        "36f9dc0b-d29a-4bee-b2ea-7858c5f6b0cb"
       ]
     },
     {
-      "query": "any positive rate. In contrast,",
+      "query": "studies manifold using graph methods",
       "ground_truth_ids": [
-        "arxiv-0080",
-        "arxiv-0047",
-        "arxiv-0029",
-        "arxiv-0082",
-        "arxiv-0059"
+        "eec1ecfb-7a18-4d06-819b-115c9e932238",
+        "b0219df3-d71b-487c-9823-10f6183c4c3a",
+        "062e56d7-69de-43a6-9a1c-6b3b6815b190",
+        "94650023-75a8-4b45-9e45-a5db3beec227",
+        "0a093276-554f-49fb-a2b3-eb7d55c88dc6"
       ]
     },
     {
-      "query": "Technologies (CSLT), RIIT, Tsinghua University",
+      "query": "privacy and clustering communication efficiency.",
       "ground_truth_ids": [
-        "arxiv-0016",
-        "arxiv-0095",
-        "arxiv-0130",
-        "arxiv-0116",
-        "arxiv-0061"
+        "63040918-0470-4f34-ad5a-77e1c8301c2f",
+        "5d38a993-31b9-41e3-8ee8-3d2f1125a822",
+        "ff5d9c22-6492-4d7c-a31b-20bcc2863802",
+        "f47b0955-2d2e-4674-ad07-cf01e1d50e14",
+        "d1aee071-51ba-4413-b809-f461b2341c69"
       ]
     },
     {
-      "query": "of GA. Travelling Salesperson Problem (TSP)",
+      "query": "spatial privacy and dataset",
       "ground_truth_ids": [
-        "arxiv-0054",
-        "arxiv-0062",
-        "arxiv-0120",
-        "arxiv-0093",
-        "arxiv-0069"
+        "af402821-6d18-487b-a23e-9ae5dc7b13ed",
+        "31e9d85e-5b75-493f-b7fc-f17f533e126d",
+        "e845fcf0-335e-4579-a32a-3b95af66b5db",
+        "65c8ed76-4ade-428c-9f62-34952ba98bfb",
+        "0dfb20cc-14ff-4ef0-bedb-5216e439a2a6"
       ]
     },
     {
-      "query": "Student, Department of Information Technology",
+      "query": "concurrency test 8166319eaf3942f399cd2d60b9678579",
       "ground_truth_ids": [
-        "arxiv-0117",
-        "arxiv-0061",
-        "arxiv-0013",
-        "arxiv-0023",
-        "arxiv-0012"
+        "ead96105-47d0-455e-aae0-0a09ab8f1b50",
+        "bcd6516d-b032-44c2-be49-d4f4502e0ff9",
+        "31e1c968-5706-40c2-8c13-7da018a024e1",
+        "6956af68-be0b-42b2-8065-50a890078d6e",
+        "07763761-2f30-4847-bb17-836941e61219"
       ]
     },
     {
-      "query": "corpora. We develop a new",
+      "query": "contrastive with text attention mechanism for",
       "ground_truth_ids": [
-        "arxiv-0035",
-        "arxiv-0128",
-        "arxiv-0059",
-        "arxiv-0087",
-        "arxiv-0123"
+        "03b756fb-167f-4413-9257-df45ff8f942d",
+        "a4c38d14-cb20-46f7-8331-cd316f280c25",
+        "24c6ae83-6479-4887-a562-56655e743894",
+        "8b9b44e9-d681-402a-9fed-3689a41428a3",
+        "b984c070-5096-47ba-b2b2-4b94ac5c9327"
       ]
     },
     {
-      "query": "which may also be viewed as",
+      "query": "networks achieve state-of-the-art performance",
       "ground_truth_ids": [
-        "arxiv-0149",
-        "arxiv-0102",
-        "arxiv-0112",
-        "arxiv-0092",
-        "arxiv-0044"
+        "ecfd3d86-1303-4139-a5c6-8f83c406ee7c",
+        "d6dd9710-4138-49e4-a462-4f09415043da",
+        "d2165c69-5d77-4ed5-a876-121b65239604",
+        "5c17595e-662a-4123-b8be-f5a94a598df2",
+        "9bfddcd0-73b4-4f31-951f-87f3e5dfb7b7"
       ]
     },
     {
-      "query": "We argue that causal",
+      "query": "methods with application",
       "ground_truth_ids": [
-        "arxiv-0092",
-        "arxiv-0138",
-        "arxiv-0081",
-        "arxiv-0015",
-        "arxiv-0018"
+        "eec1ecfb-7a18-4d06-819b-115c9e932238",
+        "ca7ddd63-9e31-4efd-af40-e0dc6d8cb36c",
+        "f7a6fabd-692a-4174-8743-415d1ca57545",
+        "b0219df3-d71b-487c-9823-10f6183c4c3a",
+        "36f9dc0b-d29a-4bee-b2ea-7858c5f6b0cb"
       ]
     },
     {
-      "query": "considering whether the",
+      "query": "Scalable distributional approaches for structured",
       "ground_truth_ids": [
-        "arxiv-0130",
-        "arxiv-0079",
-        "arxiv-0026",
-        "arxiv-0054",
-        "arxiv-0047"
+        "cdd36e31-0ad3-407f-a9d7-3d6cb1f6f367",
+        "db24429a-dd8c-4543-9258-7b612d3ed1ba",
+        "5085fb41-a22c-410a-a809-d8efcb191229",
+        "6708919c-ce49-4aef-83ec-cd70c1b54376",
+        "5c15a130-b85d-44df-a261-58d27d1c855c"
       ]
     },
     {
-      "query": "over all dynamic executions.",
+      "query": "networks achieve state-of-the-art",
       "ground_truth_ids": [
-        "arxiv-0012",
-        "arxiv-0079",
-        "arxiv-0004",
-        "arxiv-0107",
-        "arxiv-0032"
+        "ecfd3d86-1303-4139-a5c6-8f83c406ee7c",
+        "d6dd9710-4138-49e4-a462-4f09415043da",
+        "d2165c69-5d77-4ed5-a876-121b65239604",
+        "5c17595e-662a-4123-b8be-f5a94a598df2",
+        "9bfddcd0-73b4-4f31-951f-87f3e5dfb7b7"
       ]
     },
     {
-      "query": "as motor vessels)",
+      "query": "algorithm for text optimization",
       "ground_truth_ids": [
-        "arxiv-0040",
-        "arxiv-0108",
-        "arxiv-0007",
-        "arxiv-0054",
-        "arxiv-0085"
+        "6fbd066e-54f4-4afd-9691-2d64f958fbc2",
+        "0a1477b7-97a0-4f66-b7cb-48a94ffa8f08",
+        "bb339eaf-df1d-4a57-b73e-db2db3cd26ce",
+        "5b1ff2be-7117-4358-92a3-749463c4f619",
+        "da1cc578-906a-4437-8cf4-7bc529b5c6a9"
       ]
     },
     {
-      "query": "Let R := K[xij , yj",
+      "query": "text attention mechanism for relational ranking",
       "ground_truth_ids": [
-        "arxiv-0098",
-        "arxiv-0094",
-        "arxiv-0072",
-        "arxiv-0081",
-        "arxiv-0009"
+        "03b756fb-167f-4413-9257-df45ff8f942d",
+        "a4c38d14-cb20-46f7-8331-cd316f280c25",
+        "24c6ae83-6479-4887-a562-56655e743894",
+        "8b9b44e9-d681-402a-9fed-3689a41428a3",
+        "b984c070-5096-47ba-b2b2-4b94ac5c9327"
       ]
     },
     {
-      "query": "classifying 2-fusion systems",
+      "query": "studies adversarial using graph",
       "ground_truth_ids": [
-        "arxiv-0135",
-        "arxiv-0125",
-        "arxiv-0026",
-        "arxiv-0011",
-        "arxiv-0111"
+        "ca7ddd63-9e31-4efd-af40-e0dc6d8cb36c",
+        "36f9dc0b-d29a-4bee-b2ea-7858c5f6b0cb",
+        "3f2dd7b3-5bc8-4afe-871c-c7957f6285ac",
+        "000e2c7d-c4bd-4833-9a01-4b6c1ca35cb0",
+        "2697ba5a-58ee-4df6-acc5-224cbcc7f1cd"
       ]
     },
     {
-      "query": "of patches. To the best",
+      "query": "video uncertainty with segmentation guarantees.",
       "ground_truth_ids": [
-        "arxiv-0029",
-        "arxiv-0024",
-        "arxiv-0118",
-        "arxiv-0019",
-        "arxiv-0117"
+        "f4956668-a793-4763-915f-f27ae74c0183",
+        "24d6916a-abbb-4293-a23d-86eccca00a4d",
+        "9b4f3924-a450-4291-9dd4-eb1f985e931b",
+        "4b4735ae-545b-4cd1-bc29-2ca8889fb42f",
+        "b6977645-2f1c-4328-ae5c-5e85a8e31508"
       ]
     },
     {
-      "query": "originating in [26], to \u201ccomputation-friendly\u201d",
+      "query": "concurrency test c4f1fe80348040a8b755c709891a2e3e",
       "ground_truth_ids": [
-        "arxiv-0087",
-        "arxiv-0117",
-        "arxiv-0077",
-        "arxiv-0099",
-        "arxiv-0107"
+        "ca346f53-0d00-465e-9a80-682fd3ffc901",
+        "bcd6516d-b032-44c2-be49-d4f4502e0ff9",
+        "31e1c968-5706-40c2-8c13-7da018a024e1",
+        "ead96105-47d0-455e-aae0-0a09ab8f1b50",
+        "6956af68-be0b-42b2-8065-50a890078d6e"
       ]
     },
     {
-      "query": "habitats via ensemble clustering framework Peng",
+      "query": "structured tasks using pipeline-based representations. (node-100854)",
       "ground_truth_ids": [
-        "arxiv-0111",
-        "arxiv-0041",
-        "arxiv-0087",
-        "arxiv-0110",
-        "arxiv-0038"
+        "ab1c7db8-5ccc-437a-8c54-69698d966082",
+        "6206a0de-4e40-4ca7-a66b-9f5aea13ff33",
+        "edc013ab-e674-49ed-8212-2e01fc40ee77",
+        "5ca74a48-38ca-4cde-9644-9e1fd8849a4a",
+        "cbb2de1f-51a0-4fd5-b69a-48b493c499e6"
       ]
     },
     {
-      "query": "for optimizing a relaxation",
+      "query": "paper studies adversarial using",
       "ground_truth_ids": [
-        "arxiv-0000",
-        "arxiv-0085",
-        "arxiv-0058",
-        "arxiv-0037",
-        "arxiv-0123"
+        "ca7ddd63-9e31-4efd-af40-e0dc6d8cb36c",
+        "36f9dc0b-d29a-4bee-b2ea-7858c5f6b0cb",
+        "3f2dd7b3-5bc8-4afe-871c-c7957f6285ac",
+        "000e2c7d-c4bd-4833-9a01-4b6c1ca35cb0",
+        "2697ba5a-58ee-4df6-acc5-224cbcc7f1cd"
       ]
     },
     {
-      "query": "LeBlanc2 Abstract\u2014 Analyzing and reconstructing",
+      "query": "inference via graph",
       "ground_truth_ids": [
-        "arxiv-0129",
-        "arxiv-0020",
-        "arxiv-0019",
-        "arxiv-0051",
-        "arxiv-0114"
+        "6785cc9b-61d4-4e16-ad45-2e805cae7c64",
+        "97cc9149-5d67-4e19-89f9-1d2cf546d85b",
+        "f8f6b422-daa2-4429-a7e7-5c994c07c1c3",
+        "abf2bb01-935b-4507-a12f-c0691f19b377",
+        "f3c1ea9b-2a48-437f-b4a3-9ea4bc4960ac"
       ]
     },
     {
-      "query": "conflicts at unprotected intersections",
+      "query": "analysis of dense in",
       "ground_truth_ids": [
-        "arxiv-0129",
-        "arxiv-0015",
-        "arxiv-0116",
-        "arxiv-0069",
-        "arxiv-0134"
+        "be3c801d-74d5-4589-b97d-d0616dbab23a",
+        "1245bf30-4b80-4234-880d-89dfde172c0a",
+        "e7e31a66-58e6-49bb-ab67-239b542c13be",
+        "4e43463c-446c-483f-a4a9-7276718c421c",
+        "5ceda987-39d4-47c5-ad2e-4cf2e93f7a80"
       ]
     },
     {
-      "query": "Technologies president@iscatech.com Eamonn",
+      "query": "mixed test dbfabc2b7a4b47e8abfa5579d4548590",
       "ground_truth_ids": [
-        "arxiv-0095",
-        "arxiv-0016",
-        "arxiv-0130",
-        "arxiv-0028",
-        "arxiv-0075"
+        "ca24f1d6-3d82-49c7-a947-b4bb73f15fce",
+        "00393389-8313-4d1b-ba6d-62ae79bf7ae2",
+        "aaae7ddb-da42-4509-8b94-34f8b735b76e",
+        "711f7a48-d3e9-4708-96c1-cd999b5b80f6",
+        "8abfa9aa-51ae-45cf-9b0a-05dc213b7033"
       ]
     },
     {
-      "query": "with high probability.",
+      "query": "approximation in high-dimensional knowledge spaces. (node-100325)",
       "ground_truth_ids": [
-        "arxiv-0082",
-        "arxiv-0008",
-        "arxiv-0002",
-        "arxiv-0052",
-        "arxiv-0057"
+        "6e1933f5-14dc-430b-9f34-bc30fa305e67",
+        "f8f6b422-daa2-4429-a7e7-5c994c07c1c3",
+        "570c955f-2aba-4795-8a87-c7324489ebb5",
+        "9d0c79b0-f20b-4b87-9938-f1cd8bab7e9b",
+        "399b78fe-034b-4731-b9a2-55dc10f31ccf"
       ]
     },
     {
-      "query": "inputs in terms of permanent,",
+      "query": "concurrency test c7c7d2c6384443c38c5bcff898781eb2",
       "ground_truth_ids": [
-        "arxiv-0028",
-        "arxiv-0147",
-        "arxiv-0143",
-        "arxiv-0040",
-        "arxiv-0035"
+        "cb09ef2b-0378-4195-9df9-c5ec78fa79c0",
+        "bcd6516d-b032-44c2-be49-d4f4502e0ff9",
+        "31e1c968-5706-40c2-8c13-7da018a024e1",
+        "ead96105-47d0-455e-aae0-0a09ab8f1b50",
+        "6956af68-be0b-42b2-8065-50a890078d6e"
       ]
     },
     {
-      "query": "with minimum weight.",
+      "query": "achieve state-of-the-art performance on spatial benchmarks.",
       "ground_truth_ids": [
-        "arxiv-0078",
-        "arxiv-0096",
-        "arxiv-0050",
-        "arxiv-0067",
-        "arxiv-0113"
+        "ecfd3d86-1303-4139-a5c6-8f83c406ee7c",
+        "d6dd9710-4138-49e4-a462-4f09415043da",
+        "d2165c69-5d77-4ed5-a876-121b65239604",
+        "5c17595e-662a-4123-b8be-f5a94a598df2",
+        "9bfddcd0-73b4-4f31-951f-87f3e5dfb7b7"
       ]
     },
     {
-      "query": "metric on the",
+      "query": "concurrency test 5ff3a5b7f86d4ce08a62761f7e655433",
       "ground_truth_ids": [
-        "arxiv-0061",
-        "arxiv-0037",
-        "arxiv-0060",
-        "arxiv-0018",
-        "arxiv-0006"
+        "cb425b6f-683f-43c4-8499-79a8c7448251",
+        "bcd6516d-b032-44c2-be49-d4f4502e0ff9",
+        "31e1c968-5706-40c2-8c13-7da018a024e1",
+        "ead96105-47d0-455e-aae0-0a09ab8f1b50",
+        "6956af68-be0b-42b2-8065-50a890078d6e"
       ]
     },
     {
-      "query": "prediction formulas and",
+      "query": "spatial privacy and clustering communication",
       "ground_truth_ids": [
-        "arxiv-0021",
-        "arxiv-0084",
-        "arxiv-0014",
-        "arxiv-0136",
-        "arxiv-0114"
+        "63040918-0470-4f34-ad5a-77e1c8301c2f",
+        "5d38a993-31b9-41e3-8ee8-3d2f1125a822",
+        "ff5d9c22-6492-4d7c-a31b-20bcc2863802",
+        "f47b0955-2d2e-4674-ad07-cf01e1d50e14",
+        "d1aee071-51ba-4413-b809-f461b2341c69"
       ]
     }
   ]

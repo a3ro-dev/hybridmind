@@ -35,7 +35,7 @@ import httpx
 import psutil
 
 # ── Constants ──────────────────────────────────────────────────────────────────
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://127.0.0.1:8000"
 WARMUP_REQUESTS = 50
 MEASURE_REQUESTS = 200
 TIMEOUT = 15.0  # per-request timeout; CPU embedding ~2-3s, give headroom
@@ -104,13 +104,13 @@ def _stats(latencies: list[float]) -> dict[str, float]:
     if not latencies:
         return {"mean": 0, "median": 0, "p95": 0, "p99": 0, "min": 0, "max": 0, "count": 0}
     return {
-        "mean": round(statistics.mean(latencies), 3),
-        "median": round(statistics.median(latencies), 3),
-        "p95": round(_percentile(latencies, 95), 3),
-        "p99": round(_percentile(latencies, 99), 3),
-        "min": round(min(latencies), 3),
-        "max": round(max(latencies), 3),
-        "count": len(latencies),
+        "mean": float(round(statistics.mean(latencies), 3)),
+        "median": float(round(statistics.median(latencies), 3)),
+        "p95": float(round(_percentile(latencies, 95), 3)),
+        "p99": float(round(_percentile(latencies, 99), 3)),
+        "min": float(round(min(latencies), 3)),
+        "max": float(round(max(latencies), 3)),
+        "count": float(len(latencies)),
     }
 
 
@@ -564,16 +564,16 @@ def benchmark_1b_scale(client: httpx.Client) -> dict[str, Any]:
         results[str(target)] = {
             "actual_node_count": current_count,
             "vector_search": {
-                "p50": round(_percentile(vec_lats, 50), 3),
-                "p95": round(_percentile(vec_lats, 95), 3),
+                "p50": float(round(_percentile(vec_lats, 50), 3)),
+                "p95": float(round(_percentile(vec_lats, 95), 3)),
             },
             "hybrid_search": {
-                "p50": round(_percentile(hyb_lats, 50), 3),
-                "p95": round(_percentile(hyb_lats, 95), 3),
+                "p50": float(round(_percentile(hyb_lats, 50), 3)),
+                "p95": float(round(_percentile(hyb_lats, 95), 3)),
             },
             "graph_traversal": {
-                "p50": round(_percentile(graph_lats, 50), 3),
-                "p95": round(_percentile(graph_lats, 95), 3),
+                "p50": float(round(_percentile(graph_lats, 50), 3)),
+                "p95": float(round(_percentile(graph_lats, 95), 3)),
             },
             "faiss_memory_bytes": faiss_mem,
             "graph_memory_bytes": graph_mem,
@@ -690,9 +690,9 @@ def benchmark_1c_conditioning(client: httpx.Client) -> dict[str, Any]:
     results["isolated_nodes"] = {
         "count": len(isolated_diffs),
         "mean_cosine_diff": safe_mean(isolated_diffs),
-        "min_cosine_diff": round(min(isolated_diffs), 6) if isolated_diffs else 0.0,
-        "max_cosine_diff": round(max(isolated_diffs), 6) if isolated_diffs else 0.0,
-        "nodes_with_diff_gt_0_01": sum(1 for d in isolated_diffs if d > 0.01),
+        "min_cosine_diff": round(float(min(isolated_diffs)), 6) if isolated_diffs else 0.0,
+        "max_cosine_diff": round(float(max(isolated_diffs)), 6) if isolated_diffs else 0.0,
+        "nodes_with_diff_gt_0_01": int(sum(1 for d in isolated_diffs if d > 0.01)),
     }
 
     results["edged_vs_unedged"] = {
@@ -701,7 +701,7 @@ def benchmark_1c_conditioning(client: httpx.Client) -> dict[str, Any]:
         "edged_mean_diff": safe_mean(edged_diffs),
         "unedged_mean_diff": safe_mean(unedged_diffs),
         "edged_higher_than_unedged": safe_mean(edged_diffs) > safe_mean(unedged_diffs),
-        "difference_in_conditioning": round(safe_mean(edged_diffs) - safe_mean(unedged_diffs), 6),
+        "difference_in_conditioning": round(float(safe_mean(edged_diffs) - safe_mean(unedged_diffs)), 6),
     }
 
     print(f"  Isolated: mean_diff={results['isolated_nodes']['mean_cosine_diff']:.6f}, "
