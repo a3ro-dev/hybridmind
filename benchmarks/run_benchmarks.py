@@ -38,7 +38,7 @@ import psutil
 BASE_URL = "http://localhost:8000"
 WARMUP_REQUESTS = 50
 MEASURE_REQUESTS = 200
-TIMEOUT = 120.0
+TIMEOUT = 15.0  # per-request timeout; CPU embedding ~2-3s, give headroom
 
 # Output paths are relative to repo root
 REPO_ROOT = Path(__file__).parent.parent
@@ -154,11 +154,26 @@ def _wait_for_server(max_wait: int = 30) -> None:
             r = httpx.get(f"{BASE_URL}/health", timeout=5)
             if r.status_code == 200:
                 print("Server ready.")
-                return
+                break
         except Exception:
             pass
         time.sleep(1)
-    raise RuntimeError(f"Server not ready after {max_wait}s. Is uvicorn running on port 8000?")
+    else:
+        raise RuntimeError(f"Server not ready after {max_wait}s. Is uvicorn running on port 8000?")
+
+    # Pre-warm: fire one embedding request and wait for it to complete.
+    # sentence-transformers lazy-compiles on first call; without this, the
+    # first N benchmark calls queue behind the compile and all look slow.
+    print("Pre-warming embedding model (first call may take 5-30s on CPU)...")
+    try:
+        r = httpx.post(
+            f"{BASE_URL}/search/vector",
+            json={"query_text": f"prewarm {uuid.uuid4().hex}", "top_k": 1},
+            timeout=60,
+        )
+        print(f"  Pre-warm done (HTTP {r.status_code}).")
+    except Exception as e:
+        print(f"  Pre-warm failed (continuing anyway): {e}")
 
 
 def _get_all_node_ids(client: httpx.Client) -> list[str]:
@@ -337,7 +352,6 @@ def benchmark_1a_latency(client: httpx.Client) -> dict[str, Any]:
     print("\n[1A] Latency Benchmarks")
     results = {}
 
-    # Ensure we have a working dataset (at least 150 nodes)
     node_count = _get_node_count(client)
     if node_count < 150:
         print(f"  Insufficient nodes ({node_count}). Loading demo data first...")
@@ -347,111 +361,126 @@ def benchmark_1a_latency(client: httpx.Client) -> dict[str, Any]:
     all_ids = _get_all_node_ids(client)
     anchor_id = _get_most_connected_node(client) or (all_ids[0] if all_ids else None)
 
-    import random
-    random.seed(42)
 
-    def random_node_id() -> str:
-        return random.choice(all_ids) if all_ids else ""
+    import random as _rnd
+    _rnd.seed(None)
 
-    # NOTE: All search queries use a per-call unique suffix to defeat the query
-    # cache. Without this, calls 2..N hit cache (~0.1ms) and results are useless.
-    _call_n = [0]
+    # Detect embedding backend
+    try:
+        embedder = client.get("/health").json().get("components", {}).get("embedding_model", "unknown")
+    except Exception:
+        embedder = "unknown"
+    print(f"  Embedding backend: {embedder}")
+    if "mock" in str(embedder).lower() or embedder == "unknown":
+        print("  WARNING: mock embeddings — node_insert shows DB+network only, not real ~50-150ms embed time")
 
-    def _q(base: str) -> str:
-        """Return a unique query string to prevent cache hits."""
-        _call_n[0] += 1
-        return f"{base} {_call_n[0]}"
+    # Pre-build 30 distinct IDs for graph traversal rotation
+    graph_ids = list({_rnd.choice(all_ids) for _ in range(min(30, len(all_ids)))}) if all_ids else all_ids[:30]
+    _gi = [0]
+    def _gid() -> str:
+        v = graph_ids[_gi[0] % len(graph_ids)]; _gi[0] += 1; return v
 
-    # 1. Vector search — cache-busted
+    # Pre-build 50 distinct IDs for node_get rotation
+    get_ids = list({_rnd.choice(all_ids) for _ in range(min(50, len(all_ids)))}) if all_ids else all_ids[:50]
+    _ngi = [0]
+    def _ngid() -> str:
+        v = get_ids[_ngi[0] % len(get_ids)]; _ngi[0] += 1; return v
+
+    N, W = 20, 3  # 20 measured + 3 warmup per search op — fast proof run
+
+    # 1. Vector search — uuid4 per call
     print("  [1A.1] Vector search...")
-    def vec_search():
-        client.post("/search/vector", json={"query_text": _q("neural network optimization"), "top_k": 10})
-    results["vector_search"] = _measure_op(vec_search)
+    results["vector_search"] = _measure_op(
+        lambda: client.post("/search/vector", json={"query_text": f"neural network {uuid.uuid4().hex}", "top_k": 10}),
+        n=N, warmup=W)
 
-    # 2. Hybrid search (default weights) — cache-busted
-    print("  [1A.2] Hybrid search (default weights)...")
-    def hybrid_search():
-        client.post("/search/hybrid", json={"query_text": _q("machine learning gradient"), "top_k": 10})
-    results["hybrid_search_default"] = _measure_op(hybrid_search)
+    # 2. Hybrid search — uuid4 per call (completely independent from vector above)
+    print("  [1A.2] Hybrid search...")
+    results["hybrid_search_default"] = _measure_op(
+        lambda: client.post("/search/hybrid", json={"query_text": f"gradient descent {uuid.uuid4().hex}", "top_k": 10}),
+        n=N, warmup=W)
 
-    # 3. Hybrid search with anchor — cache-busted
-    print("  [1A.3] Hybrid search with anchor_nodes...")
-    def hybrid_anchor():
-        payload = {
-            "query_text": _q("deep learning representation"),
-            "top_k": 10,
-            "anchor_nodes": [anchor_id] if anchor_id else [],
-        }
-        client.post("/search/hybrid", json=payload)
-    results["hybrid_search_anchored"] = _measure_op(hybrid_anchor)
+    # 3. Hybrid with anchor — uuid4 per call
+    print("  [1A.3] Hybrid search (anchored)...")
+    results["hybrid_search_anchored"] = _measure_op(
+        lambda: client.post("/search/hybrid", json={
+            "query_text": f"representation learning {uuid.uuid4().hex}",
+            "top_k": 10, "anchor_nodes": [anchor_id] if anchor_id else []}),
+        n=N, warmup=W)
 
-    # 4. Graph traversal — not cached, but use random start node to vary results
-    print("  [1A.4] Graph traversal (depth=2)...")
-    def graph_traversal():
-        nid = random_node_id() or (all_ids[0] if all_ids else "")
-        client.get("/search/graph", params={"start_id": nid, "depth": 2, "direction": "both"})
-    results["graph_traversal"] = _measure_op(graph_traversal)
+    # 4. Graph traversal — rotate through 30 distinct start nodes
+    print(f"  [1A.4] Graph traversal ({len(graph_ids)} start nodes)...")
+    results["graph_traversal"] = _measure_op(
+        lambda: client.get("/search/graph", params={"start_id": _gid(), "depth": 2, "direction": "both"}),
+        n=N, warmup=W)
 
-    # 5. Node insert — each call MUST have unique text (embedding is per-unique-text)
+    # 5. Node insert — unique uuid per call; verify count delta
     print("  [1A.5] Node insert...")
-    def node_insert():
-        client.post("/nodes", json={
-            "text": f"benchmark insert {uuid.uuid4().hex} measurement node",
-            "metadata": {"source": "benchmark_1a"},
-        })
-    results["node_insert"] = _measure_op(node_insert, n=50, warmup=3)
+    count_before = _get_node_count(client)
+    N_INS = 50
+    results["node_insert"] = _measure_op(
+        lambda: client.post("/nodes", json={
+            "text": f"benchmark node {uuid.uuid4()} {_rnd.choice(['attention','graph','embedding','retrieval'])}",
+            "metadata": {"source": "benchmark_1a"}}),
+        n=N_INS, warmup=3)
+    count_after = _get_node_count(client)
+    results["node_insert"]["verified_inserts"] = count_after - count_before
+    print(f"    count: {count_before} → {count_after} (+{count_after - count_before}, expected ~{N_INS})")
 
-    # 6. Node get by ID — no cache concern, varies by random ID
-    print("  [1A.6] Node get by ID...")
-    def node_get():
-        nid = random_node_id()
-        if nid:
-            client.get(f"/nodes/{nid}")
-    results["node_get"] = _measure_op(node_get)
+    # 6. Node get — rotate through 50 distinct IDs
+    print(f"  [1A.6] Node get ({len(get_ids)} IDs)...")
+    results["node_get"] = _measure_op(lambda: client.get(f"/nodes/{_ngid()}"), n=200, warmup=10)
 
-    # 7. Snapshot — stateful I/O; measure individual wall-clock, no warmup loop
-    # (repeated calls to same endpoint are fine — snapshot always hits disk)
+    # 7. Snapshot — log HTTP status on each call
     print("  [1A.7] Snapshot...")
-    snap_latencies = []
-    for _ in range(10):
+    snap_lats, snap_codes = [], []
+    for i in range(10):
         t0 = time.perf_counter()
         try:
-            client.post("/snapshot")
-            snap_latencies.append((time.perf_counter() - t0) * 1000)
-        except Exception:
-            pass
-    results["snapshot"] = _stats(snap_latencies)
-    results["snapshot"]["errors"] = 10 - len(snap_latencies)
+            r = client.post("/snapshot")
+            elapsed = (time.perf_counter() - t0) * 1000
+            snap_codes.append(r.status_code)
+            if r.status_code in (200, 201):
+                snap_lats.append(elapsed)
+            else:
+                print(f"    snap[{i}] HTTP {r.status_code}: {r.text[:100]}")
+        except Exception as e:
+            print(f"    snap[{i}] error: {e}")
+    print(f"    statuses: {snap_codes}")
+    results["snapshot"] = _stats(snap_lats)
+    results["snapshot"]["errors"] = 10 - len(snap_lats)
 
-    # 8. Compact — set up fresh soft-deletes before each measured call
+    # 8. Compact — fresh 5 deletes per round, log HTTP status
     print("  [1A.8] Compact...")
-    compact_latencies = []
-    for _ in range(8):
-        # Insert 5 nodes then immediately soft-delete them
-        to_delete = []
+    cmp_lats, cmp_codes = [], []
+    for i in range(8):
         for _ in range(5):
             try:
-                r = client.post("/nodes", json={"text": f"compact_fodder_{uuid.uuid4().hex}"})
+                r = client.post("/nodes", json={"text": f"fodder_{uuid.uuid4().hex}"})
                 if r.status_code in (200, 201):
                     nid = r.json().get("id")
                     if nid:
                         client.delete(f"/nodes/{nid}")
-                        to_delete.append(nid)
             except Exception:
                 pass
-        # Now measure the compaction
         t0 = time.perf_counter()
         try:
-            client.post("/admin/compact")
-            compact_latencies.append((time.perf_counter() - t0) * 1000)
-        except Exception:
-            pass
-    results["compact"] = _stats(compact_latencies)
-    results["compact"]["errors"] = 8 - len(compact_latencies)
+            r = client.post("/admin/compact")
+            elapsed = (time.perf_counter() - t0) * 1000
+            cmp_codes.append(r.status_code)
+            if r.status_code in (200, 201):
+                cmp_lats.append(elapsed)
+            else:
+                print(f"    compact[{i}] HTTP {r.status_code}: {r.text[:100]}")
+        except Exception as e:
+            print(f"    compact[{i}] error: {e}")
+    print(f"    statuses: {cmp_codes}")
+    results["compact"] = _stats(cmp_lats)
+    results["compact"]["errors"] = 8 - len(cmp_lats)
 
-    print(f"  [1A] Done. Summary:")
+    print("  [1A] Done. Summary:")
     for name, stats in results.items():
-        print(f"    {name}: mean={stats['mean']}ms p95={stats['p95']}ms")
+        print(f"    {name}: mean={stats['mean']}ms p95={stats['p95']}ms errors={stats.get('errors', 0)}")
 
     return results
 

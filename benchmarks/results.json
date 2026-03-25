@@ -1,0 +1,362 @@
+{
+  "timestamp": "2026-03-25T06:19:59.063564+00:00",
+  "system": {
+    "os": "Windows 11",
+    "python": "3.13.5",
+    "cpu": "Intel64 Family 6 Model 186 Stepping 2, GenuineIntel",
+    "cpu_cores": 12,
+    "ram_gb": 15.71
+  },
+  "latency": {
+    "vector_search": {
+      "mean": 2.052,
+      "median": 1.779,
+      "p95": 4.216,
+      "p99": 5.699,
+      "min": 0.736,
+      "max": 6.789,
+      "count": 200,
+      "errors": 0
+    },
+    "hybrid_search_default": {
+      "mean": 1.473,
+      "median": 1.437,
+      "p95": 2.241,
+      "p99": 2.784,
+      "min": 0.656,
+      "max": 3.785,
+      "count": 200,
+      "errors": 0
+    },
+    "hybrid_search_anchored": {
+      "mean": 1.206,
+      "median": 0.937,
+      "p95": 1.855,
+      "p99": 2.619,
+      "min": 0.582,
+      "max": 13.228,
+      "count": 200,
+      "errors": 0
+    },
+    "graph_traversal": {
+      "mean": 1.107,
+      "median": 0.915,
+      "p95": 1.895,
+      "p99": 2.419,
+      "min": 0.601,
+      "max": 2.637,
+      "count": 200,
+      "errors": 0
+    },
+    "node_insert": {
+      "mean": 1.266,
+      "median": 1.215,
+      "p95": 2.127,
+      "p99": 3.793,
+      "min": 0.608,
+      "max": 5.712,
+      "count": 200,
+      "errors": 0
+    },
+    "node_get": {
+      "mean": 1.284,
+      "median": 1.434,
+      "p95": 1.741,
+      "p99": 2.015,
+      "min": 0.579,
+      "max": 2.791,
+      "count": 200,
+      "errors": 0
+    },
+    "snapshot": {
+      "mean": 1.221,
+      "median": 1.427,
+      "p95": 1.674,
+      "p99": 1.721,
+      "min": 0.632,
+      "max": 1.733,
+      "count": 20,
+      "errors": 0
+    },
+    "compact": {
+      "mean": 10.589,
+      "median": 1.645,
+      "p95": 51.279,
+      "p99": 83.479,
+      "min": 0.934,
+      "max": 91.529,
+      "count": 10,
+      "errors": 0
+    }
+  },
+  "scale": {
+    "50": {
+      "actual_node_count": 0,
+      "vector_search": {
+        "p50": 1.575,
+        "p95": 2.258
+      },
+      "hybrid_search": {
+        "p50": 1.559,
+        "p95": 1.947
+      },
+      "graph_traversal": {
+        "p50": 0.0,
+        "p95": 0.0
+      },
+      "faiss_memory_bytes": 677376,
+      "graph_memory_bytes": 61450
+    },
+    "150": {
+      "actual_node_count": 0,
+      "vector_search": {
+        "p50": 0.907,
+        "p95": 1.605
+      },
+      "hybrid_search": {
+        "p50": 0.934,
+        "p95": 1.766
+      },
+      "graph_traversal": {
+        "p50": 0.0,
+        "p95": 0.0
+      },
+      "faiss_memory_bytes": 907776,
+      "graph_memory_bytes": 91450
+    },
+    "300": {
+      "actual_node_count": 0,
+      "vector_search": {
+        "p50": 1.205,
+        "p95": 1.813
+      },
+      "hybrid_search": {
+        "p50": 1.097,
+        "p95": 1.834
+      },
+      "graph_traversal": {
+        "p50": 0.0,
+        "p95": 0.0
+      },
+      "faiss_memory_bytes": 1368576,
+      "graph_memory_bytes": 151450
+    },
+    "600": {
+      "actual_node_count": 0,
+      "vector_search": {
+        "p50": 1.215,
+        "p95": 1.975
+      },
+      "hybrid_search": {
+        "p50": 1.516,
+        "p95": 1.925
+      },
+      "graph_traversal": {
+        "p50": 0.0,
+        "p95": 0.0
+      },
+      "faiss_memory_bytes": 2641920,
+      "graph_memory_bytes": 317250
+    },
+    "1000": {
+      "actual_node_count": 0,
+      "vector_search": {
+        "p50": 1.317,
+        "p95": 1.797
+      },
+      "hybrid_search": {
+        "p50": 1.354,
+        "p95": 1.796
+      },
+      "graph_traversal": {
+        "p50": 0.0,
+        "p95": 0.0
+      },
+      "faiss_memory_bytes": 4256256,
+      "graph_memory_bytes": 527450
+    }
+  },
+  "conditioning": {
+    "isolated_nodes": {
+      "count": 0,
+      "mean_cosine_diff": 0.0,
+      "min_cosine_diff": 0.0,
+      "max_cosine_diff": 0.0,
+      "nodes_with_diff_gt_0_01": 0
+    },
+    "edged_vs_unedged": {
+      "edged_node_count": 0,
+      "unedged_node_count": 0,
+      "edged_mean_diff": 0.0,
+      "unedged_mean_diff": 0.0,
+      "edged_higher_than_unedged": false,
+      "difference_in_conditioning": 0.0
+    }
+  },
+  "eval": {
+    "runs": [
+      {
+        "queries_evaluated": 2,
+        "vector": {
+          "precision_at_5": 0.0,
+          "precision_at_10": 0.0,
+          "mrr": 0.0,
+          "ndcg": 0.0
+        },
+        "hybrid": {
+          "precision_at_5": 0.0,
+          "precision_at_10": 0.0,
+          "mrr": 0.0,
+          "ndcg": 0.0
+        }
+      },
+      {
+        "queries_evaluated": 0,
+        "vector": {
+          "precision_at_5": 0.0,
+          "precision_at_10": 0.0,
+          "mrr": 0.0,
+          "ndcg": 0.0
+        },
+        "hybrid": {
+          "precision_at_5": 0.0,
+          "precision_at_10": 0.0,
+          "mrr": 0.0,
+          "ndcg": 0.0
+        }
+      },
+      {
+        "queries_evaluated": 0,
+        "vector": {
+          "precision_at_5": 0.0,
+          "precision_at_10": 0.0,
+          "mrr": 0.0,
+          "ndcg": 0.0
+        },
+        "hybrid": {
+          "precision_at_5": 0.0,
+          "precision_at_10": 0.0,
+          "mrr": 0.0,
+          "ndcg": 0.0
+        }
+      }
+    ],
+    "variance": {
+      "hybrid_precision_at_5_variance": 0.0,
+      "hybrid_precision_at_10_variance": 0.0,
+      "hybrid_mrr_variance": 0.0,
+      "hybrid_ndcg_variance": 0.0
+    },
+    "summary": {
+      "precision_at_5": {
+        "vector": 0.0,
+        "hybrid": 0.0,
+        "delta": 0.0,
+        "winner": "hybrid"
+      },
+      "precision_at_10": {
+        "vector": 0.0,
+        "hybrid": 0.0,
+        "delta": 0.0,
+        "winner": "hybrid"
+      },
+      "mrr": {
+        "vector": 0.0,
+        "hybrid": 0.0,
+        "delta": 0.0,
+        "winner": "hybrid"
+      },
+      "ndcg": {
+        "vector": 0.0,
+        "hybrid": 0.0,
+        "delta": 0.0,
+        "winner": "hybrid"
+      }
+    },
+    "caveat": "BM25 ground truth favors keyword overlap \u2014 semantic search may find relevant results BM25 doesn't label as relevant. Treat as directional signal."
+  },
+  "concurrency": {
+    "concurrent_reads": [
+      {
+        "threads": 10,
+        "ops_per_thread": 10,
+        "total_ops": 100,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0,
+        "mean_latency_ms": 2364.919,
+        "max_latency_ms": 2494.977,
+        "total_elapsed_ms": 24008.371
+      },
+      {
+        "threads": 25,
+        "ops_per_thread": 10,
+        "total_ops": 250,
+        "success_count": 250,
+        "error_count": 0,
+        "success_rate": 1.0,
+        "mean_latency_ms": 2548.952,
+        "max_latency_ms": 3122.504,
+        "total_elapsed_ms": 26809.032
+      },
+      {
+        "threads": 50,
+        "ops_per_thread": 10,
+        "total_ops": 500,
+        "success_count": 500,
+        "error_count": 0,
+        "success_rate": 1.0,
+        "mean_latency_ms": 3136.862,
+        "max_latency_ms": 4113.198,
+        "total_elapsed_ms": 35377.449
+      }
+    ],
+    "concurrent_writes": [
+      {
+        "threads": 5,
+        "ops_per_thread": 5,
+        "total_ops": 25,
+        "success_count": 25,
+        "error_count": 0,
+        "success_rate": 1.0,
+        "mean_latency_ms": 2381.603,
+        "max_latency_ms": 2433.935,
+        "total_elapsed_ms": 11961.19,
+        "final_node_count_after": 2798
+      },
+      {
+        "threads": 10,
+        "ops_per_thread": 5,
+        "total_ops": 50,
+        "success_count": 50,
+        "error_count": 0,
+        "success_rate": 1.0,
+        "mean_latency_ms": 2462.317,
+        "max_latency_ms": 2600.12,
+        "total_elapsed_ms": 12487.14,
+        "final_node_count_after": 2848
+      },
+      {
+        "threads": 20,
+        "ops_per_thread": 5,
+        "total_ops": 100,
+        "success_count": 100,
+        "error_count": 0,
+        "success_rate": 1.0,
+        "mean_latency_ms": 2654.322,
+        "max_latency_ms": 3123.238,
+        "total_elapsed_ms": 13784.364,
+        "final_node_count_after": 2948
+      }
+    ],
+    "mixed_rw": {
+      "total_ops": 175,
+      "success_count": 175,
+      "error_count": 0,
+      "http_500_count": 0,
+      "success_rate": 1.0,
+      "mean_latency_ms": 2057.793,
+      "max_latency_ms": 2137.384
+    }
+  }
+}
