@@ -416,12 +416,22 @@ class VectorIndex:
         """
         Rebuild entire index from list of (node_id, embedding) tuples.
         Used when loading from SQLite.
+        
+        Always performs a FULL REPLACEMENT — never appends to existing index.
         """
+        # BUG-2 fix: explicitly reset all state before rebuilding
+        if self._use_faiss:
+            self.index = faiss.IndexFlatIP(self.dimension)
+        else:
+            self._vectors = []
+        self.id_map = {}
+        self.reverse_map = {}
+        self.deleted_ids.clear()
+
         vectors = []
         ids = []
-        
+
         for node_id, embedding in embeddings:
-            # Normalize
             embedding = np.asarray(embedding, dtype=np.float32)
             norm = np.linalg.norm(embedding)
             if norm > 0:
@@ -430,10 +440,18 @@ class VectorIndex:
                 normalized = embedding
             vectors.append(normalized)
             ids.append(node_id)
-        
-        self._rebuild(vectors, ids)
-        self.deleted_ids.clear()
-        
+
+        if vectors:
+            if self._use_faiss:
+                vectors_array = np.vstack(vectors).astype(np.float32)
+                self.index.add(vectors_array)
+            else:
+                self._vectors = vectors
+
+            for idx, nid in enumerate(ids):
+                self.id_map[idx] = nid
+                self.reverse_map[nid] = idx
+
         logger.info(f"Vector index rebuilt with {len(embeddings)} embeddings")
     
     def clear(self):

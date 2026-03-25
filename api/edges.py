@@ -33,6 +33,13 @@ async def create_edge(
     """
     Create a relationship between two nodes.
     """
+    # BUG-6: Prevent self-loop edges
+    if edge.source_id == edge.target_id:
+        raise HTTPException(
+            status_code=422,
+            detail="Self-loop edges are not allowed: source_id and target_id must differ."
+        )
+
     # Validate source node exists
     source_node = sqlite_store.get_node(edge.source_id)
     if source_node is None:

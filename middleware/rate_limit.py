@@ -152,7 +152,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     """
     
     # Paths exempt from rate limiting
-    EXEMPT_PATHS = {"/health", "/live", "/ready", "/docs", "/redoc", "/openapi.json"}
+    EXEMPT_PATHS = {"/health", "/live", "/ready", "/docs", "/redoc", "/openapi.json", "/admin/compact", "/snapshot"}
     
     def __init__(
         self,

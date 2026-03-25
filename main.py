@@ -138,7 +138,35 @@ async def lifespan(app: FastAPI):
         logger.info(f"  Embedding model loaded in {warmup_time:.0f}ms")
     else:
         logger.warning("  Embedding model not available, using mock embeddings")
-    
+
+    # Step 2.5: BUG-1 — Verify FAISS index is in sync with SQLite
+    sqlite_count = db_manager.sqlite_store.count_nodes()
+    faiss_count = db_manager.vector_index.size
+    if abs(sqlite_count - faiss_count) > 0:
+        logger.warning(
+            f"Index mismatch detected: SQLite={sqlite_count}, FAISS={faiss_count}. "
+            "Rebuilding indexes from SQLite..."
+        )
+        import numpy as np
+        all_embeddings = db_manager.sqlite_store.get_all_node_embeddings()
+        db_manager.vector_index.clear()
+        db_manager.graph_index.clear()
+        for node_id, embedding in all_embeddings:
+            db_manager.vector_index.add(node_id, embedding)
+            db_manager.graph_index.add_node(node_id)
+        all_edges = db_manager.sqlite_store.get_all_edges()
+        for edge in all_edges:
+            db_manager.graph_index.add_edge(
+                edge["source_id"], edge["target_id"],
+                edge["type"], edge.get("weight", 1.0)
+            )
+        logger.info(
+            f"Index rebuild complete: {db_manager.vector_index.size} vectors, "
+            f"{db_manager.graph_index.node_count} graph nodes"
+        )
+    else:
+        logger.info(f"Index sync verified: SQLite={sqlite_count}, FAISS={faiss_count}")
+
     # Step 3: Initialize query cache
     logger.info("  Initializing query cache...")
     cache = get_query_cache(

@@ -7,6 +7,11 @@ import sys
 import os
 import random
 
+# BUG-8: Fix Windows UTF-8 encoding crash (emojis in print output)
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

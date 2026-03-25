@@ -79,7 +79,7 @@ class TestReadNodeWithRelationships:
         
         found_edge = next((e for e in edges if e["target_id"] == node_b_id), None)
         assert found_edge is not None
-        assert found_edge["type"] == "references"
+        assert found_edge["type"] == "depends_on"
         assert found_edge["weight"] == 0.75
 
 

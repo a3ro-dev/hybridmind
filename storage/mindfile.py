@@ -134,6 +134,22 @@ class MindFile:
                 sha_hash.update(chunk)
         return sha_hash.hexdigest()
 
+    def _checkpoint_wal(self, db_path: Path) -> None:
+        """
+        BUG-3 fix: Flush SQLite WAL to the main database file before checksumming.
+
+        In WAL mode, SQLite may leave recent changes in the WAL file rather than
+        immediately writing them to store.db. Checksumming store.db before a
+        checkpoint yields a stale / incorrect hash. PRAGMA wal_checkpoint(FULL)
+        ensures all committed WAL frames are written back to the database file.
+        """
+        try:
+            import sqlite3 as _sqlite3
+            with _sqlite3.connect(str(db_path)) as _db:
+                _db.execute("PRAGMA wal_checkpoint(FULL)")
+        except Exception as e:
+            logger.warning(f"WAL checkpoint failed (non-fatal): {e}")
+
     def create_snapshot(
         self,
         sqlite_conn: sqlite3.Connection,
@@ -165,6 +181,9 @@ class MindFile:
             graph_index.save(str(temp_dir / GRAPH_FILE))
             
             # 3. Compute checksums
+            # BUG-3 fix: checkpoint WAL so store.db contains all committed data
+            self._checkpoint_wal(temp_sqlite)
+
             # FAISS adds .faiss to the vector_index path if it's FAISS
             temp_vector_faiss = temp_dir / (VECTOR_INDEX_FILE + ".faiss")
             if not temp_vector_faiss.exists():

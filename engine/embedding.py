@@ -157,11 +157,26 @@ class EmbeddingEngine:
             
         neighbor_mean = np.mean(neighbor_embeddings, axis=0)
         final = alpha * own_embedding + (1.0 - alpha) * neighbor_mean
-        
+
         norm = np.linalg.norm(final)
         if norm > 0:
-            return (final / norm).astype(np.float32)
-        return final.astype(np.float32)
+            final_normed = (final / norm).astype(np.float32)
+        else:
+            final_normed = final.astype(np.float32)
+
+        # Debug: report conditioning effect
+        own_norm_val = np.linalg.norm(own_embedding)
+        if own_norm_val > 0:
+            own_normed = own_embedding / own_norm_val
+            cosine_diff = 1.0 - float(np.dot(own_normed, final_normed))
+        else:
+            cosine_diff = 0.0
+        logger.debug(
+            f"Graph conditioning: {len(neighbor_embeddings)} neighbors, "
+            f"alpha={alpha}, cosine_diff={cosine_diff:.4f}"
+        )
+
+        return final_normed
     
     def embed_batch(
         self,
