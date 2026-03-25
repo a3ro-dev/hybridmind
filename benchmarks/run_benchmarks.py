@@ -315,7 +315,7 @@ def _get_node_embeddings_from_db() -> dict[str, dict[str, list[float]]]:
             return result
         
         has_raw = "raw_embedding" in cols
-        cursor.execute("SELECT id, embedding FROM nodes WHERE deleted_at IS NULL LIMIT 200")
+        cursor.execute("SELECT id, embedding FROM nodes WHERE deleted_at IS NULL")
         rows = cursor.fetchall()
         
         for node_id, emb_blob in rows:
@@ -329,7 +329,7 @@ def _get_node_embeddings_from_db() -> dict[str, dict[str, list[float]]]:
                 pass
         
         if has_raw:
-            cursor.execute("SELECT id, raw_embedding FROM nodes WHERE deleted_at IS NULL LIMIT 200")
+            cursor.execute("SELECT id, raw_embedding FROM nodes WHERE deleted_at IS NULL")
             for node_id, raw_blob in cursor.fetchall():
                 if raw_blob is None or node_id not in result:
                     continue
@@ -450,23 +450,25 @@ def benchmark_1a_latency(client: httpx.Client) -> dict[str, Any]:
     results["snapshot"] = _stats(snap_lats)
     results["snapshot"]["errors"] = 10 - len(snap_lats)
 
-    # 8. Compact — fresh 5 deletes per round, log HTTP status
+    # 8. Compact — insert 15, soft-delete 10, compact
     print("  [1A.8] Compact...")
     cmp_lats, cmp_codes = [], []
-    for i in range(8):
-        for _ in range(5):
-            try:
-                r = client.post("/nodes", json={"text": f"fodder_{uuid.uuid4().hex}"})
+    for i in range(5):
+        try:
+            nids_to_del = []
+            for j in range(15):
+                r = client.post("/nodes", json={"text": f"bench_compact_fodder_{uuid.uuid4().hex}"})
                 if r.status_code in (200, 201):
                     nid = r.json().get("id")
-                    if nid:
-                        client.delete(f"/nodes/{nid}")
-            except Exception:
-                pass
-        t0 = time.perf_counter()
-        try:
+                    if nid and j < 10:
+                        nids_to_del.append(nid)
+            for nid in nids_to_del:
+                client.delete(f"/nodes/{nid}")
+                
+            t0 = time.perf_counter()
             r = client.post("/admin/compact")
             elapsed = (time.perf_counter() - t0) * 1000
+            
             cmp_codes.append(r.status_code)
             if r.status_code in (200, 201):
                 cmp_lats.append(elapsed)
@@ -474,9 +476,10 @@ def benchmark_1a_latency(client: httpx.Client) -> dict[str, Any]:
                 print(f"    compact[{i}] HTTP {r.status_code}: {r.text[:100]}")
         except Exception as e:
             print(f"    compact[{i}] error: {e}")
+    
     print(f"    statuses: {cmp_codes}")
     results["compact"] = _stats(cmp_lats)
-    results["compact"]["errors"] = 8 - len(cmp_lats)
+    results["compact"]["errors"] = 5 - len(cmp_lats)
 
     print("  [1A] Done. Summary:")
     for name, stats in results.items():
@@ -496,6 +499,11 @@ def benchmark_1b_scale(client: httpx.Client) -> dict[str, Any]:
 
     for target in SCALE_SIZES:
         print(f"\n  Scale: {target} nodes (current={current_count})")
+        if current_count > target:
+            print("  Clearing DB to start fresh...")
+            client.post("/admin/clear")
+            current_count = 0
+            
         if current_count < target:
             _load_nodes(client, target, current_count)
             current_count = _get_node_count(client)

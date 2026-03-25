@@ -132,7 +132,8 @@ class EmbeddingEngine:
             embedding = self.model.encode(
                 text,
                 normalize_embeddings=normalize,
-                convert_to_numpy=True
+                convert_to_numpy=True,
+                show_progress_bar=False
             )
             return embedding.astype(np.float32)
         else:

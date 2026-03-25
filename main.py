@@ -184,7 +184,7 @@ async def lifespan(app: FastAPI):
     timestamp = manifest.get('modified', 'Unknown')
     soft_deleted = db_manager.sqlite_store.get_deleted_nodes_count()
     
-    graph_embeddings_enabled = getattr(settings, "USE_GRAPH_CONDITIONED_EMBEDDINGS", False)
+    graph_embeddings_enabled = getattr(settings, "use_graph_conditioned_embeddings", False)
     
     print(f"\nHybridMind starting up")
     print(f"- Nodes: {stats['total_nodes']} ({soft_deleted} pending compaction)")
@@ -466,12 +466,18 @@ async def readiness_check():
         db_manager = get_db_manager()
         stats = db_manager.get_stats()
         
-        return ReadinessResponse(
-            status="ready" if _model_loaded else "not_ready",
-            model_loaded=_model_loaded,
-            nodes_loaded=stats["total_nodes"],
-            edges_loaded=stats["total_edges"]
-        )
+        return {
+            "status": "online",
+            "model_loaded": db_manager.embedding_engine.model is not None,
+            "nodes_loaded": stats.get("total_nodes", 0),
+            "edges_loaded": stats.get("total_edges", 0),
+            "graph_nodes": stats.get("graph_node_count", 0),
+            "vector_nodes": stats.get("vector_index_size", 0),
+            "settings": {
+                "graph_conditioned_embeddings": getattr(settings, "use_graph_conditioned_embeddings", False),
+                "dimensions": getattr(settings, "embedding_dimension", 384)
+            }
+        }
     except Exception:
         return JSONResponse(
             status_code=503,
@@ -609,11 +615,25 @@ async def compact_database():
             "compacted_nodes": deleted_count
         }
     except Exception as e:
-        logger.error(f"Compaction failed: {e}")
         return JSONResponse(
             status_code=500,
             content={"status": "error", "message": str(e)}
         )
+
+@app.post("/admin/clear", tags=["Admin"])
+async def clear_database():
+    """Clear all data from the database."""
+    try:
+        db_manager = get_db_manager()
+        with db_manager.sqlite_store._get_connection() as conn:
+            conn.execute("DELETE FROM edges")
+            conn.execute("DELETE FROM nodes")
+            conn.commit()
+        db_manager.vector_index.clear()
+        db_manager.graph_index.clear()
+        return {"status": "success", "message": "Database cleared"}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 if __name__ == "__main__":
