@@ -29,7 +29,7 @@ from api.bulk import router as bulk_router
 from api.comparison import router as comparison_router
 from api.dependencies import get_db_manager
 from engine.cache import get_query_cache
-from middleware.rate_limit import RateLimitMiddleware
+
 
 # Configure logging
 logging.basicConfig(
@@ -253,12 +253,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Rate limiting middleware (100 requests/minute default)
-app.add_middleware(
-    RateLimitMiddleware,
-    requests_per_minute=100,
-    enabled=not settings.debug  # Disable in debug mode
-)
+# Rate limiting removed — single-user local deployment does not require throttling.
 
 
 # Request timing middleware
