@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-25T07:32:15.011729+00:00",
+  "timestamp": "2026-03-25T07:26:00.635829+00:00",
   "system": {
     "os": "Windows 11",
     "python": "3.13.5",
@@ -8,110 +8,110 @@
     "ram_gb": 15.71
   },
   "latency": {
-    "error": "'charmap' codec can't encode character '\\u2192' in position 15: character maps to <undefined>"
+    "error": "'charmap' codec can't encode character '\\u2192' in position 16: character maps to <undefined>"
   },
   "scale": {
     "50": {
-      "actual_node_count": 55,
+      "actual_node_count": 50,
       "vector_search": {
-        "p50": 11.213,
-        "p95": 14.416
+        "p50": 10.698,
+        "p95": 14.401
       },
       "hybrid_search": {
-        "p50": 12.586,
-        "p95": 14.682
+        "p50": 11.81,
+        "p95": 14.002
       },
       "graph_traversal": {
-        "p50": 1.595,
-        "p95": 2.098
+        "p50": 1.533,
+        "p95": 1.906
       },
-      "faiss_memory_bytes": 84480,
-      "graph_memory_bytes": 11000
+      "faiss_memory_bytes": 76800,
+      "graph_memory_bytes": 10000
     },
     "150": {
-      "actual_node_count": 159,
+      "actual_node_count": 150,
       "vector_search": {
-        "p50": 12.177,
-        "p95": 16.352
+        "p50": 10.769,
+        "p95": 12.806
       },
       "hybrid_search": {
-        "p50": 12.301,
-        "p95": 14.749
+        "p50": 12.05,
+        "p95": 14.095
       },
       "graph_traversal": {
-        "p50": 1.564,
-        "p95": 1.908
+        "p50": 1.583,
+        "p95": 1.844
       },
-      "faiss_memory_bytes": 245760,
-      "graph_memory_bytes": 32000
+      "faiss_memory_bytes": 230400,
+      "graph_memory_bytes": 30000
     },
     "300": {
-      "actual_node_count": 314,
+      "actual_node_count": 1322,
       "vector_search": {
-        "p50": 12.223,
-        "p95": 15.334
+        "p50": 11.865,
+        "p95": 15.201
       },
       "hybrid_search": {
-        "p50": 12.375,
-        "p95": 14.093
+        "p50": 12.464,
+        "p95": 15.065
       },
       "graph_traversal": {
-        "p50": 1.613,
-        "p95": 2.116
+        "p50": 1.815,
+        "p95": 5.818
       },
-      "faiss_memory_bytes": 483840,
-      "graph_memory_bytes": 63000
+      "faiss_memory_bytes": 2030592,
+      "graph_memory_bytes": 264400
     },
     "600": {
-      "actual_node_count": 629,
+      "actual_node_count": 600,
       "vector_search": {
-        "p50": 16.316,
-        "p95": 28.678
+        "p50": 37.112,
+        "p95": 40.326
       },
       "hybrid_search": {
-        "p50": 15.637,
-        "p95": 19.581
+        "p50": 40.534,
+        "p95": 45.003
       },
       "graph_traversal": {
-        "p50": 2.0,
-        "p95": 2.447
+        "p50": 1.555,
+        "p95": 2.615
       },
-      "faiss_memory_bytes": 967680,
-      "graph_memory_bytes": 126000
+      "faiss_memory_bytes": 921600,
+      "graph_memory_bytes": 120000
     },
     "1000": {
-      "actual_node_count": 1037,
+      "actual_node_count": 1000,
       "vector_search": {
-        "p50": 12.264,
-        "p95": 15.274
+        "p50": 37.366,
+        "p95": 42.66
       },
       "hybrid_search": {
-        "p50": 13.276,
-        "p95": 15.901
+        "p50": 42.13,
+        "p95": 47.282
       },
       "graph_traversal": {
-        "p50": 1.722,
-        "p95": 2.089
+        "p50": 1.682,
+        "p95": 2.365
       },
-      "faiss_memory_bytes": 1594368,
-      "graph_memory_bytes": 207600
+      "faiss_memory_bytes": 1536000,
+      "graph_memory_bytes": 200000
     }
   },
   "conditioning": {
     "isolated_nodes": {
       "count": 20,
-      "mean_cosine_diff": 0.009774,
-      "min_cosine_diff": 0.005192,
-      "max_cosine_diff": 0.017987,
+      "mean_cosine_diff": 0.00976,
+      "min_cosine_diff": 0.005199,
+      "max_cosine_diff": 0.017982,
       "nodes_with_diff_gt_0_01": 8
     },
     "edged_vs_unedged": {
       "edged_node_count": 10,
       "unedged_node_count": 10,
-      "edged_mean_diff": 0.006625,
+      "edged_mean_diff": 0.006588,
       "unedged_mean_diff": 0.008769,
       "edged_higher_than_unedged": false,
-      "difference_in_conditioning": -0.002144
+      "difference_in_conditioning": -0.002181
     }
   },
   "eval": {
@@ -205,9 +205,9 @@
         "success_count": 100,
         "error_count": 0,
         "success_rate": 1.0,
-        "mean_latency_ms": 487.364,
-        "max_latency_ms": 688.205,
-        "total_elapsed_ms": 4919.593
+        "mean_latency_ms": 3065.178,
+        "max_latency_ms": 3738.318,
+        "total_elapsed_ms": 31778.797
       },
       {
         "threads": 25,
@@ -216,9 +216,9 @@
         "success_count": 250,
         "error_count": 0,
         "success_rate": 1.0,
-        "mean_latency_ms": 1109.327,
-        "max_latency_ms": 1843.324,
-        "total_elapsed_ms": 11843.051
+        "mean_latency_ms": 4559.083,
+        "max_latency_ms": 6342.28,
+        "total_elapsed_ms": 46953.001
       },
       {
         "threads": 50,
@@ -227,9 +227,9 @@
         "success_count": 500,
         "error_count": 0,
         "success_rate": 1.0,
-        "mean_latency_ms": 2357.127,
-        "max_latency_ms": 4647.038,
-        "total_elapsed_ms": 24325.285
+        "mean_latency_ms": 7775.304,
+        "max_latency_ms": 11004.595,
+        "total_elapsed_ms": 82429.481
       }
     ],
     "concurrent_writes": [
@@ -240,10 +240,10 @@
         "success_count": 25,
         "error_count": 0,
         "success_rate": 1.0,
-        "mean_latency_ms": 384.906,
-        "max_latency_ms": 492.872,
-        "total_elapsed_ms": 2044.176,
-        "final_node_count_after": 1117
+        "mean_latency_ms": 2796.007,
+        "max_latency_ms": 3337.46,
+        "total_elapsed_ms": 14547.799,
+        "final_node_count_after": 1065
       },
       {
         "threads": 10,
@@ -252,10 +252,10 @@
         "success_count": 50,
         "error_count": 0,
         "success_rate": 1.0,
-        "mean_latency_ms": 658.44,
-        "max_latency_ms": 854.659,
-        "total_elapsed_ms": 3394.355,
-        "final_node_count_after": 1168
+        "mean_latency_ms": 3205.396,
+        "max_latency_ms": 5304.603,
+        "total_elapsed_ms": 17040.079,
+        "final_node_count_after": 1115
       },
       {
         "threads": 20,
@@ -264,10 +264,10 @@
         "success_count": 100,
         "error_count": 0,
         "success_rate": 1.0,
-        "mean_latency_ms": 1390.203,
-        "max_latency_ms": 2345.946,
-        "total_elapsed_ms": 7245.466,
-        "final_node_count_after": 1271
+        "mean_latency_ms": 4603.769,
+        "max_latency_ms": 8710.709,
+        "total_elapsed_ms": 24370.263,
+        "final_node_count_after": 1215
       }
     ],
     "mixed_rw": {
@@ -276,8 +276,8 @@
       "error_count": 0,
       "http_500_count": 0,
       "success_rate": 1.0,
-      "mean_latency_ms": 378.779,
-      "max_latency_ms": 1419.703
+      "mean_latency_ms": 2269.811,
+      "max_latency_ms": 4661.527
     }
   }
 }
