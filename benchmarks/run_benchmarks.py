@@ -386,7 +386,7 @@ def benchmark_1a_latency(client: httpx.Client) -> dict[str, Any]:
     def _ngid() -> str:
         v = get_ids[_ngi[0] % len(get_ids)]; _ngi[0] += 1; return v
 
-    N, W = 20, 3  # 20 measured + 3 warmup per search op — fast proof run
+    N, W = 5, 2  # 5 measured + 2 warmup — fast proof run (~30s total on CPU)
 
     # 1. Vector search — uuid4 per call
     print("  [1A.1] Vector search...")

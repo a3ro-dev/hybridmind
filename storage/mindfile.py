@@ -243,8 +243,8 @@ class MindFile:
                         # Attempt atomic replace for files
                         os.replace(str(item), str(target))
                     except PermissionError:
-                        # SQLite DB file is open and locked by the application, so skip it - SQLite handles its own persistence state
-                        if item.name == SQLITE_FILE:
+                        # SQLite DB file (and its -wal / -shm) are open and locked by the application, so skip them
+                        if item.name.startswith(SQLITE_FILE):
                             pass
                         else:
                             raise
