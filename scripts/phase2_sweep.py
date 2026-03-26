@@ -9,6 +9,7 @@ Conventions match scripts/multi_domain_eval.py:
 
 Run from repo root:  python scripts/phase2_sweep.py
 """
+import io
 import json
 import os
 import random
@@ -16,7 +17,11 @@ import sqlite3
 import sys
 import time
 
-os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+# Force UTF-8 for stdout/stderr on Windows cp1252 terminals
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 from collections import Counter, defaultdict
 from itertools import combinations
 from pathlib import Path
@@ -404,7 +409,7 @@ def run_density_sweep(api: APIClient, store: EmbeddingStore) -> Dict[str, Any]:
         for beta in DENSITY_TEST_BETAS:
             alpha = round(1.0 - beta, 4)
             query_rows = []
-            for query in tqdm(CONCEPT_QUERIES, desc=f"  β={beta}@{target}edges", leave=False):
+            for query in tqdm(CONCEPT_QUERIES, desc=f"  b={beta}@{target}edges", leave=False):
                 v_results = vector_baselines[query]
                 row = run_query_at_weight(api, query, beta, v_results)
                 query_rows.append({"query": query, **row})
@@ -641,7 +646,7 @@ def main() -> None:
 
     # Print compact summary
     print("\n=== WEIGHT SWEEP SUMMARY ===")
-    print(f"{'Query':<42} | {'gap':>8} | " + " | ".join(f"β={b}" for b in WEIGHT_BETAS))
+    print(f"{'Query':<42} | {'gap':>8} | " + " | ".join(f"b={b}" for b in WEIGHT_BETAS))
     print("-" * 100)
     for r in ws_results["queries"]:
         gap = r["v_score_gap_rank10_11"]
@@ -649,7 +654,7 @@ def main() -> None:
         print(f"{r['query'][:42]:<42} | {str(gap or '?'):>8} | " + " | ".join(f"{d:>5}" for d in diffs))
 
     print("\n=== DENSITY SWEEP SUMMARY ===")
-    print(f"{'Edges':>6} | {'Density':>8} | {'β':>5} | {'SetDiff':>8} | {'DomDiff':>8} | {'Top1Diff':>9}")
+    print(f"{'Edges':>6} | {'Density':>8} | {'beta':>5} | {'SetDiff':>8} | {'DomDiff':>8} | {'Top1Diff':>9}")
     print("-" * 60)
     for row in ds_results["summary_table"]:
         print(f"{row['edges']:>6} | {row['density_pct']:>7.2f}% | {row['beta']:>5} | {row['n_set_diff']:>8}/10 | {row['n_domain_diff']:>8}/10 | {row['n_top1_diff']:>9}/10")

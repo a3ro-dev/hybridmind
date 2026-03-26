@@ -1690,5 +1690,3381 @@
       "exp1_any_top10_set_difference": false,
       "exp1_queries_with_domain_distribution_change": 0
     }
+  },
+  "phase2_sweep": {
+    "generated_at": "2026-03-27 00:18:23",
+    "weight_sweep": {
+      "betas_tested": [
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8
+      ],
+      "queries_tested": 10,
+      "top_k": 12,
+      "n_queries_with_any_diff": 0,
+      "n_queries_with_diff_per_beta": {
+        "0.4": 0,
+        "0.5": 0,
+        "0.6": 0,
+        "0.7": 0,
+        "0.8": 0
+      },
+      "crossover_betas": [],
+      "min_crossover_beta": null,
+      "queries": [
+        {
+          "query": "optimization algorithms for convergence",
+          "vector_top1": {
+            "node_id": "a7e310d2-946e-4490-84da-d8214e547168",
+            "domain": "wikipedia",
+            "score": 0.3321
+          },
+          "vector_top10_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "v_score_gap_rank10_11": 0.0021,
+          "per_beta": [
+            {
+              "beta": 0.4,
+              "alpha": 0.6,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "a7e310d2-946e-4490-84da-d8214e547168",
+                "domain": "wikipedia",
+                "score": 0.5993
+              },
+              "hybrid_domain_dist": {
+                "news": 2,
+                "stackexchange": 2,
+                "wikipedia": 6
+              }
+            },
+            {
+              "beta": 0.5,
+              "alpha": 0.5,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "a7e310d2-946e-4490-84da-d8214e547168",
+                "domain": "wikipedia",
+                "score": 0.6661
+              },
+              "hybrid_domain_dist": {
+                "news": 2,
+                "stackexchange": 2,
+                "wikipedia": 6
+              }
+            },
+            {
+              "beta": 0.6,
+              "alpha": 0.4,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "a7e310d2-946e-4490-84da-d8214e547168",
+                "domain": "wikipedia",
+                "score": 0.7328
+              },
+              "hybrid_domain_dist": {
+                "news": 2,
+                "stackexchange": 2,
+                "wikipedia": 6
+              }
+            },
+            {
+              "beta": 0.7,
+              "alpha": 0.3,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "a7e310d2-946e-4490-84da-d8214e547168",
+                "domain": "wikipedia",
+                "score": 0.7996
+              },
+              "hybrid_domain_dist": {
+                "news": 2,
+                "stackexchange": 2,
+                "wikipedia": 6
+              }
+            },
+            {
+              "beta": 0.8,
+              "alpha": 0.2,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "a7e310d2-946e-4490-84da-d8214e547168",
+                "domain": "wikipedia",
+                "score": 0.8664
+              },
+              "hybrid_domain_dist": {
+                "news": 2,
+                "stackexchange": 2,
+                "wikipedia": 6
+              }
+            }
+          ],
+          "first_beta_with_diff": null,
+          "any_diff_across_betas": false,
+          "rank11_12_graph_diagnostics": [
+            {
+              "rank_in_vector": 10,
+              "node_id": "4fa7209f-2bb7-4183-a1c6-df36ab8df30a",
+              "domain": "stackexchange",
+              "vector_score": 0.2137,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0427
+            },
+            {
+              "rank_in_vector": 11,
+              "node_id": "6f3957d1-5028-4027-a565-8e8f80399ea3",
+              "domain": "wikipedia",
+              "vector_score": 0.2116,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0423
+            },
+            {
+              "rank_in_vector": 12,
+              "node_id": "5ef33f37-7859-42ac-9636-c8e5659f3a50",
+              "domain": "wikipedia",
+              "vector_score": 0.2097,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0419
+            }
+          ]
+        },
+        {
+          "query": "neural network architecture design",
+          "vector_top1": {
+            "node_id": "403f7e17-5cc3-4983-a08b-e965d60e6551",
+            "domain": "stackexchange",
+            "score": 0.2781
+          },
+          "vector_top10_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "v_score_gap_rank10_11": 0.0037,
+          "per_beta": [
+            {
+              "beta": 0.4,
+              "alpha": 0.6,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "403f7e17-5cc3-4983-a08b-e965d60e6551",
+                "domain": "stackexchange",
+                "score": 0.5669
+              },
+              "hybrid_domain_dist": {
+                "news": 1,
+                "stackexchange": 2,
+                "wikipedia": 7
+              }
+            },
+            {
+              "beta": 0.5,
+              "alpha": 0.5,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "403f7e17-5cc3-4983-a08b-e965d60e6551",
+                "domain": "stackexchange",
+                "score": 0.6391
+              },
+              "hybrid_domain_dist": {
+                "news": 1,
+                "stackexchange": 2,
+                "wikipedia": 7
+              }
+            },
+            {
+              "beta": 0.6,
+              "alpha": 0.4,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "403f7e17-5cc3-4983-a08b-e965d60e6551",
+                "domain": "stackexchange",
+                "score": 0.7112
+              },
+              "hybrid_domain_dist": {
+                "news": 1,
+                "stackexchange": 2,
+                "wikipedia": 7
+              }
+            },
+            {
+              "beta": 0.7,
+              "alpha": 0.3,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "403f7e17-5cc3-4983-a08b-e965d60e6551",
+                "domain": "stackexchange",
+                "score": 0.7834
+              },
+              "hybrid_domain_dist": {
+                "news": 1,
+                "stackexchange": 2,
+                "wikipedia": 7
+              }
+            },
+            {
+              "beta": 0.8,
+              "alpha": 0.2,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "403f7e17-5cc3-4983-a08b-e965d60e6551",
+                "domain": "stackexchange",
+                "score": 0.8556
+              },
+              "hybrid_domain_dist": {
+                "news": 1,
+                "stackexchange": 2,
+                "wikipedia": 7
+              }
+            }
+          ],
+          "first_beta_with_diff": null,
+          "any_diff_across_betas": false,
+          "rank11_12_graph_diagnostics": [
+            {
+              "rank_in_vector": 10,
+              "node_id": "a09d9faf-3de3-4564-82d8-1825196d5c12",
+              "domain": "wikipedia",
+              "vector_score": 0.217,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0434
+            },
+            {
+              "rank_in_vector": 11,
+              "node_id": "c86c37f4-63e4-4237-8331-7c03750ee4d2",
+              "domain": "wikipedia",
+              "vector_score": 0.2133,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0427
+            },
+            {
+              "rank_in_vector": 12,
+              "node_id": "46661643-a0f9-4ac5-9311-879f07eca33d",
+              "domain": "stackexchange",
+              "vector_score": 0.2132,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0426
+            }
+          ]
+        },
+        {
+          "query": "statistical inference and uncertainty",
+          "vector_top1": {
+            "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+            "domain": "wikipedia",
+            "score": 0.3569
+          },
+          "vector_top10_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "v_score_gap_rank10_11": 0.0073,
+          "per_beta": [
+            {
+              "beta": 0.4,
+              "alpha": 0.6,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                "domain": "wikipedia",
+                "score": 0.6141
+              },
+              "hybrid_domain_dist": {
+                "news": 3,
+                "wikipedia": 7
+              }
+            },
+            {
+              "beta": 0.5,
+              "alpha": 0.5,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                "domain": "wikipedia",
+                "score": 0.6784
+              },
+              "hybrid_domain_dist": {
+                "news": 3,
+                "wikipedia": 7
+              }
+            },
+            {
+              "beta": 0.6,
+              "alpha": 0.4,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                "domain": "wikipedia",
+                "score": 0.7428
+              },
+              "hybrid_domain_dist": {
+                "news": 3,
+                "wikipedia": 7
+              }
+            },
+            {
+              "beta": 0.7,
+              "alpha": 0.3,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                "domain": "wikipedia",
+                "score": 0.8071
+              },
+              "hybrid_domain_dist": {
+                "news": 3,
+                "wikipedia": 7
+              }
+            },
+            {
+              "beta": 0.8,
+              "alpha": 0.2,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                "domain": "wikipedia",
+                "score": 0.8714
+              },
+              "hybrid_domain_dist": {
+                "news": 3,
+                "wikipedia": 7
+              }
+            }
+          ],
+          "first_beta_with_diff": null,
+          "any_diff_across_betas": false,
+          "rank11_12_graph_diagnostics": [
+            {
+              "rank_in_vector": 10,
+              "node_id": "86b2b5d2-7d7b-4f70-8a63-0624fd9816c2",
+              "domain": "news",
+              "vector_score": 0.2511,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0502
+            },
+            {
+              "rank_in_vector": 11,
+              "node_id": "d68d7647-82ec-4fad-ad21-4104258e1cc7",
+              "domain": "pubmed",
+              "vector_score": 0.2438,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0488
+            },
+            {
+              "rank_in_vector": 12,
+              "node_id": "1ef03c84-3301-454a-bed6-39dc618d9994",
+              "domain": "pubmed",
+              "vector_score": 0.2432,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0486
+            }
+          ]
+        },
+        {
+          "query": "distributed systems and fault tolerance",
+          "vector_top1": {
+            "node_id": "c97025e9-3b4d-4037-a73a-cf885fbb7f6a",
+            "domain": "wikipedia",
+            "score": 0.3131
+          },
+          "vector_top10_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "v_score_gap_rank10_11": 0.0063,
+          "per_beta": [
+            {
+              "beta": 0.4,
+              "alpha": 0.6,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "c97025e9-3b4d-4037-a73a-cf885fbb7f6a",
+                "domain": "wikipedia",
+                "score": 0.5879
+              },
+              "hybrid_domain_dist": {
+                "legal": 1,
+                "news": 4,
+                "wikipedia": 5
+              }
+            },
+            {
+              "beta": 0.5,
+              "alpha": 0.5,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "c97025e9-3b4d-4037-a73a-cf885fbb7f6a",
+                "domain": "wikipedia",
+                "score": 0.6565
+              },
+              "hybrid_domain_dist": {
+                "legal": 1,
+                "news": 4,
+                "wikipedia": 5
+              }
+            },
+            {
+              "beta": 0.6,
+              "alpha": 0.4,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "c97025e9-3b4d-4037-a73a-cf885fbb7f6a",
+                "domain": "wikipedia",
+                "score": 0.7252
+              },
+              "hybrid_domain_dist": {
+                "legal": 1,
+                "news": 4,
+                "wikipedia": 5
+              }
+            },
+            {
+              "beta": 0.7,
+              "alpha": 0.3,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "c97025e9-3b4d-4037-a73a-cf885fbb7f6a",
+                "domain": "wikipedia",
+                "score": 0.7939
+              },
+              "hybrid_domain_dist": {
+                "legal": 1,
+                "news": 4,
+                "wikipedia": 5
+              }
+            },
+            {
+              "beta": 0.8,
+              "alpha": 0.2,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "c97025e9-3b4d-4037-a73a-cf885fbb7f6a",
+                "domain": "wikipedia",
+                "score": 0.8626
+              },
+              "hybrid_domain_dist": {
+                "legal": 1,
+                "news": 4,
+                "wikipedia": 5
+              }
+            }
+          ],
+          "first_beta_with_diff": null,
+          "any_diff_across_betas": false,
+          "rank11_12_graph_diagnostics": [
+            {
+              "rank_in_vector": 10,
+              "node_id": "bbb1d45e-f1fd-4dc8-b646-58603ba09683",
+              "domain": "news",
+              "vector_score": 0.2584,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0517
+            },
+            {
+              "rank_in_vector": 11,
+              "node_id": "ceb9239b-e6f7-4315-bfa6-beb405e03b7f",
+              "domain": "stackexchange",
+              "vector_score": 0.2521,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0504
+            },
+            {
+              "rank_in_vector": 12,
+              "node_id": "30fbd370-7eff-40b4-94c0-b671aa46490e",
+              "domain": "wikipedia",
+              "vector_score": 0.2466,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0493
+            }
+          ]
+        },
+        {
+          "query": "protein folding and molecular structure",
+          "vector_top1": {
+            "node_id": "b1795c07-93c6-4db5-938c-3290c471071d",
+            "domain": "wikipedia",
+            "score": 0.419
+          },
+          "vector_top10_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "v_score_gap_rank10_11": 0.0046,
+          "per_beta": [
+            {
+              "beta": 0.4,
+              "alpha": 0.6,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "b1795c07-93c6-4db5-938c-3290c471071d",
+                "domain": "wikipedia",
+                "score": 0.6514
+              },
+              "hybrid_domain_dist": {
+                "news": 1,
+                "stackexchange": 1,
+                "wikipedia": 8
+              }
+            },
+            {
+              "beta": 0.5,
+              "alpha": 0.5,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "b1795c07-93c6-4db5-938c-3290c471071d",
+                "domain": "wikipedia",
+                "score": 0.7095
+              },
+              "hybrid_domain_dist": {
+                "news": 1,
+                "stackexchange": 1,
+                "wikipedia": 8
+              }
+            },
+            {
+              "beta": 0.6,
+              "alpha": 0.4,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "b1795c07-93c6-4db5-938c-3290c471071d",
+                "domain": "wikipedia",
+                "score": 0.7676
+              },
+              "hybrid_domain_dist": {
+                "news": 1,
+                "stackexchange": 1,
+                "wikipedia": 8
+              }
+            },
+            {
+              "beta": 0.7,
+              "alpha": 0.3,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "b1795c07-93c6-4db5-938c-3290c471071d",
+                "domain": "wikipedia",
+                "score": 0.8257
+              },
+              "hybrid_domain_dist": {
+                "news": 1,
+                "stackexchange": 1,
+                "wikipedia": 8
+              }
+            },
+            {
+              "beta": 0.8,
+              "alpha": 0.2,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "b1795c07-93c6-4db5-938c-3290c471071d",
+                "domain": "wikipedia",
+                "score": 0.8838
+              },
+              "hybrid_domain_dist": {
+                "news": 1,
+                "stackexchange": 1,
+                "wikipedia": 8
+              }
+            }
+          ],
+          "first_beta_with_diff": null,
+          "any_diff_across_betas": false,
+          "rank11_12_graph_diagnostics": [
+            {
+              "rank_in_vector": 10,
+              "node_id": "5703d36b-f651-4e7c-b7fd-4f0246b42c2a",
+              "domain": "wikipedia",
+              "vector_score": 0.2692,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0538
+            },
+            {
+              "rank_in_vector": 11,
+              "node_id": "fd47f854-8ea6-4c0c-914e-c6e378862658",
+              "domain": "stackexchange",
+              "vector_score": 0.2646,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0529
+            },
+            {
+              "rank_in_vector": 12,
+              "node_id": "63f2ffed-0db2-4d60-81b4-4a0c9a1c4c10",
+              "domain": "wikipedia",
+              "vector_score": 0.2646,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0529
+            }
+          ]
+        },
+        {
+          "query": "regulatory compliance and risk assessment",
+          "vector_top1": {
+            "node_id": "0ad16294-bf88-4ff3-bc35-80f8673a31f9",
+            "domain": "news",
+            "score": 0.4552
+          },
+          "vector_top10_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "v_score_gap_rank10_11": 0.0017,
+          "per_beta": [
+            {
+              "beta": 0.4,
+              "alpha": 0.6,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "0ad16294-bf88-4ff3-bc35-80f8673a31f9",
+                "domain": "news",
+                "score": 0.6731
+              },
+              "hybrid_domain_dist": {
+                "legal": 7,
+                "news": 2,
+                "pubmed": 1
+              }
+            },
+            {
+              "beta": 0.5,
+              "alpha": 0.5,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "0ad16294-bf88-4ff3-bc35-80f8673a31f9",
+                "domain": "news",
+                "score": 0.7276
+              },
+              "hybrid_domain_dist": {
+                "legal": 7,
+                "news": 2,
+                "pubmed": 1
+              }
+            },
+            {
+              "beta": 0.6,
+              "alpha": 0.4,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "0ad16294-bf88-4ff3-bc35-80f8673a31f9",
+                "domain": "news",
+                "score": 0.7821
+              },
+              "hybrid_domain_dist": {
+                "legal": 7,
+                "news": 2,
+                "pubmed": 1
+              }
+            },
+            {
+              "beta": 0.7,
+              "alpha": 0.3,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "0ad16294-bf88-4ff3-bc35-80f8673a31f9",
+                "domain": "news",
+                "score": 0.8366
+              },
+              "hybrid_domain_dist": {
+                "legal": 7,
+                "news": 2,
+                "pubmed": 1
+              }
+            },
+            {
+              "beta": 0.8,
+              "alpha": 0.2,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "0ad16294-bf88-4ff3-bc35-80f8673a31f9",
+                "domain": "news",
+                "score": 0.891
+              },
+              "hybrid_domain_dist": {
+                "legal": 7,
+                "news": 2,
+                "pubmed": 1
+              }
+            }
+          ],
+          "first_beta_with_diff": null,
+          "any_diff_across_betas": false,
+          "rank11_12_graph_diagnostics": [
+            {
+              "rank_in_vector": 10,
+              "node_id": "1835ce10-a731-4277-902f-025523924703",
+              "domain": "legal",
+              "vector_score": 0.3883,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0777
+            },
+            {
+              "rank_in_vector": 11,
+              "node_id": "bca7a632-5825-422c-a3d3-c6725cc8b73c",
+              "domain": "legal",
+              "vector_score": 0.3866,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0773
+            },
+            {
+              "rank_in_vector": 12,
+              "node_id": "12564472-2548-4580-b75f-6035c6f77ce0",
+              "domain": "legal",
+              "vector_score": 0.386,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0772
+            }
+          ]
+        },
+        {
+          "query": "gradient descent and loss functions",
+          "vector_top1": {
+            "node_id": "4c042d52-af5b-49ac-85b9-1c63e7bd382b",
+            "domain": "news",
+            "score": 0.2579
+          },
+          "vector_top10_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "v_score_gap_rank10_11": 0.0018,
+          "per_beta": [
+            {
+              "beta": 0.4,
+              "alpha": 0.6,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "4c042d52-af5b-49ac-85b9-1c63e7bd382b",
+                "domain": "news",
+                "score": 0.5547
+              },
+              "hybrid_domain_dist": {
+                "news": 7,
+                "pubmed": 2,
+                "wikipedia": 1
+              }
+            },
+            {
+              "beta": 0.5,
+              "alpha": 0.5,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "4c042d52-af5b-49ac-85b9-1c63e7bd382b",
+                "domain": "news",
+                "score": 0.629
+              },
+              "hybrid_domain_dist": {
+                "news": 7,
+                "pubmed": 2,
+                "wikipedia": 1
+              }
+            },
+            {
+              "beta": 0.6,
+              "alpha": 0.4,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "4c042d52-af5b-49ac-85b9-1c63e7bd382b",
+                "domain": "news",
+                "score": 0.7032
+              },
+              "hybrid_domain_dist": {
+                "news": 7,
+                "pubmed": 2,
+                "wikipedia": 1
+              }
+            },
+            {
+              "beta": 0.7,
+              "alpha": 0.3,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "4c042d52-af5b-49ac-85b9-1c63e7bd382b",
+                "domain": "news",
+                "score": 0.7774
+              },
+              "hybrid_domain_dist": {
+                "news": 7,
+                "pubmed": 2,
+                "wikipedia": 1
+              }
+            },
+            {
+              "beta": 0.8,
+              "alpha": 0.2,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "4c042d52-af5b-49ac-85b9-1c63e7bd382b",
+                "domain": "news",
+                "score": 0.8516
+              },
+              "hybrid_domain_dist": {
+                "news": 7,
+                "pubmed": 2,
+                "wikipedia": 1
+              }
+            }
+          ],
+          "first_beta_with_diff": null,
+          "any_diff_across_betas": false,
+          "rank11_12_graph_diagnostics": [
+            {
+              "rank_in_vector": 10,
+              "node_id": "5faa17a8-feff-4da3-983d-f38ff76f4b06",
+              "domain": "news",
+              "vector_score": 0.1788,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0358
+            },
+            {
+              "rank_in_vector": 11,
+              "node_id": "fa2aa84e-915c-4f5c-9918-89cb293381d6",
+              "domain": "wikipedia",
+              "vector_score": 0.177,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0354
+            },
+            {
+              "rank_in_vector": 12,
+              "node_id": "ea78a870-bc45-4ce8-ae5d-d7014c9f36ee",
+              "domain": "pubmed",
+              "vector_score": 0.1728,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0346
+            }
+          ]
+        },
+        {
+          "query": "natural language understanding",
+          "vector_top1": {
+            "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+            "domain": "wikipedia",
+            "score": 0.3165
+          },
+          "vector_top10_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "v_score_gap_rank10_11": 0.0023,
+          "per_beta": [
+            {
+              "beta": 0.4,
+              "alpha": 0.6,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                "domain": "wikipedia",
+                "score": 0.5899
+              },
+              "hybrid_domain_dist": {
+                "stackexchange": 1,
+                "wikipedia": 9
+              }
+            },
+            {
+              "beta": 0.5,
+              "alpha": 0.5,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                "domain": "wikipedia",
+                "score": 0.6583
+              },
+              "hybrid_domain_dist": {
+                "stackexchange": 1,
+                "wikipedia": 9
+              }
+            },
+            {
+              "beta": 0.6,
+              "alpha": 0.4,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                "domain": "wikipedia",
+                "score": 0.7266
+              },
+              "hybrid_domain_dist": {
+                "stackexchange": 1,
+                "wikipedia": 9
+              }
+            },
+            {
+              "beta": 0.7,
+              "alpha": 0.3,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                "domain": "wikipedia",
+                "score": 0.7949
+              },
+              "hybrid_domain_dist": {
+                "stackexchange": 1,
+                "wikipedia": 9
+              }
+            },
+            {
+              "beta": 0.8,
+              "alpha": 0.2,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                "domain": "wikipedia",
+                "score": 0.8633
+              },
+              "hybrid_domain_dist": {
+                "stackexchange": 1,
+                "wikipedia": 9
+              }
+            }
+          ],
+          "first_beta_with_diff": null,
+          "any_diff_across_betas": false,
+          "rank11_12_graph_diagnostics": [
+            {
+              "rank_in_vector": 10,
+              "node_id": "9c04fefd-aeac-4d7c-8060-412a027e76d3",
+              "domain": "wikipedia",
+              "vector_score": 0.2703,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0541
+            },
+            {
+              "rank_in_vector": 11,
+              "node_id": "a3727444-32d6-4413-a6d9-95a8a35dd6be",
+              "domain": "pubmed",
+              "vector_score": 0.268,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0536
+            },
+            {
+              "rank_in_vector": 12,
+              "node_id": "9dc7c8e0-a3e0-41c8-82e8-04d158b42e82",
+              "domain": "wikipedia",
+              "vector_score": 0.2665,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0533
+            }
+          ]
+        },
+        {
+          "query": "clinical trials and treatment efficacy",
+          "vector_top1": {
+            "node_id": "15fb4250-bdbd-46dc-a61e-916947a34b9d",
+            "domain": "pubmed",
+            "score": 0.5531
+          },
+          "vector_top10_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "v_score_gap_rank10_11": 0.003,
+          "per_beta": [
+            {
+              "beta": 0.4,
+              "alpha": 0.6,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "15fb4250-bdbd-46dc-a61e-916947a34b9d",
+                "domain": "pubmed",
+                "score": 0.7319
+              },
+              "hybrid_domain_dist": {
+                "news": 1,
+                "pubmed": 9
+              }
+            },
+            {
+              "beta": 0.5,
+              "alpha": 0.5,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "15fb4250-bdbd-46dc-a61e-916947a34b9d",
+                "domain": "pubmed",
+                "score": 0.7766
+              },
+              "hybrid_domain_dist": {
+                "news": 1,
+                "pubmed": 9
+              }
+            },
+            {
+              "beta": 0.6,
+              "alpha": 0.4,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "15fb4250-bdbd-46dc-a61e-916947a34b9d",
+                "domain": "pubmed",
+                "score": 0.8212
+              },
+              "hybrid_domain_dist": {
+                "news": 1,
+                "pubmed": 9
+              }
+            },
+            {
+              "beta": 0.7,
+              "alpha": 0.3,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "15fb4250-bdbd-46dc-a61e-916947a34b9d",
+                "domain": "pubmed",
+                "score": 0.8659
+              },
+              "hybrid_domain_dist": {
+                "news": 1,
+                "pubmed": 9
+              }
+            },
+            {
+              "beta": 0.8,
+              "alpha": 0.2,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "15fb4250-bdbd-46dc-a61e-916947a34b9d",
+                "domain": "pubmed",
+                "score": 0.9106
+              },
+              "hybrid_domain_dist": {
+                "news": 1,
+                "pubmed": 9
+              }
+            }
+          ],
+          "first_beta_with_diff": null,
+          "any_diff_across_betas": false,
+          "rank11_12_graph_diagnostics": [
+            {
+              "rank_in_vector": 10,
+              "node_id": "f80f61e8-d25f-4739-bcbd-965ba40bee08",
+              "domain": "pubmed",
+              "vector_score": 0.4009,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0802
+            },
+            {
+              "rank_in_vector": 11,
+              "node_id": "ba74c733-69a3-456a-a8ca-794d35f7973c",
+              "domain": "pubmed",
+              "vector_score": 0.3979,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0796
+            },
+            {
+              "rank_in_vector": 12,
+              "node_id": "94b5f81a-4fd6-4e6b-9146-387527aabb06",
+              "domain": "pubmed",
+              "vector_score": 0.3978,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0796
+            }
+          ]
+        },
+        {
+          "query": "market dynamics and price prediction",
+          "vector_top1": {
+            "node_id": "9c18a47c-4c2e-42f4-813a-4e4537c4d9a6",
+            "domain": "news",
+            "score": 0.4936
+          },
+          "vector_top10_domain_dist": {
+            "news": 10
+          },
+          "v_score_gap_rank10_11": 0.0009,
+          "per_beta": [
+            {
+              "beta": 0.4,
+              "alpha": 0.6,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "9c18a47c-4c2e-42f4-813a-4e4537c4d9a6",
+                "domain": "news",
+                "score": 0.6962
+              },
+              "hybrid_domain_dist": {
+                "news": 10
+              }
+            },
+            {
+              "beta": 0.5,
+              "alpha": 0.5,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "9c18a47c-4c2e-42f4-813a-4e4537c4d9a6",
+                "domain": "news",
+                "score": 0.7468
+              },
+              "hybrid_domain_dist": {
+                "news": 10
+              }
+            },
+            {
+              "beta": 0.6,
+              "alpha": 0.4,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "9c18a47c-4c2e-42f4-813a-4e4537c4d9a6",
+                "domain": "news",
+                "score": 0.7974
+              },
+              "hybrid_domain_dist": {
+                "news": 10
+              }
+            },
+            {
+              "beta": 0.7,
+              "alpha": 0.3,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "9c18a47c-4c2e-42f4-813a-4e4537c4d9a6",
+                "domain": "news",
+                "score": 0.8481
+              },
+              "hybrid_domain_dist": {
+                "news": 10
+              }
+            },
+            {
+              "beta": 0.8,
+              "alpha": 0.2,
+              "set_diff": 0,
+              "top1_changed": false,
+              "domain_dist_changed": false,
+              "promoted_nodes": [],
+              "demoted_nodes": [],
+              "hybrid_top1": {
+                "node_id": "9c18a47c-4c2e-42f4-813a-4e4537c4d9a6",
+                "domain": "news",
+                "score": 0.8987
+              },
+              "hybrid_domain_dist": {
+                "news": 10
+              }
+            }
+          ],
+          "first_beta_with_diff": null,
+          "any_diff_across_betas": false,
+          "rank11_12_graph_diagnostics": [
+            {
+              "rank_in_vector": 10,
+              "node_id": "63e78a09-2bef-4274-83fa-8ffade4ee9a8",
+              "domain": "news",
+              "vector_score": 0.4207,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0841
+            },
+            {
+              "rank_in_vector": 11,
+              "node_id": "4b362cbf-32a3-462f-a732-2dff37234bd3",
+              "domain": "news",
+              "vector_score": 0.4198,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.084
+            },
+            {
+              "rank_in_vector": 12,
+              "node_id": "1cf0a47d-d2d4-495f-ace9-35640a3b7d59",
+              "domain": "news",
+              "vector_score": 0.4086,
+              "graph_score_at_b08": 0.0,
+              "combined_score_at_b08": 0.0817
+            }
+          ]
+        }
+      ]
+    },
+    "density_sweep": {
+      "density_targets": [
+        75,
+        150,
+        375
+      ],
+      "betas_tested": [
+        0.5,
+        0.7,
+        0.8
+      ],
+      "queries_tested": 10,
+      "top_k": 12,
+      "per_density": [
+        {
+          "target_edges": 75,
+          "graph": {
+            "target_edges": 75,
+            "actual_edges": 75,
+            "created_edges": 75,
+            "min_cosine": 0.43668,
+            "max_cosine": 0.71525,
+            "domain_pair_counts": {
+              "legal-news": 15,
+              "news-pubmed": 11,
+              "news-wikipedia": 36,
+              "pubmed-wikipedia": 13
+            }
+          },
+          "per_beta": [
+            {
+              "beta": 0.5,
+              "alpha": 0.5,
+              "n_queries_set_diff": 0,
+              "n_queries_domain_dist_changed": 0,
+              "n_queries_top1_changed": 0,
+              "queries": [
+                {
+                  "query": "optimization algorithms for convergence",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "a7e310d2-946e-4490-84da-d8214e547168",
+                    "domain": "wikipedia",
+                    "score": 0.6661
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 2,
+                    "stackexchange": 2,
+                    "wikipedia": 6
+                  }
+                },
+                {
+                  "query": "neural network architecture design",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "403f7e17-5cc3-4983-a08b-e965d60e6551",
+                    "domain": "stackexchange",
+                    "score": 0.6391
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "stackexchange": 2,
+                    "wikipedia": 7
+                  }
+                },
+                {
+                  "query": "statistical inference and uncertainty",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                    "domain": "wikipedia",
+                    "score": 0.6784
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 3,
+                    "wikipedia": 7
+                  }
+                },
+                {
+                  "query": "distributed systems and fault tolerance",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "c97025e9-3b4d-4037-a73a-cf885fbb7f6a",
+                    "domain": "wikipedia",
+                    "score": 0.6565
+                  },
+                  "hybrid_domain_dist": {
+                    "legal": 1,
+                    "news": 4,
+                    "wikipedia": 5
+                  }
+                },
+                {
+                  "query": "protein folding and molecular structure",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "b1795c07-93c6-4db5-938c-3290c471071d",
+                    "domain": "wikipedia",
+                    "score": 0.7095
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "stackexchange": 1,
+                    "wikipedia": 8
+                  }
+                },
+                {
+                  "query": "regulatory compliance and risk assessment",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "0ad16294-bf88-4ff3-bc35-80f8673a31f9",
+                    "domain": "news",
+                    "score": 0.7276
+                  },
+                  "hybrid_domain_dist": {
+                    "legal": 7,
+                    "news": 2,
+                    "pubmed": 1
+                  }
+                },
+                {
+                  "query": "gradient descent and loss functions",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "4c042d52-af5b-49ac-85b9-1c63e7bd382b",
+                    "domain": "news",
+                    "score": 0.629
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 7,
+                    "pubmed": 2,
+                    "wikipedia": 1
+                  }
+                },
+                {
+                  "query": "natural language understanding",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                    "domain": "wikipedia",
+                    "score": 0.6583
+                  },
+                  "hybrid_domain_dist": {
+                    "stackexchange": 1,
+                    "wikipedia": 9
+                  }
+                },
+                {
+                  "query": "clinical trials and treatment efficacy",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "15fb4250-bdbd-46dc-a61e-916947a34b9d",
+                    "domain": "pubmed",
+                    "score": 0.7766
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "pubmed": 9
+                  }
+                },
+                {
+                  "query": "market dynamics and price prediction",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "9c18a47c-4c2e-42f4-813a-4e4537c4d9a6",
+                    "domain": "news",
+                    "score": 0.7468
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 10
+                  }
+                }
+              ]
+            },
+            {
+              "beta": 0.7,
+              "alpha": 0.3,
+              "n_queries_set_diff": 0,
+              "n_queries_domain_dist_changed": 0,
+              "n_queries_top1_changed": 0,
+              "queries": [
+                {
+                  "query": "optimization algorithms for convergence",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "a7e310d2-946e-4490-84da-d8214e547168",
+                    "domain": "wikipedia",
+                    "score": 0.7996
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 2,
+                    "stackexchange": 2,
+                    "wikipedia": 6
+                  }
+                },
+                {
+                  "query": "neural network architecture design",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "403f7e17-5cc3-4983-a08b-e965d60e6551",
+                    "domain": "stackexchange",
+                    "score": 0.7834
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "stackexchange": 2,
+                    "wikipedia": 7
+                  }
+                },
+                {
+                  "query": "statistical inference and uncertainty",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                    "domain": "wikipedia",
+                    "score": 0.8071
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 3,
+                    "wikipedia": 7
+                  }
+                },
+                {
+                  "query": "distributed systems and fault tolerance",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "c97025e9-3b4d-4037-a73a-cf885fbb7f6a",
+                    "domain": "wikipedia",
+                    "score": 0.7939
+                  },
+                  "hybrid_domain_dist": {
+                    "legal": 1,
+                    "news": 4,
+                    "wikipedia": 5
+                  }
+                },
+                {
+                  "query": "protein folding and molecular structure",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "b1795c07-93c6-4db5-938c-3290c471071d",
+                    "domain": "wikipedia",
+                    "score": 0.8257
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "stackexchange": 1,
+                    "wikipedia": 8
+                  }
+                },
+                {
+                  "query": "regulatory compliance and risk assessment",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "0ad16294-bf88-4ff3-bc35-80f8673a31f9",
+                    "domain": "news",
+                    "score": 0.8366
+                  },
+                  "hybrid_domain_dist": {
+                    "legal": 7,
+                    "news": 2,
+                    "pubmed": 1
+                  }
+                },
+                {
+                  "query": "gradient descent and loss functions",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "4c042d52-af5b-49ac-85b9-1c63e7bd382b",
+                    "domain": "news",
+                    "score": 0.7774
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 7,
+                    "pubmed": 2,
+                    "wikipedia": 1
+                  }
+                },
+                {
+                  "query": "natural language understanding",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                    "domain": "wikipedia",
+                    "score": 0.7949
+                  },
+                  "hybrid_domain_dist": {
+                    "stackexchange": 1,
+                    "wikipedia": 9
+                  }
+                },
+                {
+                  "query": "clinical trials and treatment efficacy",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "15fb4250-bdbd-46dc-a61e-916947a34b9d",
+                    "domain": "pubmed",
+                    "score": 0.8659
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "pubmed": 9
+                  }
+                },
+                {
+                  "query": "market dynamics and price prediction",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "9c18a47c-4c2e-42f4-813a-4e4537c4d9a6",
+                    "domain": "news",
+                    "score": 0.8481
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 10
+                  }
+                }
+              ]
+            },
+            {
+              "beta": 0.8,
+              "alpha": 0.2,
+              "n_queries_set_diff": 0,
+              "n_queries_domain_dist_changed": 0,
+              "n_queries_top1_changed": 0,
+              "queries": [
+                {
+                  "query": "optimization algorithms for convergence",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "a7e310d2-946e-4490-84da-d8214e547168",
+                    "domain": "wikipedia",
+                    "score": 0.8664
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 2,
+                    "stackexchange": 2,
+                    "wikipedia": 6
+                  }
+                },
+                {
+                  "query": "neural network architecture design",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "403f7e17-5cc3-4983-a08b-e965d60e6551",
+                    "domain": "stackexchange",
+                    "score": 0.8556
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "stackexchange": 2,
+                    "wikipedia": 7
+                  }
+                },
+                {
+                  "query": "statistical inference and uncertainty",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                    "domain": "wikipedia",
+                    "score": 0.8714
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 3,
+                    "wikipedia": 7
+                  }
+                },
+                {
+                  "query": "distributed systems and fault tolerance",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "c97025e9-3b4d-4037-a73a-cf885fbb7f6a",
+                    "domain": "wikipedia",
+                    "score": 0.8626
+                  },
+                  "hybrid_domain_dist": {
+                    "legal": 1,
+                    "news": 4,
+                    "wikipedia": 5
+                  }
+                },
+                {
+                  "query": "protein folding and molecular structure",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "b1795c07-93c6-4db5-938c-3290c471071d",
+                    "domain": "wikipedia",
+                    "score": 0.8838
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "stackexchange": 1,
+                    "wikipedia": 8
+                  }
+                },
+                {
+                  "query": "regulatory compliance and risk assessment",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "0ad16294-bf88-4ff3-bc35-80f8673a31f9",
+                    "domain": "news",
+                    "score": 0.891
+                  },
+                  "hybrid_domain_dist": {
+                    "legal": 7,
+                    "news": 2,
+                    "pubmed": 1
+                  }
+                },
+                {
+                  "query": "gradient descent and loss functions",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "4c042d52-af5b-49ac-85b9-1c63e7bd382b",
+                    "domain": "news",
+                    "score": 0.8516
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 7,
+                    "pubmed": 2,
+                    "wikipedia": 1
+                  }
+                },
+                {
+                  "query": "natural language understanding",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                    "domain": "wikipedia",
+                    "score": 0.8633
+                  },
+                  "hybrid_domain_dist": {
+                    "stackexchange": 1,
+                    "wikipedia": 9
+                  }
+                },
+                {
+                  "query": "clinical trials and treatment efficacy",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "15fb4250-bdbd-46dc-a61e-916947a34b9d",
+                    "domain": "pubmed",
+                    "score": 0.9106
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "pubmed": 9
+                  }
+                },
+                {
+                  "query": "market dynamics and price prediction",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "9c18a47c-4c2e-42f4-813a-4e4537c4d9a6",
+                    "domain": "news",
+                    "score": 0.8987
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 10
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "target_edges": 150,
+          "graph": {
+            "target_edges": 150,
+            "actual_edges": 150,
+            "created_edges": 150,
+            "min_cosine": 0.41137,
+            "max_cosine": 0.73078,
+            "domain_pair_counts": {
+              "legal-news": 60,
+              "legal-wikipedia": 2,
+              "news-pubmed": 17,
+              "news-stackexchange": 14,
+              "news-wikipedia": 39,
+              "pubmed-stackexchange": 3,
+              "pubmed-wikipedia": 14,
+              "stackexchange-wikipedia": 1
+            }
+          },
+          "per_beta": [
+            {
+              "beta": 0.5,
+              "alpha": 0.5,
+              "n_queries_set_diff": 0,
+              "n_queries_domain_dist_changed": 0,
+              "n_queries_top1_changed": 0,
+              "queries": [
+                {
+                  "query": "optimization algorithms for convergence",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "a7e310d2-946e-4490-84da-d8214e547168",
+                    "domain": "wikipedia",
+                    "score": 0.6661
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 2,
+                    "stackexchange": 2,
+                    "wikipedia": 6
+                  }
+                },
+                {
+                  "query": "neural network architecture design",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "403f7e17-5cc3-4983-a08b-e965d60e6551",
+                    "domain": "stackexchange",
+                    "score": 0.6391
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "stackexchange": 2,
+                    "wikipedia": 7
+                  }
+                },
+                {
+                  "query": "statistical inference and uncertainty",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                    "domain": "wikipedia",
+                    "score": 0.6784
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 3,
+                    "wikipedia": 7
+                  }
+                },
+                {
+                  "query": "distributed systems and fault tolerance",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "c97025e9-3b4d-4037-a73a-cf885fbb7f6a",
+                    "domain": "wikipedia",
+                    "score": 0.6565
+                  },
+                  "hybrid_domain_dist": {
+                    "legal": 1,
+                    "news": 4,
+                    "wikipedia": 5
+                  }
+                },
+                {
+                  "query": "protein folding and molecular structure",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "b1795c07-93c6-4db5-938c-3290c471071d",
+                    "domain": "wikipedia",
+                    "score": 0.7095
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "stackexchange": 1,
+                    "wikipedia": 8
+                  }
+                },
+                {
+                  "query": "regulatory compliance and risk assessment",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "0ad16294-bf88-4ff3-bc35-80f8673a31f9",
+                    "domain": "news",
+                    "score": 0.7276
+                  },
+                  "hybrid_domain_dist": {
+                    "legal": 7,
+                    "news": 2,
+                    "pubmed": 1
+                  }
+                },
+                {
+                  "query": "gradient descent and loss functions",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "4c042d52-af5b-49ac-85b9-1c63e7bd382b",
+                    "domain": "news",
+                    "score": 0.629
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 7,
+                    "pubmed": 2,
+                    "wikipedia": 1
+                  }
+                },
+                {
+                  "query": "natural language understanding",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                    "domain": "wikipedia",
+                    "score": 0.6583
+                  },
+                  "hybrid_domain_dist": {
+                    "stackexchange": 1,
+                    "wikipedia": 9
+                  }
+                },
+                {
+                  "query": "clinical trials and treatment efficacy",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "15fb4250-bdbd-46dc-a61e-916947a34b9d",
+                    "domain": "pubmed",
+                    "score": 0.7766
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "pubmed": 9
+                  }
+                },
+                {
+                  "query": "market dynamics and price prediction",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "9c18a47c-4c2e-42f4-813a-4e4537c4d9a6",
+                    "domain": "news",
+                    "score": 0.7468
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 10
+                  }
+                }
+              ]
+            },
+            {
+              "beta": 0.7,
+              "alpha": 0.3,
+              "n_queries_set_diff": 0,
+              "n_queries_domain_dist_changed": 0,
+              "n_queries_top1_changed": 0,
+              "queries": [
+                {
+                  "query": "optimization algorithms for convergence",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "a7e310d2-946e-4490-84da-d8214e547168",
+                    "domain": "wikipedia",
+                    "score": 0.7996
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 2,
+                    "stackexchange": 2,
+                    "wikipedia": 6
+                  }
+                },
+                {
+                  "query": "neural network architecture design",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "403f7e17-5cc3-4983-a08b-e965d60e6551",
+                    "domain": "stackexchange",
+                    "score": 0.7834
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "stackexchange": 2,
+                    "wikipedia": 7
+                  }
+                },
+                {
+                  "query": "statistical inference and uncertainty",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                    "domain": "wikipedia",
+                    "score": 0.8071
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 3,
+                    "wikipedia": 7
+                  }
+                },
+                {
+                  "query": "distributed systems and fault tolerance",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "c97025e9-3b4d-4037-a73a-cf885fbb7f6a",
+                    "domain": "wikipedia",
+                    "score": 0.7939
+                  },
+                  "hybrid_domain_dist": {
+                    "legal": 1,
+                    "news": 4,
+                    "wikipedia": 5
+                  }
+                },
+                {
+                  "query": "protein folding and molecular structure",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "b1795c07-93c6-4db5-938c-3290c471071d",
+                    "domain": "wikipedia",
+                    "score": 0.8257
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "stackexchange": 1,
+                    "wikipedia": 8
+                  }
+                },
+                {
+                  "query": "regulatory compliance and risk assessment",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "0ad16294-bf88-4ff3-bc35-80f8673a31f9",
+                    "domain": "news",
+                    "score": 0.8366
+                  },
+                  "hybrid_domain_dist": {
+                    "legal": 7,
+                    "news": 2,
+                    "pubmed": 1
+                  }
+                },
+                {
+                  "query": "gradient descent and loss functions",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "4c042d52-af5b-49ac-85b9-1c63e7bd382b",
+                    "domain": "news",
+                    "score": 0.7774
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 7,
+                    "pubmed": 2,
+                    "wikipedia": 1
+                  }
+                },
+                {
+                  "query": "natural language understanding",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                    "domain": "wikipedia",
+                    "score": 0.7949
+                  },
+                  "hybrid_domain_dist": {
+                    "stackexchange": 1,
+                    "wikipedia": 9
+                  }
+                },
+                {
+                  "query": "clinical trials and treatment efficacy",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "15fb4250-bdbd-46dc-a61e-916947a34b9d",
+                    "domain": "pubmed",
+                    "score": 0.8659
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "pubmed": 9
+                  }
+                },
+                {
+                  "query": "market dynamics and price prediction",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "9c18a47c-4c2e-42f4-813a-4e4537c4d9a6",
+                    "domain": "news",
+                    "score": 0.8481
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 10
+                  }
+                }
+              ]
+            },
+            {
+              "beta": 0.8,
+              "alpha": 0.2,
+              "n_queries_set_diff": 0,
+              "n_queries_domain_dist_changed": 0,
+              "n_queries_top1_changed": 0,
+              "queries": [
+                {
+                  "query": "optimization algorithms for convergence",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "a7e310d2-946e-4490-84da-d8214e547168",
+                    "domain": "wikipedia",
+                    "score": 0.8664
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 2,
+                    "stackexchange": 2,
+                    "wikipedia": 6
+                  }
+                },
+                {
+                  "query": "neural network architecture design",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "403f7e17-5cc3-4983-a08b-e965d60e6551",
+                    "domain": "stackexchange",
+                    "score": 0.8556
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "stackexchange": 2,
+                    "wikipedia": 7
+                  }
+                },
+                {
+                  "query": "statistical inference and uncertainty",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                    "domain": "wikipedia",
+                    "score": 0.8714
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 3,
+                    "wikipedia": 7
+                  }
+                },
+                {
+                  "query": "distributed systems and fault tolerance",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "c97025e9-3b4d-4037-a73a-cf885fbb7f6a",
+                    "domain": "wikipedia",
+                    "score": 0.8626
+                  },
+                  "hybrid_domain_dist": {
+                    "legal": 1,
+                    "news": 4,
+                    "wikipedia": 5
+                  }
+                },
+                {
+                  "query": "protein folding and molecular structure",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "b1795c07-93c6-4db5-938c-3290c471071d",
+                    "domain": "wikipedia",
+                    "score": 0.8838
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "stackexchange": 1,
+                    "wikipedia": 8
+                  }
+                },
+                {
+                  "query": "regulatory compliance and risk assessment",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "0ad16294-bf88-4ff3-bc35-80f8673a31f9",
+                    "domain": "news",
+                    "score": 0.891
+                  },
+                  "hybrid_domain_dist": {
+                    "legal": 7,
+                    "news": 2,
+                    "pubmed": 1
+                  }
+                },
+                {
+                  "query": "gradient descent and loss functions",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "4c042d52-af5b-49ac-85b9-1c63e7bd382b",
+                    "domain": "news",
+                    "score": 0.8516
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 7,
+                    "pubmed": 2,
+                    "wikipedia": 1
+                  }
+                },
+                {
+                  "query": "natural language understanding",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                    "domain": "wikipedia",
+                    "score": 0.8633
+                  },
+                  "hybrid_domain_dist": {
+                    "stackexchange": 1,
+                    "wikipedia": 9
+                  }
+                },
+                {
+                  "query": "clinical trials and treatment efficacy",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "15fb4250-bdbd-46dc-a61e-916947a34b9d",
+                    "domain": "pubmed",
+                    "score": 0.9106
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "pubmed": 9
+                  }
+                },
+                {
+                  "query": "market dynamics and price prediction",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "9c18a47c-4c2e-42f4-813a-4e4537c4d9a6",
+                    "domain": "news",
+                    "score": 0.8987
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 10
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "target_edges": 375,
+          "graph": {
+            "target_edges": 375,
+            "actual_edges": 375,
+            "created_edges": 375,
+            "min_cosine": 0.38285,
+            "max_cosine": 0.70876,
+            "domain_pair_counts": {
+              "legal-news": 236,
+              "legal-pubmed": 6,
+              "legal-stackexchange": 2,
+              "legal-wikipedia": 3,
+              "news-pubmed": 9,
+              "news-stackexchange": 27,
+              "news-wikipedia": 55,
+              "pubmed-stackexchange": 5,
+              "pubmed-wikipedia": 24,
+              "stackexchange-wikipedia": 8
+            }
+          },
+          "per_beta": [
+            {
+              "beta": 0.5,
+              "alpha": 0.5,
+              "n_queries_set_diff": 0,
+              "n_queries_domain_dist_changed": 0,
+              "n_queries_top1_changed": 0,
+              "queries": [
+                {
+                  "query": "optimization algorithms for convergence",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "a7e310d2-946e-4490-84da-d8214e547168",
+                    "domain": "wikipedia",
+                    "score": 0.6661
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 2,
+                    "stackexchange": 2,
+                    "wikipedia": 6
+                  }
+                },
+                {
+                  "query": "neural network architecture design",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "403f7e17-5cc3-4983-a08b-e965d60e6551",
+                    "domain": "stackexchange",
+                    "score": 0.6391
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "stackexchange": 2,
+                    "wikipedia": 7
+                  }
+                },
+                {
+                  "query": "statistical inference and uncertainty",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                    "domain": "wikipedia",
+                    "score": 0.6784
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 3,
+                    "wikipedia": 7
+                  }
+                },
+                {
+                  "query": "distributed systems and fault tolerance",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "c97025e9-3b4d-4037-a73a-cf885fbb7f6a",
+                    "domain": "wikipedia",
+                    "score": 0.6565
+                  },
+                  "hybrid_domain_dist": {
+                    "legal": 1,
+                    "news": 4,
+                    "wikipedia": 5
+                  }
+                },
+                {
+                  "query": "protein folding and molecular structure",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "b1795c07-93c6-4db5-938c-3290c471071d",
+                    "domain": "wikipedia",
+                    "score": 0.7095
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "stackexchange": 1,
+                    "wikipedia": 8
+                  }
+                },
+                {
+                  "query": "regulatory compliance and risk assessment",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "0ad16294-bf88-4ff3-bc35-80f8673a31f9",
+                    "domain": "news",
+                    "score": 0.7276
+                  },
+                  "hybrid_domain_dist": {
+                    "legal": 7,
+                    "news": 2,
+                    "pubmed": 1
+                  }
+                },
+                {
+                  "query": "gradient descent and loss functions",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "4c042d52-af5b-49ac-85b9-1c63e7bd382b",
+                    "domain": "news",
+                    "score": 0.629
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 7,
+                    "pubmed": 2,
+                    "wikipedia": 1
+                  }
+                },
+                {
+                  "query": "natural language understanding",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                    "domain": "wikipedia",
+                    "score": 0.6583
+                  },
+                  "hybrid_domain_dist": {
+                    "stackexchange": 1,
+                    "wikipedia": 9
+                  }
+                },
+                {
+                  "query": "clinical trials and treatment efficacy",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "15fb4250-bdbd-46dc-a61e-916947a34b9d",
+                    "domain": "pubmed",
+                    "score": 0.7766
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "pubmed": 9
+                  }
+                },
+                {
+                  "query": "market dynamics and price prediction",
+                  "beta": 0.5,
+                  "alpha": 0.5,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "9c18a47c-4c2e-42f4-813a-4e4537c4d9a6",
+                    "domain": "news",
+                    "score": 0.7468
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 10
+                  }
+                }
+              ]
+            },
+            {
+              "beta": 0.7,
+              "alpha": 0.3,
+              "n_queries_set_diff": 0,
+              "n_queries_domain_dist_changed": 0,
+              "n_queries_top1_changed": 0,
+              "queries": [
+                {
+                  "query": "optimization algorithms for convergence",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "a7e310d2-946e-4490-84da-d8214e547168",
+                    "domain": "wikipedia",
+                    "score": 0.7996
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 2,
+                    "stackexchange": 2,
+                    "wikipedia": 6
+                  }
+                },
+                {
+                  "query": "neural network architecture design",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "403f7e17-5cc3-4983-a08b-e965d60e6551",
+                    "domain": "stackexchange",
+                    "score": 0.7834
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "stackexchange": 2,
+                    "wikipedia": 7
+                  }
+                },
+                {
+                  "query": "statistical inference and uncertainty",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                    "domain": "wikipedia",
+                    "score": 0.8071
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 3,
+                    "wikipedia": 7
+                  }
+                },
+                {
+                  "query": "distributed systems and fault tolerance",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "c97025e9-3b4d-4037-a73a-cf885fbb7f6a",
+                    "domain": "wikipedia",
+                    "score": 0.7939
+                  },
+                  "hybrid_domain_dist": {
+                    "legal": 1,
+                    "news": 4,
+                    "wikipedia": 5
+                  }
+                },
+                {
+                  "query": "protein folding and molecular structure",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "b1795c07-93c6-4db5-938c-3290c471071d",
+                    "domain": "wikipedia",
+                    "score": 0.8257
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "stackexchange": 1,
+                    "wikipedia": 8
+                  }
+                },
+                {
+                  "query": "regulatory compliance and risk assessment",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "0ad16294-bf88-4ff3-bc35-80f8673a31f9",
+                    "domain": "news",
+                    "score": 0.8366
+                  },
+                  "hybrid_domain_dist": {
+                    "legal": 7,
+                    "news": 2,
+                    "pubmed": 1
+                  }
+                },
+                {
+                  "query": "gradient descent and loss functions",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "4c042d52-af5b-49ac-85b9-1c63e7bd382b",
+                    "domain": "news",
+                    "score": 0.7774
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 7,
+                    "pubmed": 2,
+                    "wikipedia": 1
+                  }
+                },
+                {
+                  "query": "natural language understanding",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                    "domain": "wikipedia",
+                    "score": 0.7949
+                  },
+                  "hybrid_domain_dist": {
+                    "stackexchange": 1,
+                    "wikipedia": 9
+                  }
+                },
+                {
+                  "query": "clinical trials and treatment efficacy",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "15fb4250-bdbd-46dc-a61e-916947a34b9d",
+                    "domain": "pubmed",
+                    "score": 0.8659
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "pubmed": 9
+                  }
+                },
+                {
+                  "query": "market dynamics and price prediction",
+                  "beta": 0.7,
+                  "alpha": 0.3,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "9c18a47c-4c2e-42f4-813a-4e4537c4d9a6",
+                    "domain": "news",
+                    "score": 0.8481
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 10
+                  }
+                }
+              ]
+            },
+            {
+              "beta": 0.8,
+              "alpha": 0.2,
+              "n_queries_set_diff": 0,
+              "n_queries_domain_dist_changed": 0,
+              "n_queries_top1_changed": 0,
+              "queries": [
+                {
+                  "query": "optimization algorithms for convergence",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "a7e310d2-946e-4490-84da-d8214e547168",
+                    "domain": "wikipedia",
+                    "score": 0.8664
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 2,
+                    "stackexchange": 2,
+                    "wikipedia": 6
+                  }
+                },
+                {
+                  "query": "neural network architecture design",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "403f7e17-5cc3-4983-a08b-e965d60e6551",
+                    "domain": "stackexchange",
+                    "score": 0.8556
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "stackexchange": 2,
+                    "wikipedia": 7
+                  }
+                },
+                {
+                  "query": "statistical inference and uncertainty",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                    "domain": "wikipedia",
+                    "score": 0.8714
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 3,
+                    "wikipedia": 7
+                  }
+                },
+                {
+                  "query": "distributed systems and fault tolerance",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "c97025e9-3b4d-4037-a73a-cf885fbb7f6a",
+                    "domain": "wikipedia",
+                    "score": 0.8626
+                  },
+                  "hybrid_domain_dist": {
+                    "legal": 1,
+                    "news": 4,
+                    "wikipedia": 5
+                  }
+                },
+                {
+                  "query": "protein folding and molecular structure",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "b1795c07-93c6-4db5-938c-3290c471071d",
+                    "domain": "wikipedia",
+                    "score": 0.8838
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "stackexchange": 1,
+                    "wikipedia": 8
+                  }
+                },
+                {
+                  "query": "regulatory compliance and risk assessment",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "0ad16294-bf88-4ff3-bc35-80f8673a31f9",
+                    "domain": "news",
+                    "score": 0.891
+                  },
+                  "hybrid_domain_dist": {
+                    "legal": 7,
+                    "news": 2,
+                    "pubmed": 1
+                  }
+                },
+                {
+                  "query": "gradient descent and loss functions",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "4c042d52-af5b-49ac-85b9-1c63e7bd382b",
+                    "domain": "news",
+                    "score": 0.8516
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 7,
+                    "pubmed": 2,
+                    "wikipedia": 1
+                  }
+                },
+                {
+                  "query": "natural language understanding",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+                    "domain": "wikipedia",
+                    "score": 0.8633
+                  },
+                  "hybrid_domain_dist": {
+                    "stackexchange": 1,
+                    "wikipedia": 9
+                  }
+                },
+                {
+                  "query": "clinical trials and treatment efficacy",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "15fb4250-bdbd-46dc-a61e-916947a34b9d",
+                    "domain": "pubmed",
+                    "score": 0.9106
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 1,
+                    "pubmed": 9
+                  }
+                },
+                {
+                  "query": "market dynamics and price prediction",
+                  "beta": 0.8,
+                  "alpha": 0.2,
+                  "set_diff": 0,
+                  "top1_changed": false,
+                  "domain_dist_changed": false,
+                  "promoted_nodes": [],
+                  "demoted_nodes": [],
+                  "hybrid_top1": {
+                    "node_id": "9c18a47c-4c2e-42f4-813a-4e4537c4d9a6",
+                    "domain": "news",
+                    "score": 0.8987
+                  },
+                  "hybrid_domain_dist": {
+                    "news": 10
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "summary_table": [
+        {
+          "edges": 75,
+          "density_pct": 1.0,
+          "beta": 0.5,
+          "n_set_diff": 0,
+          "n_domain_diff": 0,
+          "n_top1_diff": 0
+        },
+        {
+          "edges": 75,
+          "density_pct": 1.0,
+          "beta": 0.7,
+          "n_set_diff": 0,
+          "n_domain_diff": 0,
+          "n_top1_diff": 0
+        },
+        {
+          "edges": 75,
+          "density_pct": 1.0,
+          "beta": 0.8,
+          "n_set_diff": 0,
+          "n_domain_diff": 0,
+          "n_top1_diff": 0
+        },
+        {
+          "edges": 150,
+          "density_pct": 2.0,
+          "beta": 0.5,
+          "n_set_diff": 0,
+          "n_domain_diff": 0,
+          "n_top1_diff": 0
+        },
+        {
+          "edges": 150,
+          "density_pct": 2.0,
+          "beta": 0.7,
+          "n_set_diff": 0,
+          "n_domain_diff": 0,
+          "n_top1_diff": 0
+        },
+        {
+          "edges": 150,
+          "density_pct": 2.0,
+          "beta": 0.8,
+          "n_set_diff": 0,
+          "n_domain_diff": 0,
+          "n_top1_diff": 0
+        },
+        {
+          "edges": 375,
+          "density_pct": 4.99,
+          "beta": 0.5,
+          "n_set_diff": 0,
+          "n_domain_diff": 0,
+          "n_top1_diff": 0
+        },
+        {
+          "edges": 375,
+          "density_pct": 4.99,
+          "beta": 0.7,
+          "n_set_diff": 0,
+          "n_domain_diff": 0,
+          "n_top1_diff": 0
+        },
+        {
+          "edges": 375,
+          "density_pct": 4.99,
+          "beta": 0.8,
+          "n_set_diff": 0,
+          "n_domain_diff": 0,
+          "n_top1_diff": 0
+        }
+      ]
+    }
   }
 }

@@ -280,7 +280,7 @@ Five probe nodes were inserted after graph construction. For each, the raw embed
 ## 5. Key Findings
 
 1. **Graph density:** Only **6** cross-domain edges at threshold 0.45 on **7,510** nodes; news–wikipedia was the most connected pair (3 edges), contradicting the hypothesis that stackexchange–wikipedia would dominate.
-2. **Threshold insensitivity:** Lowering threshold to **0.20** produced **49 edges** (8.2×) yet still **0/10** Experiment 1 queries changed top-10 set or domain distribution — graph weight 0.4 is the binding constraint, not edge density.
+2. **Graph signal is structurally zero:** Across weight sweep (β 0.4–0.8) and density sweep (75–375 edges / 1–5%), every `graph_score` diagnostic read **0.0000**. Root cause: the anchor-free CRS fallback uses top-3 vector hits as reference nodes; at ≤5% edge coverage, P(any reference node has an edge) ≈ 27%, and when edges do exist they point to cross-domain nodes outside the top-12 candidate pool. Higher β cannot fix zero graph scores.
 3. **No domain diversification:** Hybrid returned identical top-10 sets to vector for **10/10** concept queries; mean unique domains was **2.5** for both modes.
 4. **Hidden gems absent:** Hybrid found the same **6/6** linked partner nodes as vector; hidden-gem count was **0**; hybrid improved rank by mean **3.2 positions** without expanding recall.
 5. **Conditioning effect doubled:** Mean raw-vs-conditioned embedding cosine diff was **0.01927** vs **0.00977** arXiv baseline — graph conditioning is measurably stronger at multi-domain scale.
@@ -292,10 +292,97 @@ Five probe nodes were inserted after graph construction. For each, the raw embed
 
 ## 6. Open Questions
 
-- **Weight tuning at scale:** What CRS graph weight is needed for graph edges to influence top-10 membership at 7,500 nodes? Theoretical analysis suggests the graph component must score ≥ ~0.25 to overcome typical vector score differences between rank 10 and rank 11.
-- **Reciprocal edges and edge expansion:** Current construction is directional and top-3 capped. Bidirectional edges with a higher neighborhood cap (top-10) may produce the density needed for retrieval-level effects.
-- **Embedding model choice:** MiniLM's short-sentence geometry places Stack Exchange Q&A near news in embedding space, creating systematic cross-domain confusion. Sentence-BERT or domain-adaptive models may produce more separated clusters and richer cross-domain edges.
-- **Minimum edge density for retrieval-level hybrid gains:** Based on these results, a target of ~1% edge density (750 edges on 7,500 nodes) seems necessary. What construction protocol achieves this without noise?
+- **Explicit anchor experiments:** Every sweep used anchor-free hybrid search. The next experiment should re-run Experiment 3 with explicit `anchor_nodes` set to a node known to have ≥1 cross-domain edge; this is the only currently viable path to non-zero graph signal.
+- **Larger candidate pool:** Expanding `top_k` to 100+ so that cross-domain neighbors of the reference nodes enter the candidate set before CRS scoring. This tests whether the graph signal exists but is buried below rank 12.
+- **Intra-domain edges:** Build edges within each domain (e.g., top-10 cosine neighbors within Wikipedia) so reference nodes almost always have in-domain neighbors already in the vector top-12. This makes the graph structurally effective without changing the anchor mechanism.
+- **Embedding model choice:** MiniLM's short-sentence geometry places Stack Exchange Q&A near news, creating systematic cross-domain confusion. Sentence-BERT or domain-adaptive models may produce more separated clusters and richer cross-domain edges.
 - **Human relevance labels:** Exp 4 precision numbers (0.00 for stackexchange) should be validated against human annotation to distinguish model failure from corpus sparsity.
-- **Threshold as a precision/recall dial:** The 0.20 threshold exposes edges like "pubmed temperature monitoring → stackexchange 3D printer enclosure temperature" (weight 0.40) — arguably spurious. The right threshold is a precision/recall tradeoff, not a single number.
+- **Minimum edge density for retrieval-level hybrid gains:** Based on these results, purely cross-domain edges at ≤5% density are insufficient. Intra-domain + cross-domain combined (targeting ≥30% per-node edge coverage) is the right target.
 
+
+
+---
+
+## Appendix: Phase 2 Sweep Results
+
+*Generated: 2026-03-27 00:18:23. Server: http://127.0.0.1:8000. Nodes: 7510 (edge state before sweep: 75).*
+
+### A.1 Weight Sweep
+
+**Setup:** 10 concept queries × 5 β values. Vector search run once per query (top_k=12); hybrid run with matching α = 1−β. Cache cleared before every call.
+
+**Crossover β (first weight where hybrid top-10 ≠ vector top-10):** none found (≥β=0.8 tested)
+
+### Weight Sweep — top-10 set differences vs vector-only (10 concept queries, top_k=12)
+
+| Query | v score gap (r10–r11) | β=0.4 Δ | β=0.5 Δ | β=0.6 Δ | β=0.7 Δ | β=0.8 Δ | First crossover β |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| optimization algorithms for convergence | 0.00210 | 0 | 0 | 0 | 0 | 0 | none |
+| neural network architecture design | 0.00370 | 0 | 0 | 0 | 0 | 0 | none |
+| statistical inference and uncertainty | 0.00730 | 0 | 0 | 0 | 0 | 0 | none |
+| distributed systems and fault tolerance | 0.00630 | 0 | 0 | 0 | 0 | 0 | none |
+| protein folding and molecular structure | 0.00460 | 0 | 0 | 0 | 0 | 0 | none |
+| regulatory compliance and risk assessment | 0.00170 | 0 | 0 | 0 | 0 | 0 | none |
+| gradient descent and loss functions | 0.00180 | 0 | 0 | 0 | 0 | 0 | none |
+| natural language understanding | 0.00230 | 0 | 0 | 0 | 0 | 0 | none |
+| clinical trials and treatment efficacy | 0.00300 | 0 | 0 | 0 | 0 | 0 | none |
+| market dynamics and price prediction | 0.00090 | 0 | 0 | 0 | 0 | 0 | none |
+
+**Queries with any set diff across all betas:** 0/10
+
+| β | Queries with ≥1 set diff |
+| --- | ---: |
+| 0.4 | 0/10 |
+| 0.5 | 0/10 |
+| 0.6 | 0/10 |
+| 0.7 | 0/10 |
+| 0.8 | 0/10 |
+
+No rank promotions detected across any β value.
+
+### A.2 Density Sweep
+
+**Setup:** Graph rebuilt at 3 edge-count targets (75, 150, 375 edges ≈ 1.0%, 2.0%, 5.0% node-density). Edges chosen as global top-N cross-domain pairs by cosine similarity (300 nodes sampled per domain per pair; deduplicated). β tested: [0.5, 0.7, 0.8].
+
+### Density Sweep — hybrid vs vector divergence at different edge densities
+
+| Edges | Density | β | Set-diff queries | Domain-dist changes | Top-1 changes |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 75 | 1.00% | 0.5 | 0/10 | 0/10 | 0/10 |
+| 75 | 1.00% | 0.7 | 0/10 | 0/10 | 0/10 |
+| 75 | 1.00% | 0.8 | 0/10 | 0/10 | 0/10 |
+| 150 | 2.00% | 0.5 | 0/10 | 0/10 | 0/10 |
+| 150 | 2.00% | 0.7 | 0/10 | 0/10 | 0/10 |
+| 150 | 2.00% | 0.8 | 0/10 | 0/10 | 0/10 |
+| 375 | 4.99% | 0.5 | 0/10 | 0/10 | 0/10 |
+| 375 | 4.99% | 0.7 | 0/10 | 0/10 | 0/10 |
+| 375 | 4.99% | 0.8 | 0/10 | 0/10 | 0/10 |
+
+**Set-diff = nodes in hybrid top-10 not present in vector top-10 for the same query.**
+**A non-zero value means hybrid retrieved at least one node vector would have missed.**
+
+### A.3 Root Cause: Why Graph Scores Are Universally Zero
+
+Every diagnostic read of `graph_score_at_β=0.8` for vector ranks 10–12 returned **0.0000** across all 10 queries and all density levels. This is not a weight-tuning problem. It is a structural mismatch between how edges are built and how the CRS formula resolves reference nodes.
+
+**The CRS anchor-free fallback mechanism:**  
+When no `anchor_nodes` are provided to `POST /search/hybrid`, `HybridRanker.search` uses the **top-3 vector results** as reference nodes for graph proximity scoring. Graph score for any candidate is then `1 / (1 + min_dist_to_reference)`, where distance is BFS hops in the graph index.
+
+**Why reference nodes have no useful edges:**  
+1. *Low edge coverage.* At E=375 edges on N=7,510 nodes, bidirectional edge coverage is `2×375/7510 = 9.99%`. P(at least one of the top-3 reference nodes has any edge) ≈ `1 − (1−0.10)^3 ≈ 27%`. For 73% of queries, all three reference nodes have zero edges — graph score is zero by definition.
+2. *Cross-domain orthogonality.* The edges that were built connect the globally top-N cross-domain cosine pairs. For a query like "neural network architecture design", the top-3 vector hits are stackexchange/wikipedia ML nodes. Their cross-domain edges (if any) point to pubmed, legal, or news nodes that are semantically distant from the query and never appear in the top-12 vector pool. A reference node's edge to a cross-domain partner never fires because that partner does not enter the candidate set.
+3. *Candidate set too narrow.* With `top_k=12` and retrieval dominated by a single domain, cross-domain neighbors of the reference nodes sit far below rank 12. The graph score boost cannot promote what the vector index never surfaced.
+
+**Implication — minimum conditions for non-zero graph signal:**  
+The graph component will produce non-zero scores only when **all three** of the following hold simultaneously:
+- A reference node has ≥1 edge (requires ≥~30% bidirectional coverage, or explicit `anchor_nodes`).
+- That edge's target node appears in the vector candidate pool (requires either larger `top_k` or intra-domain edges).
+- The graph boost `β × graph_score` exceeds the vector score gap between rank 10 and rank 11 (typically 0.001–0.007 here).
+
+None of these three conditions was satisfied in any sweep configuration. The fix is not higher β. It is either: **(a)** explicit `anchor_nodes` per query (bypasses the fallback), **(b)** a much larger candidate pool (`top_k ≥ 100`), or **(c)** intra-domain edges so reference nodes have in-domain neighbors already present in the top-12.
+
+### A.4 Interpretation
+
+- **Crossover β** is the minimum graph weight at which the graph component overrides vector ranking for ≥1 query.
+- At β=0.8 the graph score was still 0.0 for every query — no crossover exists in this configuration because the structural conditions for non-zero graph scores were never met.
+- The density sweep confirms edge density alone is insufficient: at 375 edges (~5%), graph score remained zero because the reference-node / candidate overlap probability is still too low.
