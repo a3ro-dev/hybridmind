@@ -1,100 +1,92 @@
 # HybridMind
 
-HybridMind is a local-first hybrid vector + graph database designed for agentic memory. It unifies semantic similarity (FAISS) with relational structure (NetworkX) via the **Contextual Relevance Score (CRS)** algorithm, enabling retrieval that is both semantically aware and structurally grounded.
+**HybridMind** is a local-first hybrid vector–graph store for agent memory: FAISS exact inner-product search, a NetworkX directed graph, and a unified **Contextual Relevance Score (CRS)** for retrieval. Repository: [github.com/a3ro-dev/hybridmind](https://github.com/a3ro-dev/hybridmind).
 
-The system is optimized for sequential reasoning loops, providing sub-15ms retrieval latencies and atomic persistence on standard CPU hardware.
+## Problem
 
----
+Pure vector retrieval ignores explicit relational structure; graph-only retrieval lacks semantic filtering and scales poorly when edges are sparse or noisy. Agent memory systems need both: semantic alignment to the query and re-ranking or traversal grounded in declared relationships, without mandatory remote services.
 
-## 🚀 Key Features
+## Approach
 
-*   **CRS Hybrid Retrieval:** Score fusion algorithm merging vector cosine similarity ($\alpha$) and graph shortest-path proximity ($\beta$).
-*   **Graph-Conditioned Embeddings:** Optional ingest-time conditioning where semantic neighborhood influences node placement in the coordinate space.
-*   **Atomic Persistence:** Crash-safe `.mind` snapshot protocol with SHA256 integrity manifests and SQLite WAL logging.
-*   **Soft Deletion & Compaction:** Concurrent-safe soft deletes with background-compatible compaction to rebuild indexing.
-*   **Python SDK:** High-level memory module for agents: `store()`, `relate()`, `recall()`, `trace()`, and `forget()`.
-*   **Local Inference:** Powered by `all-MiniLM-L6-v2` via `sentence-transformers`. CPU-optimized with sub-1ms engine overhead.
+**Contextual Relevance Score (CRS).** For query \(q\) and candidate node \(n\), \(CRS = \alpha V(q,n) + \beta G(A,n)\) with \(\alpha+\beta=1\). \(V\) is cosine similarity between query and node embeddings; \(G\) is graph proximity from anchor set \(A\) via \(\max_{a\in A} 1/(1+d(a,n))\) on shortest directed paths (either direction). Defaults \(\alpha=0.6\), \(\beta=0.4\) (“semantic primacy”). When anchors are omitted, the top-3 vector hits define \(A\). Formal definition, anchor policy, and weight discussion: [docs/ALGORITHM.md](docs/ALGORITHM.md).
 
----
+**Graph-conditioned embeddings (GCE).** At ingest, the stored embedding is a normalized blend of the text embedding and the mean of the top-5 vector neighbors: \(0.7 \cdot e_{\text{raw}} + 0.3 \cdot e_{\text{neighbors}}\) (see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) Embedding Engine). Motivation and limitations: [docs/ALGORITHM.md](docs/ALGORITHM.md) §3.
 
-## ⚙️ Performance at a Glance
+## Architecture
 
-Measured on: *Windows 11 · Python 3.13.5 · 12-core Intel · 15.7GB RAM (CPU-only)*
+Layered stack: FastAPI / Pydantic → embedding engine, vector and graph query engines, CRS hybrid ranker → SQLite (WAL), FAISS `IndexFlatIP`, NetworkX `DiGraph` → atomic `.mind` persistence (manifest, DB, vectors, graph). ASCII diagram and data-flow for hybrid search: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-- **Hybrid Search (p50)**: 9.9ms (150 nodes) / 13ms (1000 nodes)
-- **Vector Search (p50)**: 6.5ms
-- **Graph Traversal (p50)**: 2.3ms
-- **Node Ingest (mean)**: 200ms (includes embedding generation)
-- **Snapshot (median)**: 4ms
-- **Concurrency**: 10 threads @ ~487ms/req (serialization via GIL)
+## Quick start
 
-Detailed analysis available in [PERFORMANCE.md](file:///d:/yugaantar/benchmarks/PERFORMANCE.md).
-
----
-
-## 📦 Stack
-
-- **API Layer**: FastAPI / Pydantic v2
-- **Vector Store**: FAISS (IndexFlatIP)
-- **Graph Engine**: NetworkX (DiGraph)
-- **Relational Store**: SQLite3 (WAL Mode)
-- **Embedding Model**: all-MiniLM-L6-v2 (384-dim)
-
----
-
-## 🧠 Setup & Quickstart
-
-Use the **project `.venv`** for every `pip`, `python`, and `uvicorn` command (do not rely on the global interpreter).
+Use the project virtual environment for all Python commands.
 
 ```bash
-# 1. Prepare environment
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1   # Windows PowerShell
-# .\.venv\Scripts\activate.bat # Windows cmd
-# source .venv/bin/activate    # macOS/Linux
+# Windows PowerShell: .\.venv\Scripts\Activate.ps1
+# Unix: source .venv/bin/activate
 pip install -r requirements.txt
-
-# 2. Start server (explicit interpreter — same as Cursor uses via .vscode/settings.json)
 .\.venv\Scripts\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
-### Basic SDK Usage
+**Python SDK** ([sdk/memory.py](sdk/memory.py)):
 
 ```python
 from sdk.memory import HybridMemory
 
 memory = HybridMemory(base_url="http://127.0.0.1:8000")
-
-# Store and establish relationships
-node_id = memory.store("Transformer models use self-attention.")
-memory.relate(node_id, "other-node-uuid", "derived_from")
-
-# Relational search
-results = memory.recall("attention mechanisms", top_k=5)
+nid = memory.store("Transformer models use self-attention.")
+memory.relate(nid, "other-node-uuid", "derived_from")
+results = memory.recall("attention mechanisms", top_k=5, mode="hybrid")
 ```
 
-For advanced integration patterns, see [AGENT_INTEGRATION.md](file:///d:/yugaantar/docs/AGENT_INTEGRATION.md).
+**Tests and benchmarks:**
 
----
-
-## 🛠 Documentation
-
-- [Architecture Deep-Dive](file:///d:/yugaantar/docs/ARCHITECTURE.md)
-- [Algorithm Specification (CRS & GCE)](file:///d:/yugaantar/docs/ALGORITHM.md)
-- [Performance Characterization](file:///d:/yugaantar/benchmarks/PERFORMANCE.md)
-- [Agent Integration Guide](file:///d:/yugaantar/docs/AGENT_INTEGRATION.md)
-
----
-
-## 🧪 Development
-
-Run core verification suite:
 ```bash
 python -m pytest tests/ -v
-```
-
-Run stress tests & benchmarks:
-```bash
 python benchmarks/run_benchmarks.py
 ```
 
+Further integration notes: [docs/AGENT_INTEGRATION.md](docs/AGENT_INTEGRATION.md).
+
+## API overview
+
+| Area | Methods (HTTP) |
+|------|----------------|
+| Nodes | `POST/GET/PUT/DELETE /nodes`, `GET /nodes/{id}` |
+| Edges | `POST/GET/PUT/DELETE /edges`, `GET /edges/node/{node_id}`, `GET /edges/types` |
+| Search | `POST /search/vector`, `GET /search/graph`, `POST /search/hybrid`, `POST /search/compare`, `GET /search/path/{source}/{target}`, `GET /search/stats` |
+| Bulk | `POST /bulk/nodes`, `POST /bulk/edges`, `POST /bulk/import`, `POST /bulk/unstructured`, `DELETE /bulk/clear` |
+| Comparison | `POST /comparison/effectiveness` |
+| Ops | `GET /health`, `GET /ready`, `GET /live`, `POST /snapshot`, `POST /cache/clear`, `POST /admin/compact`, `POST /admin/clear` |
+
+**SDK:** `HybridMemory.store`, `relate`, `recall` (`mode`: `hybrid` \| `vector`), `trace` (vector anchor then `GET /search/graph`), `forget`, `compact`, `stats`.
+
+## Evaluation
+
+Multi-corpus load and retrieval experiments (Wikipedia, Stack Exchange, PubMed QA, AG News, legal text), **7,510 nodes**, embedding `all-MiniLM-L6-v2`, CRS weights 0.6 / 0.4: [docs/MULTI_DOMAIN_EVAL.md](docs/MULTI_DOMAIN_EVAL.md).
+
+| Finding | Reference |
+|--------|-----------|
+| Cross-domain `analogous_to` edges at cosine 0.45: **6**; at **0.20**: **49** — still **0/10** concept queries with hybrid vs vector top-10 set change | §1–3, §5 |
+| Identical top-10 membership vector vs hybrid for all 10 cross-domain concept queries; mean unique domains **2.5** both modes | §3.1 |
+| Linked-partner “hidden gem” recall: vector **6/6**, hybrid **6/6**; hybrid improved rank (mean **~3.2** positions) without new members in top-10 | §3.3, §5 |
+| Mean raw vs conditioned embedding separation (probes): **0.01927** vs **0.00977** single-corpus baseline in [docs/ALGORITHM.md](docs/ALGORITHM.md) | §4.3 |
+| Hybrid latency (100 queries, ~7.5k nodes): wall **16.51 ms** p50, **19.64 ms** p95; vs **13 / 16 ms** p50/p95 at 1k nodes | §3.5 |
+
+ArXiv-scale ablation (NDCG, \(\alpha\) sweep) and BM25-limitations caveat: [docs/ALGORITHM.md](docs/ALGORITHM.md) §2.5, §4. Micro-benchmarks (single-machine CPU): [benchmarks/PERFORMANCE.md](benchmarks/PERFORMANCE.md).
+
+## Citation
+
+```bibtex
+@software{hybridmind2025,
+  title        = {HybridMind: Hybrid Vector--Graph Memory with CRS},
+  author       = {a3ro-dev},
+  year         = {2025},
+  url          = {https://github.com/a3ro-dev/hybridmind},
+  note         = {Paper: TBD}
+}
+```
+
+## License
+
+[MIT License](LICENSE) (Copyright (c) 2025 CodeHashira Team).
