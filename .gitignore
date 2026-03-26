@@ -32,6 +32,12 @@ htmlcov/
 # ── HybridMind runtime data ──────────────────────────────────────
 # The .mind database (contains embeddings, vectors, live graph)
 data/hybridmind.mind/
+data/*.mind/
+*.mind/
+
+# Transient snapshots used during compaction/eval runs
+data/hybridmind.tmp_snapshot/
+*.tmp_snapshot/
 
 # Snapshots & backups (can be large; regenerate with POST /snapshot)
 data/backups/
@@ -67,6 +73,8 @@ desktop.ini
 # ── Logs ─────────────────────────────────────────────────────────
 *.log
 logs/
+phase2_run.log
+phase3_run.log
 
 # ── Jupyter ──────────────────────────────────────────────────────
 .ipynb_checkpoints/
