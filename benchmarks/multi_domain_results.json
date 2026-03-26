@@ -1,0 +1,632 @@
+{
+  "setup": {
+    "total_nodes": 7000,
+    "domain_distribution": {
+      "wikipedia": 2000,
+      "stackexchange": 2000,
+      "pubmed": 1000,
+      "news": 2000,
+      "legal": 0
+    }
+  },
+  "loading": {
+    "wikipedia": {
+      "count": 2000,
+      "time": 43.972546339035034
+    },
+    "stackexchange": {
+      "count": 2000,
+      "time": 40.745851278305054
+    },
+    "pubmed": {
+      "count": 1000,
+      "time": 19.290565252304077
+    },
+    "news": {
+      "count": 2000,
+      "time": 20.551668167114258
+    },
+    "legal": {
+      "count": 0,
+      "time": 0.7039272785186768
+    }
+  },
+  "graph_construction": {
+    "total_cross_domain_edges": 136,
+    "edge_counts_per_pair": {
+      "wikipedia-stackexchange": 27,
+      "wikipedia-pubmed": 19,
+      "wikipedia-news": 58,
+      "stackexchange-pubmed": 0,
+      "stackexchange-news": 1,
+      "pubmed-news": 31
+    },
+    "threshold_tests": {
+      "0.25": 255,
+      "0.30": 136,
+      "0.35": 39
+    }
+  },
+  "experiments": {
+    "exp1": [
+      {
+        "query": "optimization algorithms for convergence",
+        "vector_domains": [
+          "wikipedia",
+          "wikipedia",
+          "news",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "news",
+          "stackexchange",
+          "stackexchange",
+          "wikipedia"
+        ],
+        "hybrid_domains": [
+          "wikipedia",
+          "wikipedia",
+          "news",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "news",
+          "stackexchange",
+          "stackexchange",
+          "wikipedia"
+        ],
+        "diff_count": 0
+      },
+      {
+        "query": "neural network architecture design",
+        "vector_domains": [
+          "stackexchange",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "stackexchange",
+          "wikipedia",
+          "wikipedia",
+          "news",
+          "stackexchange",
+          "stackexchange"
+        ],
+        "hybrid_domains": [
+          "stackexchange",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "stackexchange",
+          "wikipedia",
+          "wikipedia",
+          "news",
+          "stackexchange",
+          "stackexchange"
+        ],
+        "diff_count": 0
+      },
+      {
+        "query": "statistical inference and uncertainty",
+        "vector_domains": [
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "stackexchange",
+          "wikipedia",
+          "wikipedia",
+          "news",
+          "wikipedia",
+          "wikipedia"
+        ],
+        "hybrid_domains": [
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "stackexchange",
+          "wikipedia",
+          "wikipedia",
+          "news",
+          "wikipedia",
+          "wikipedia"
+        ],
+        "diff_count": 0
+      },
+      {
+        "query": "distributed systems and fault tolerance",
+        "vector_domains": [
+          "wikipedia",
+          "stackexchange",
+          "wikipedia",
+          "wikipedia",
+          "news",
+          "wikipedia",
+          "news",
+          "wikipedia",
+          "news",
+          "pubmed"
+        ],
+        "hybrid_domains": [
+          "wikipedia",
+          "stackexchange",
+          "wikipedia",
+          "wikipedia",
+          "news",
+          "wikipedia",
+          "news",
+          "wikipedia",
+          "news",
+          "pubmed"
+        ],
+        "diff_count": 0
+      },
+      {
+        "query": "protein folding and molecular structure",
+        "vector_domains": [
+          "wikipedia",
+          "wikipedia",
+          "stackexchange",
+          "news",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "stackexchange"
+        ],
+        "hybrid_domains": [
+          "wikipedia",
+          "wikipedia",
+          "stackexchange",
+          "news",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "stackexchange"
+        ],
+        "diff_count": 0
+      },
+      {
+        "query": "regulatory compliance and risk assessment",
+        "vector_domains": [
+          "news",
+          "news",
+          "pubmed",
+          "news",
+          "pubmed",
+          "pubmed",
+          "stackexchange",
+          "stackexchange",
+          "pubmed",
+          "news"
+        ],
+        "hybrid_domains": [
+          "news",
+          "news",
+          "pubmed",
+          "news",
+          "pubmed",
+          "pubmed",
+          "stackexchange",
+          "stackexchange",
+          "pubmed",
+          "news"
+        ],
+        "diff_count": 0
+      },
+      {
+        "query": "gradient descent and loss functions",
+        "vector_domains": [
+          "news",
+          "news",
+          "wikipedia",
+          "pubmed",
+          "news",
+          "pubmed",
+          "pubmed",
+          "stackexchange",
+          "news",
+          "pubmed"
+        ],
+        "hybrid_domains": [
+          "news",
+          "news",
+          "wikipedia",
+          "pubmed",
+          "news",
+          "pubmed",
+          "pubmed",
+          "stackexchange",
+          "news",
+          "pubmed"
+        ],
+        "diff_count": 0
+      },
+      {
+        "query": "natural language understanding",
+        "vector_domains": [
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "pubmed",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia"
+        ],
+        "hybrid_domains": [
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "pubmed",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia"
+        ],
+        "diff_count": 0
+      },
+      {
+        "query": "clinical trials and treatment efficacy",
+        "vector_domains": [
+          "pubmed",
+          "pubmed",
+          "pubmed",
+          "pubmed",
+          "news",
+          "pubmed",
+          "pubmed",
+          "wikipedia",
+          "pubmed",
+          "news"
+        ],
+        "hybrid_domains": [
+          "pubmed",
+          "pubmed",
+          "pubmed",
+          "pubmed",
+          "news",
+          "pubmed",
+          "pubmed",
+          "wikipedia",
+          "pubmed",
+          "news"
+        ],
+        "diff_count": 0
+      },
+      {
+        "query": "market dynamics and price prediction",
+        "vector_domains": [
+          "news",
+          "news",
+          "news",
+          "news",
+          "news",
+          "news",
+          "news",
+          "news",
+          "news",
+          "news"
+        ],
+        "hybrid_domains": [
+          "news",
+          "news",
+          "news",
+          "news",
+          "news",
+          "news",
+          "news",
+          "news",
+          "news",
+          "news"
+        ],
+        "diff_count": 0
+      }
+    ],
+    "exp2": [
+      {
+        "query": "optimization",
+        "anchor_domain": "stackexchange",
+        "no_anchor_domains": [
+          "news",
+          "stackexchange",
+          "wikipedia",
+          "stackexchange",
+          "stackexchange",
+          "stackexchange",
+          "stackexchange",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia"
+        ],
+        "with_anchor_domains": [
+          "news",
+          "stackexchange",
+          "wikipedia",
+          "stackexchange",
+          "stackexchange",
+          "stackexchange",
+          "stackexchange",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia"
+        ]
+      },
+      {
+        "query": "network",
+        "anchor_domain": "stackexchange",
+        "no_anchor_domains": [
+          "news",
+          "news",
+          "wikipedia",
+          "stackexchange",
+          "wikipedia",
+          "news",
+          "wikipedia",
+          "news",
+          "news",
+          "news"
+        ],
+        "with_anchor_domains": [
+          "news",
+          "news",
+          "wikipedia",
+          "stackexchange",
+          "wikipedia",
+          "news",
+          "wikipedia",
+          "news",
+          "news",
+          "news"
+        ]
+      },
+      {
+        "query": "classification",
+        "anchor_domain": "stackexchange",
+        "no_anchor_domains": [
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "stackexchange",
+          "wikipedia",
+          "stackexchange"
+        ],
+        "with_anchor_domains": [
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "stackexchange",
+          "wikipedia",
+          "stackexchange"
+        ]
+      },
+      {
+        "query": "prediction",
+        "anchor_domain": "stackexchange",
+        "no_anchor_domains": [
+          "news",
+          "news",
+          "news",
+          "news",
+          "news",
+          "news",
+          "news",
+          "news",
+          "news",
+          "news"
+        ],
+        "with_anchor_domains": [
+          "news",
+          "news",
+          "news",
+          "news",
+          "news",
+          "news",
+          "news",
+          "news",
+          "news",
+          "news"
+        ]
+      },
+      {
+        "query": "inference",
+        "anchor_domain": "stackexchange",
+        "no_anchor_domains": [
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "news",
+          "stackexchange",
+          "news"
+        ],
+        "with_anchor_domains": [
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "wikipedia",
+          "news",
+          "stackexchange",
+          "news"
+        ]
+      }
+    ],
+    "exp3": {
+      "pairs_tested": 50,
+      "found_by_vector": 41,
+      "found_by_hybrid": 50,
+      "hidden_gems": [
+        {
+          "source_domain": "wikipedia",
+          "target_domain": "stackexchange",
+          "source_text": "Blue is one of the three primary colours in the RYB colour model (traditional colour theory), as well as in the RGB (additive) colour model. It lies between violet and cyan on the spectrum of visible light. The term blue generally describes colors perceived by humans observing light with a dominant ",
+          "target_text": "<p>Ive been experimenting will multiple color filament but the colors a more or less blended. Is there are filament that goes from one color directly to another without having transition color ex. red to green immediately.</p>\n<p>I've been tinkering with <a href=\"https://www.filamenthub.com\" rel=\"nofollow noreferrer\">Filament Hub Filament</a> and it is very good (some of the best I've ever used)  ",
+          "reason": "Hybrid search successfully traversed the cross-domain graph edge that bridged these nodes, whereas pure vector distance was too far."
+        },
+        {
+          "source_domain": "wikipedia",
+          "target_domain": "stackexchange",
+          "source_text": "Blue is one of the three primary colours in the RYB colour model (traditional colour theory), as well as in the RGB (additive) colour model. It lies between violet and cyan on the spectrum of visible light. The term blue generally describes colors perceived by humans observing light with a dominant ",
+          "target_text": "<p>I've seen several questions about dyes in regards to food-safety, with no conclusive answers, as well as anecdotes on the RepRap wiki about how the mechanical properties of dyed PLA tend to vary by color. The general unsatisfactory answer is that dyes and additives used are proprietary secrets of filament manufacturers. However, 3D printer filament is a sufficiently large industry, with suffici",
+          "reason": "Hybrid search successfully traversed the cross-domain graph edge that bridged these nodes, whereas pure vector distance was too far."
+        },
+        {
+          "source_domain": "wikipedia",
+          "target_domain": "stackexchange",
+          "source_text": "Burnt-in timecode (often abbreviated to BITC by analogy to VITC) is a human-readable on-screen version of the timecode information for a piece of material superimposed on a video image. BITC is sometimes used in conjunction with \"real\" machine-readable timecode, but more often used in copies of orig",
+          "target_text": "<p>Given the Marlin Firmware what is the difference between the following lines of code:</p>\n\n<blockquote>\n  <p>G4 S20</p>\n</blockquote>\n\n<p>and</p>\n\n<blockquote>\n  <p>G4 P2000</p>\n</blockquote>\n\n<p>The code <code>G4</code> refers to <em>dwell</em>. (From what I'm seeing, it can be written as either <code>G4</code> or <code>G04</code>). <code>P</code>is the length of dwell time, usually in millise",
+          "reason": "Hybrid search successfully traversed the cross-domain graph edge that bridged these nodes, whereas pure vector distance was too far."
+        },
+        {
+          "source_domain": "wikipedia",
+          "target_domain": "stackexchange",
+          "source_text": "Burnt-in timecode (often abbreviated to BITC by analogy to VITC) is a human-readable on-screen version of the timecode information for a piece of material superimposed on a video image. BITC is sometimes used in conjunction with \"real\" machine-readable timecode, but more often used in copies of orig",
+          "target_text": "<p>I\u2019ve been using Thingiverse pretty heavily since I started printing, and I frequently come across the same text block in unrelated models. Am I missing the joke or a hidden meaning in the frequent reuse of the following content?</p>\n<blockquote>\n<p>Designed up this dealer button to use in home games or have just as something laying around for any poker fan. It was inspired by a dealer button in",
+          "reason": "Hybrid search successfully traversed the cross-domain graph edge that bridged these nodes, whereas pure vector distance was too far."
+        },
+        {
+          "source_domain": "wikipedia",
+          "target_domain": "stackexchange",
+          "source_text": "A ballpoint pen, also known as a biro (British English), ball pen (Hong Kong, Indian and Philippine English), or dot pen (Nepali English), is a pen that dispenses ink (usually in paste form) over a metal ball at its point, i.e. over a \"ball point\". The metal commonly used is steel, brass, or tungste",
+          "target_text": "<p>Not quite sure what's happening here. I printed it as a single ball and had this effect. I thought it might be a cooling issue so I printed 4 at once but the issue still occurred. If I size the ball up, the problem reduces.</p>\n\n<p>Note that the hole is supposed to be a cylinder.</p>\n\n<p><a href=\"https://i.stack.imgur.com/owZtw.jpg\" rel=\"noreferrer\"><img src=\"https://i.stack.imgur.com/owZtw.jpg",
+          "reason": "Hybrid search successfully traversed the cross-domain graph edge that bridged these nodes, whereas pure vector distance was too far."
+        },
+        {
+          "source_domain": "wikipedia",
+          "target_domain": "stackexchange",
+          "source_text": "The British thermal unit (BTU or Btu) is a measure of heat, which is a form of energy. It was originally defined as the amount of heat required to raise the temperature of one pound of water by one degree Fahrenheit. It is also part of the United States customary units. The SI unit for energy is the",
+          "target_text": "<p>I've been going down the learning road with two broken printers that I'm rebuilding with better parts and electronics.</p>\n\n<p>One thing that I've recognized is that there is a pretty low likelihood that any hotend or heatbed that has had the thermistor/thermocouple and/or the printer board swapped with a non-OEM part can be trusted to accurately report it's own temperature.</p>\n\n<p>Sure, there",
+          "reason": "Hybrid search successfully traversed the cross-domain graph edge that bridged these nodes, whereas pure vector distance was too far."
+        },
+        {
+          "source_domain": "wikipedia",
+          "target_domain": "stackexchange",
+          "source_text": "The British thermal unit (BTU or Btu) is a measure of heat, which is a form of energy. It was originally defined as the amount of heat required to raise the temperature of one pound of water by one degree Fahrenheit. It is also part of the United States customary units. The SI unit for energy is the",
+          "target_text": "<p>I upgraded to an Mk9 dual extruder, and it came with thermocouples installed instead of the thermistors I had before. </p>\n\n<p>No matter what I did with the thermocouples, the indicated temperature jumped around by as much as 30C or more. In short, after several weeks of fiddling I never got the thermocouples to work well, and replaced them with thermistors, which have been fine.</p>\n\n<p>So my ",
+          "reason": "Hybrid search successfully traversed the cross-domain graph edge that bridged these nodes, whereas pure vector distance was too far."
+        },
+        {
+          "source_domain": "wikipedia",
+          "target_domain": "pubmed",
+          "source_text": "BDSM is a variety of often erotic practices or roleplaying involving bondage, discipline, dominance and submission, sadomasochism, and other related interpersonal dynamics. Given the wide range of practices, some of which may be engaged in by people who do not consider themselves to be practising BD",
+          "target_text": "Is unsafe sexual behaviour increasing among HIV-infected individuals? There was no evidence of a trend in unsafe sex behaviour over time. However, several subgroups were identified as being more likely to report unsafe sex and should be targeted for specific interventions.",
+          "reason": "Hybrid search successfully traversed the cross-domain graph edge that bridged these nodes, whereas pure vector distance was too far."
+        },
+        {
+          "source_domain": "wikipedia",
+          "target_domain": "pubmed",
+          "source_text": "The breast is one of two prominences located on the upper ventral region of a primate's torso. Both females and males develop breasts from the same embryological tissues.\n\nIn females, it serves as the mammary gland, which produces and secretes milk to feed infants. Subcutaneous fat covers and envelo",
+          "target_text": "Can nonproliferative breast disease and proliferative breast disease without atypia be distinguished by fine-needle aspiration cytology? Because there is significant overlap in cytologic features between NPBD and PBD, the distinction between the two entities is difficult in cytologic sampling.",
+          "reason": "Hybrid search successfully traversed the cross-domain graph edge that bridged these nodes, whereas pure vector distance was too far."
+        }
+      ]
+    },
+    "exp4": [
+      {
+        "query": "ACL reconstruction surgery rehabilitation",
+        "target_domain": "pubmed",
+        "hybrid_precision": 0.9,
+        "vector_precision": 0.9
+      },
+      {
+        "query": "mRNA vaccine mechanism",
+        "target_domain": "pubmed",
+        "hybrid_precision": 0.2,
+        "vector_precision": 0.2
+      },
+      {
+        "query": "Python asyncio event loop",
+        "target_domain": "stackexchange",
+        "hybrid_precision": 0.2,
+        "vector_precision": 0.2
+      },
+      {
+        "query": "Docker container networking",
+        "target_domain": "stackexchange",
+        "hybrid_precision": 0.2,
+        "vector_precision": 0.2
+      },
+      {
+        "query": "FIFA World Cup qualification",
+        "target_domain": "news",
+        "hybrid_precision": 1.0,
+        "vector_precision": 1.0
+      },
+      {
+        "query": "Central Bank interest rate hike",
+        "target_domain": "news",
+        "hybrid_precision": 0.9,
+        "vector_precision": 0.9
+      },
+      {
+        "query": "force majeure contract clause",
+        "target_domain": "legal",
+        "hybrid_precision": 0.0,
+        "vector_precision": 0.0
+      },
+      {
+        "query": "non-disclosure agreement termination",
+        "target_domain": "legal",
+        "hybrid_precision": 0.0,
+        "vector_precision": 0.0
+      }
+    ],
+    "exp5": {
+      "wikipedia": {
+        "p50": 13.612999999168096,
+        "p95": 13.729779999994207
+      },
+      "stackexchange": {
+        "p50": 14.878199999657227,
+        "p95": 16.763699999501114
+      },
+      "news": {
+        "p50": 14.203700000507524,
+        "p95": 16.718780001974665
+      }
+    }
+  },
+  "analysis": {
+    "intra_domain_similarity": {
+      "wikipedia": 0.3365401960784314,
+      "stackexchange": 0.5431648148148148,
+      "pubmed": 0.3816845730027548,
+      "news": 0.418247602739726
+    },
+    "inter_domain_similarity": {
+      "wikipedia-stackexchange": 0.2562931034482759,
+      "wikipedia-pubmed": 0.2582260869565217,
+      "wikipedia-news": 0.24235694444444444,
+      "stackexchange-wikipedia": 0.29124000000000005,
+      "stackexchange-pubmed": 0.0,
+      "stackexchange-news": 0.28388571428571424,
+      "pubmed-wikipedia": 0.3094954545454546,
+      "pubmed-stackexchange": 0.28058333333333335,
+      "pubmed-news": 0.31005714285714286,
+      "news-wikipedia": 0.2853582089552239,
+      "news-stackexchange": 0.272806976744186,
+      "news-pubmed": 0.3017692307692308
+    }
+  }
+}

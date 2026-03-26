@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "name": "hybridmind",
   "created": "2026-03-24T19:41:18.922279+00:00",
-  "modified": "2026-03-25T07:21:11.011127+00:00",
-  "snapshot_version": 69,
+  "modified": "2026-03-26T13:33:07.695384+00:00",
+  "snapshot_version": 71,
   "checksums": {
-    "store.db": "dc736e804ff6c7a4e44546579511f194de30db232a46d94b0d40067b30781c10",
-    "graph.nx": "ce67a10235f6381fce224b47ef0e904676535bfbd312bc7b21aa692b32beccce",
-    "vectors": "5d59e9dd40088d7a7a24236fb0f5ea8733902766fb8ec9352c7da10eedea35c2"
+    "store.db": "8980f3f96a2f0b77344f1fc3a232ef2082de0fdfbbc5323374edb87fcddb8868",
+    "graph.nx": "105572ac9801cb5bb418cc0b352eed77cf77120638d665654dceec94263c028e",
+    "vectors": "71a8a0606fda81c452e04ec75881404d508fc04b8da2a9b22f9a956c9931c09a"
   },
   "components": {
     "sqlite": "store.db",
@@ -17,9 +17,9 @@
     "graph": "graph.nx"
   },
   "stats": {
-    "nodes": 3479,
-    "edges": 159,
-    "vectors": 3479
+    "nodes": 7000,
+    "edges": 33,
+    "vectors": 7000
   },
   "metadata": {}
 }

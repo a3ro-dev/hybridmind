@@ -1,0 +1,76 @@
+{
+  "setup": {},
+  "loading": {
+    "wikipedia": {
+      "count": 2000,
+      "time": 39.178659200668335
+    },
+    "stackexchange": {
+      "count": 2000,
+      "time": 41.40113186836243
+    },
+    "pubmed": {
+      "count": 1000,
+      "time": 16.963273525238037
+    },
+    "news": {
+      "count": 2000,
+      "time": 21.276495218276978
+    },
+    "legal": {
+      "count": 0,
+      "time": 0.0
+    }
+  },
+  "embedding_analysis": {
+    "intra_domain": {
+      "wikipedia": 0.35340277777777784,
+      "stackexchange": 0.5727177777777778,
+      "pubmed": 0.4129083333333333,
+      "news": 0.4478637426900584
+    },
+    "inter_domain": {
+      "wikipedia-stackexchange": 0.29412,
+      "wikipedia-pubmed": 0.328395,
+      "wikipedia-news": 0.2886811111111111,
+      "stackexchange-pubmed": 0.0,
+      "stackexchange-news": 0.319,
+      "pubmed-news": 0.3629
+    }
+  },
+  "threshold_sweep": {
+    "0.35": 36,
+    "0.3": 99,
+    "0.25": 137
+  },
+  "graph_construction": {
+    "threshold": 0.3,
+    "total_edges": 99
+  },
+  "experiments": {
+    "exp1": [
+      {
+        "query": "optimization algorithms",
+        "diff_count": 0
+      },
+      {
+        "query": "neural architectures",
+        "diff_count": 0
+      },
+      {
+        "query": "regulatory compliance",
+        "diff_count": 0
+      },
+      {
+        "query": "distributed systems",
+        "diff_count": 0
+      },
+      {
+        "query": "p-values in medicine",
+        "diff_count": 0
+      }
+    ],
+    "exp3_discovery": 0
+  },
+  "hidden_gem_cases": []
+}
