@@ -1,132 +1,397 @@
-# Integrating HybridMind into a Research Agent
+# HybridMind Agent Integration Guide
 
-## What this document covers
-Using the Python SDK to provide a research agent with structured, relational memory. This guide focuses on the practical application of HybridMind within an agent reasoning loop.
+This guide shows how to integrate `sdk/memory.py` into a production research agent.
+It is focused on reliable memory workflows, session isolation, provenance, and graph-aware retrieval.
 
-## Mental Model
-HybridMind is more than a vector store; it is a memory layer that understands relationships.
-
-Three core questions it answers:
-1. **"What do I know that is similar to X?"** → `recall(x, mode="vector")`
-2. **"What do I know that is related to X through any path?"** → `trace(x)`
-3. **"How does concept A connect to concept B?"** → `relate()` then `trace()`
-
-## The Edge Vocabulary
-Using the correct edge types is critical. Mislabeling a relationship will result in inaccurate graph-based re-ranking.
-
-| Edge Type | Use Case |
-|-----------|----------|
-| **supports** | Evidence A strengthens claim B. |
-| **contradicts** | Finding A conflicts with finding B. |
-| **led_to** | Reasoning about A caused you to think of B. |
-| **derived_from**| B is a specific case or extension of A. |
-| **depends_on** | B requires A to be true/valid. |
-| **invalidated_by**| B shows A was incorrect. |
-| **refined_by** | B is a more precise version of A. |
-| **analogous_to** | A and B are similar across different domains. |
-| **caused_by** | A is the direct cause of B. |
-| **retrieved_during**| A was retrieved while reasoning about B (provenance). |
-
-## Integration Patterns
-
-### Pattern 1: Read-then-store
-Every time the agent reads a source, store it to establish a base memory.
-```python
-node_id = memory.store(
-    text=paper_abstract,
-    metadata={"source": url, "domain": "ml", "read_at": "2026-03-25"}
-)
-```
-
-### Pattern 2: Conclusion Linking
-When the agent forms a conclusion from evidence, link them explicitly.
-```python
-conclusion_id = memory.store("transformers outperform RNNs on long sequences")
-memory.relate(conclusion_id, evidence_id_1, "derived_from")
-memory.relate(conclusion_id, evidence_id_2, "supports")
-```
-
-### Pattern 3: Contradiction Detection
-Explicitly link conflicting nodes to enable relational re-ranking that surfaces conflicts.
-```python
-memory.relate(new_finding_id, old_finding_id, "contradicts")
-```
-
-### Pattern 4: Context Recall
-Retrieve a combined semantic and structural context before starting a reasoning step.
-```python
-context = memory.recall(current_topic, top_k=10, mode="hybrid")
-neighborhood = memory.trace(current_topic, depth=2)
-# Combine both into the LLM prompt context window
-```
-
-### Pattern 5: Provenance Tracking
-Link retrieved items to the current session or task node.
-```python
-memory.relate(retrieved_node_id, task_id, "retrieved_during")
-```
-
-## Performance Guidance
-Single-threaded p50 latencies (1,000-node database):
-- `recall()`: ~13ms (hybrid mode)
-- `store()`: ~200ms (embedding dominant)
-- `trace()`: ~17ms (~15ms anchor search + ~2ms BFS)
-- `relate()`: ~2ms (SQLite write)
-- `forget()`: ~2ms (Soft delete)
-- `compact()`: ~1-2s per 1,000 nodes (Full FAISS rebuild)
-
-**Critical Limitation**: Call SDK methods sequentially. Concurrent calls cause extreme latency degradation (~100-240x) due to Python GIL contention on the embedding model. Ensure memory operations reside within a single-threaded section.
-
-## Operational Recommendations
-
-### Snapshotting
-- Do **not** snapshot after every `store()`. Snapshot after bulk ingestion or at the end of an agent session.
-- **Latencies**: p50 is 4ms; p99 is 162ms (due to occasional WAL checkpoints).
-
-### Compaction
-- Run `compact()` periodically (e.g., at session end) if you frequently use `forget()`. 
-- This is an O(n) operation that rebuilds the FAISS index.
-
-### Memory and Scale
-- **Memory Growth**: ~1.6KB per node for FAISS; ~0.2KB per node for the graph.
-- **Scale Ceiling**: HybridMind provides optimal performance (sub-30ms p95) up to ~1,000 nodes. Estimated ceiling for sub-50ms p95 is ~5k-8k nodes.
-
-## Minimal Working Example
+## Quick Start
 
 ```python
 from sdk.memory import HybridMemory
 
-# Initialize connection
 memory = HybridMemory(base_url="http://127.0.0.1:8000")
 
-# 1. Store a memory from a source
+# 1) Create a session for scoped work
+session = memory.session.create(
+    name="robotics_lit_review",
+    metadata={"owner": "agent", "goal": "survey manipulation papers"}
+)
+session_id = session["session_id"]
+
+# 2) Store findings in that session
 paper_id = memory.store(
-    "Attention is All You Need introduced the transformer architecture, "
-    "replacing recurrent networks with self-attention mechanisms.",
-    metadata={"source": "arxiv:1706.03762", "year": 2017}
+    text="Paper A proposes diffusion policies for visuomotor control.",
+    metadata={
+        "domain": "robotics",
+        "source_url": "https://arxiv.org/abs/2303.04137",
+        "query": "diffusion policy robotics",
+        "kind": "paper_summary",
+    },
+    session_id=session_id,
 )
 
-# 2. Store a conclusion drawn by the agent
-conclusion_id = memory.store(
-    "Self-attention enables parallel computation, unlike sequential RNNs.",
-    metadata={"type": "conclusion", "confidence": 0.95}
-)
+# 3) Recall context in-session (strict metadata filtering)
+context = memory.session.recall("diffusion control policy", session_id=session_id, top_k=8)
 
-# 3. Relate the conclusion to the source
-memory.relate(conclusion_id, paper_id, "derived_from", weight=0.9)
+# 4) Optional graph exploration around a concept
+neighborhood = memory.trace("diffusion policy", depth=2)
 
-# 4. Recall context for a new query
-context = memory.recall("attention mechanisms", top_k=5)
-neighborhood = memory.trace("transformer architecture", depth=2)
-
-# 5. Cleanup
-memory.forget(old_node_id)
-memory.compact()  # Permanent removal
+# 5) Get health of memory state
+stats = memory.stats()
+print(stats["node_count"], stats["edge_count"])
 ```
 
-## Known Gotchas
-1. **Empty Database Cold Start**: The first ~10 nodes receive raw embeddings with no conditioning pull (no neighbors yet). The relational coherence builds as the database fills.
-2. **store() Latency**: Inserting is ~15x slower than searching (200ms vs 13ms). Avoid inserting in hot reasoning loops; use batch ingestion.
-3. **Semantic Anchors**: `trace("BERT")` identifies the node most semantically similar to "BERT" and traverses from it. It does not require an exact string match to find a starting point.
-4. **Graph Score Sparse Benefits**: Isolated nodes receive a `graph_score` of 0.0 and will be ranked solely by vector similarity. Explicit edge creation is necessary to leverage the hybrid advantage.
-5. **Snapshot version**: Monotonically increases across all experiments sharing the same `.mind` directory.
+---
+
+## Core Concepts
+
+- `store()` writes one node.
+- `store_batch()` writes many nodes + optional edges in one API call (`/bulk/import`).
+- `store_with_auto_edges()` writes a node, then auto-links to nearest neighbors using vector similarity.
+- `recall()` retrieves via `hybrid` or `vector`.
+- `session.*` provides scoped memory spaces with lifecycle controls.
+- `tools.get_schema()` exposes JSON schemas for LLM function-calling.
+
+Edge taxonomy is enforced by the server. Supported types include:
+`led_to`, `contradicts`, `supports`, `caused_by`, `retrieved_during`,
+`refined_by`, `depends_on`, `analogous_to`, `invalidated_by`, `derived_from`.
+
+---
+
+## Pattern 1: Read a Paper -> Store Summary -> Auto-Edge to Related Work
+
+Use this when ingesting many papers where linking to similar prior work should be automatic.
+
+```python
+from sdk.memory import AutoEdgeConfig, HybridMemory
+
+memory = HybridMemory("http://127.0.0.1:8000")
+session_id = memory.session.create("paper_ingest")["session_id"]
+
+paper_text = (
+    "This paper introduces a retrieval-augmented planner for robotic manipulation "
+    "with uncertainty calibration."
+)
+
+result = memory.store_with_auto_edges(
+    text=paper_text,
+    metadata={
+        "domain": "robotics",
+        "source_url": "https://arxiv.org/abs/2401.00001",
+        "kind": "paper_summary",
+    },
+    session_id=session_id,
+    auto_edge_config=AutoEdgeConfig(
+        threshold=0.7,
+        max_edges=5,
+        allowed_edge_types=("derived_from", "analogous_to"),
+    ),
+)
+
+print("node:", result["node_id"])
+print("auto_edges:", result["auto_edges_created"])
+```
+
+Notes:
+- Similarity threshold controls precision/recall of automatic links.
+- The alias `related_to` maps to `analogous_to` in SDK for compatibility.
+
+---
+
+## Pattern 2: Answer a Research Question (Decompose -> Search -> Store -> Synthesize)
+
+Use a deterministic loop where each sub-answer is persisted with provenance.
+
+```python
+question = "How do diffusion policies compare to behavior cloning in low-data regimes?"
+session_id = memory.session.create("diffusion_vs_bc")["session_id"]
+
+sub_questions = [
+    "sample efficiency of diffusion policies",
+    "behavior cloning performance in sparse data",
+    "robustness under distribution shift",
+]
+
+for sq in sub_questions:
+    # Retrieve memory context before external search/tooling
+    prior = memory.session.recall(sq, session_id=session_id, top_k=6)
+
+    # ... run your web/arxiv/tools pipeline here ...
+    synthesized_finding = f"Synthesized answer for: {sq}"
+    source_url = "https://example.org/source"
+
+    finding_id = memory.store(
+        text=synthesized_finding,
+        metadata={
+            "domain": "ml",
+            "query": sq,
+            "source_url": source_url,
+            "kind": "finding",
+            "prior_context_count": len(prior),
+        },
+        session_id=session_id,
+    )
+
+# Final synthesis node
+final_id = memory.store(
+    text="Final synthesis for diffusion vs BC question.",
+    metadata={"kind": "final_answer", "query": question},
+    session_id=session_id,
+)
+```
+
+Why this works:
+- The agent keeps an auditable chain of intermediate claims.
+- Every claim carries source/query context.
+
+---
+
+## Pattern 3: Multi-Session Research (Carry Findings Across Sessions)
+
+Use sessions for isolated tasks while still allowing controlled cross-session transfer.
+
+```python
+# Session A: foundation reading
+sess_a = memory.session.create("foundation_models")
+sid_a = sess_a["session_id"]
+
+node_a = memory.store(
+    "Scaling laws indicate smooth loss improvements with compute.",
+    metadata={"domain": "ml", "source_url": "https://arxiv.org/abs/2001.08361"},
+    session_id=sid_a,
+)
+
+# Session B: product strategy
+sess_b = memory.session.create("product_strategy")
+sid_b = sess_b["session_id"]
+
+node_b = memory.store(
+    "Need model choice strategy for cost-latency-quality frontier.",
+    metadata={"domain": "strategy"},
+    session_id=sid_b,
+)
+
+# Bridge sessions explicitly with an edge
+memory.relate(node_b, node_a, "depends_on", weight=0.85)
+```
+
+Recommended workflow:
+- Keep sessions narrow and goal-specific.
+- Add explicit cross-session edges when transferring assumptions/facts.
+- Archive stale sessions to reduce recall noise.
+
+---
+
+## Pattern 4: Contradiction Detection
+
+Represent conflicting claims explicitly so graph traversal surfaces disagreements.
+
+```python
+claim_1 = memory.store(
+    "Method X outperforms baseline Y on benchmark Z.",
+    metadata={"source_url": "https://paper-a.org", "kind": "claim"},
+)
+claim_2 = memory.store(
+    "Reproduction study finds Method X underperforms baseline Y on benchmark Z.",
+    metadata={"source_url": "https://paper-b.org", "kind": "claim"},
+)
+
+memory.relate(claim_2, claim_1, "contradicts", weight=0.95)
+```
+
+During answer generation:
+- Query recall for the topic.
+- Trace local graph neighborhood.
+- If contradictory nodes exist, force the agent to produce uncertainty-aware output.
+
+---
+
+## Pattern 5: Provenance-First Memory
+
+Every stored node should contain at least:
+- `source_url`
+- `query` (what retrieval/search prompt produced this evidence)
+- `kind` (`paper_summary`, `finding`, `hypothesis`, `final_answer`, etc.)
+
+Example:
+
+```python
+memory.store(
+    text="Fact extracted from source.",
+    metadata={
+        "source_url": "https://example.com/doc",
+        "query": "specific sub-question here",
+        "kind": "finding",
+        "domain": "legal",
+    },
+)
+```
+
+This makes downstream auditing and citation generation straightforward.
+
+---
+
+## Session Operations
+
+### Create
+```python
+session = memory.session.create("my_session", {"owner": "agent-v1"})
+```
+
+### Recall within session
+```python
+rows = memory.session.recall("contract liability cap", session["session_id"], top_k=10)
+```
+
+### List sessions with stats
+```python
+for s in memory.session.list():
+    print(s["session_id"], s["node_count"], s["edge_count"], s["status"])
+```
+
+### Archive session
+```python
+archive_result = memory.session.archive(session["session_id"])
+print(archive_result)
+```
+
+Archiving creates one summary node and soft-deletes older session nodes.
+
+---
+
+## Batch Ingestion
+
+Use `store_batch()` for high-throughput imports where each item can include outgoing edges.
+
+```python
+batch = [
+    {
+        "id": "paper_1",
+        "text": "Paper 1 summary",
+        "metadata": {"domain": "ml", "source_url": "https://a.org"},
+        "edges": [{"target_id": "paper_2", "type": "analogous_to", "weight": 0.8}],
+    },
+    {
+        "id": "paper_2",
+        "text": "Paper 2 summary",
+        "metadata": {"domain": "ml", "source_url": "https://b.org"},
+        "edges": [],
+    },
+]
+
+result = memory.store_batch(batch)
+print(result["created_nodes"], result["created_edges"])
+```
+
+---
+
+## Streaming Recall for Long Context Pipelines
+
+When post-processing many hits, stream in batches:
+
+```python
+def handle_batch(batch):
+    # process batch with your agent pipeline
+    pass
+
+for batch in memory.recall_stream(
+    query="long-form retrieval query",
+    top_k=100,
+    batch_size=20,
+    mode="hybrid",
+    on_batch_callback=handle_batch,
+):
+    # batch already processed in callback; optional extra logic here
+    pass
+```
+
+---
+
+## Tool Interface for LLM Function Calling
+
+SDK exposes tool schemas compatible with OpenAI function-calling style:
+
+```python
+schemas = memory.tools.get_schema()
+for tool in schemas:
+    print(tool["function"]["name"])
+```
+
+Each definition includes:
+- `name`
+- `description`
+- `parameters` (JSON Schema)
+- `x-return-type`
+
+---
+
+## Full Working Example: Minimal Research Agent Loop
+
+```python
+from sdk.memory import HybridMemory, AutoEdgeConfig
+
+
+def run_research_agent(question: str) -> str:
+    memory = HybridMemory("http://127.0.0.1:8000")
+    session = memory.session.create(
+        name="research_loop",
+        metadata={"question": question, "agent_version": "v1"},
+    )
+    sid = session["session_id"]
+
+    # Step 1: retrieve existing memory context
+    context_rows = memory.session.recall(question, session_id=sid, top_k=8)
+
+    # Step 2: external research step (replace with real tools)
+    external_findings = [
+        {
+            "text": "Finding A from source 1",
+            "source_url": "https://example.org/1",
+            "query": question,
+        },
+        {
+            "text": "Finding B from source 2",
+            "source_url": "https://example.org/2",
+            "query": question,
+        },
+    ]
+
+    # Step 3: persist findings with auto-linking
+    for f in external_findings:
+        memory.store_with_auto_edges(
+            text=f["text"],
+            metadata={
+                "kind": "finding",
+                "domain": "research",
+                "source_url": f["source_url"],
+                "query": f["query"],
+                "context_seed_count": len(context_rows),
+            },
+            session_id=sid,
+            auto_edge_config=AutoEdgeConfig(threshold=0.7, max_edges=3),
+        )
+
+    # Step 4: synthesize answer from memory
+    synthesis_context = memory.session.recall(question, session_id=sid, top_k=12)
+    answer = f"Synthesized answer with {len(synthesis_context)} supporting memory nodes."
+
+    memory.store(
+        text=answer,
+        metadata={"kind": "final_answer", "query": question},
+        session_id=sid,
+    )
+
+    # Optional: archive at end of run
+    # memory.session.archive(sid)
+
+    return answer
+```
+
+---
+
+## Operational Recommendations
+
+- Keep memory writes deterministic and metadata-rich.
+- Use `store_batch` for ingestion phases, `store_with_auto_edges` for iterative discovery phases.
+- Run `compact()` periodically if many nodes are soft-deleted.
+- Prefer session-scoped recall for agent loops to reduce context contamination.
+- Keep contradiction edges explicit (`contradicts`) to avoid silent conflicts in final outputs.
