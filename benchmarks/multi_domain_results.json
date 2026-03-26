@@ -5066,5 +5066,2478 @@
         }
       ]
     }
+  },
+  "phase3_fixes": {
+    "generated_at": "2026-03-27 00:28:46",
+    "fix_A": {
+      "graph": {
+        "type": "intra_domain",
+        "edges_per_domain": 150,
+        "domain_counts": {
+          "legal": 150,
+          "news": 150,
+          "pubmed": 150,
+          "stackexchange": 150,
+          "wikipedia": 150
+        },
+        "actual_edges": 750
+      },
+      "top_k": 12,
+      "betas": [
+        0.5,
+        0.7,
+        0.8
+      ],
+      "queries": [
+        {
+          "query": "optimization algorithms for convergence",
+          "beta": 0.5,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "hybrid_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "neural network architecture design",
+          "beta": 0.5,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "statistical inference and uncertainty",
+          "beta": 0.5,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "distributed systems and fault tolerance",
+          "beta": 0.5,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "hybrid_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "protein folding and molecular structure",
+          "beta": 0.5,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "regulatory compliance and risk assessment",
+          "beta": 0.5,
+          "set_diff": 1,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "hybrid_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "nonzero_graph_scores_in_top10": 4,
+          "avg_graph_score_top10": 0.35,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "gradient descent and loss functions",
+          "beta": 0.5,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "hybrid_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "natural language understanding",
+          "beta": 0.5,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "hybrid_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "clinical trials and treatment efficacy",
+          "beta": 0.5,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "market dynamics and price prediction",
+          "beta": 0.5,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 10
+          },
+          "hybrid_domain_dist": {
+            "news": 10
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "optimization algorithms for convergence",
+          "beta": 0.7,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "hybrid_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "neural network architecture design",
+          "beta": 0.7,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "statistical inference and uncertainty",
+          "beta": 0.7,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "distributed systems and fault tolerance",
+          "beta": 0.7,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "hybrid_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "protein folding and molecular structure",
+          "beta": 0.7,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "regulatory compliance and risk assessment",
+          "beta": 0.7,
+          "set_diff": 1,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "hybrid_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "nonzero_graph_scores_in_top10": 4,
+          "avg_graph_score_top10": 0.35,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "gradient descent and loss functions",
+          "beta": 0.7,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "hybrid_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "natural language understanding",
+          "beta": 0.7,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "hybrid_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "clinical trials and treatment efficacy",
+          "beta": 0.7,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "market dynamics and price prediction",
+          "beta": 0.7,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 10
+          },
+          "hybrid_domain_dist": {
+            "news": 10
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "optimization algorithms for convergence",
+          "beta": 0.8,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "hybrid_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "neural network architecture design",
+          "beta": 0.8,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "statistical inference and uncertainty",
+          "beta": 0.8,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "distributed systems and fault tolerance",
+          "beta": 0.8,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "hybrid_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "protein folding and molecular structure",
+          "beta": 0.8,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "regulatory compliance and risk assessment",
+          "beta": 0.8,
+          "set_diff": 1,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "hybrid_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "nonzero_graph_scores_in_top10": 4,
+          "avg_graph_score_top10": 0.35,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "gradient descent and loss functions",
+          "beta": 0.8,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "hybrid_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "natural language understanding",
+          "beta": 0.8,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "hybrid_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "clinical trials and treatment efficacy",
+          "beta": 0.8,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "market dynamics and price prediction",
+          "beta": 0.8,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 10
+          },
+          "hybrid_domain_dist": {
+            "news": 10
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        }
+      ]
+    },
+    "fix_B": {
+      "top_k": 100,
+      "edges_used": 750,
+      "betas": [
+        0.5,
+        0.7,
+        0.8
+      ],
+      "queries": [
+        {
+          "query": "optimization algorithms for convergence",
+          "beta": 0.5,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "hybrid_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "neural network architecture design",
+          "beta": 0.5,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "statistical inference and uncertainty",
+          "beta": 0.5,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "distributed systems and fault tolerance",
+          "beta": 0.5,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "hybrid_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "protein folding and molecular structure",
+          "beta": 0.5,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "regulatory compliance and risk assessment",
+          "beta": 0.5,
+          "set_diff": 2,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "hybrid_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "nonzero_graph_scores_in_top10": 5,
+          "avg_graph_score_top10": 0.4,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "gradient descent and loss functions",
+          "beta": 0.5,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "hybrid_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "natural language understanding",
+          "beta": 0.5,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "hybrid_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "clinical trials and treatment efficacy",
+          "beta": 0.5,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "market dynamics and price prediction",
+          "beta": 0.5,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 10
+          },
+          "hybrid_domain_dist": {
+            "news": 10
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "optimization algorithms for convergence",
+          "beta": 0.7,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "hybrid_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "neural network architecture design",
+          "beta": 0.7,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "statistical inference and uncertainty",
+          "beta": 0.7,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "distributed systems and fault tolerance",
+          "beta": 0.7,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "hybrid_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "protein folding and molecular structure",
+          "beta": 0.7,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "regulatory compliance and risk assessment",
+          "beta": 0.7,
+          "set_diff": 2,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "hybrid_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "nonzero_graph_scores_in_top10": 5,
+          "avg_graph_score_top10": 0.4,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "gradient descent and loss functions",
+          "beta": 0.7,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "hybrid_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "natural language understanding",
+          "beta": 0.7,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "hybrid_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "clinical trials and treatment efficacy",
+          "beta": 0.7,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "market dynamics and price prediction",
+          "beta": 0.7,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 10
+          },
+          "hybrid_domain_dist": {
+            "news": 10
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "optimization algorithms for convergence",
+          "beta": 0.8,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "hybrid_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "neural network architecture design",
+          "beta": 0.8,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "statistical inference and uncertainty",
+          "beta": 0.8,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "distributed systems and fault tolerance",
+          "beta": 0.8,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "hybrid_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "protein folding and molecular structure",
+          "beta": 0.8,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "regulatory compliance and risk assessment",
+          "beta": 0.8,
+          "set_diff": 2,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "hybrid_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "nonzero_graph_scores_in_top10": 5,
+          "avg_graph_score_top10": 0.4,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "gradient descent and loss functions",
+          "beta": 0.8,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "hybrid_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "natural language understanding",
+          "beta": 0.8,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "hybrid_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "clinical trials and treatment efficacy",
+          "beta": 0.8,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "market dynamics and price prediction",
+          "beta": 0.8,
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 10
+          },
+          "hybrid_domain_dist": {
+            "news": 10
+          },
+          "nonzero_graph_scores_in_top10": 3,
+          "avg_graph_score_top10": 0.3,
+          "max_graph_score_top10": 1.0
+        }
+      ]
+    },
+    "fix_C": {
+      "top_k": 12,
+      "edges_used": 750,
+      "anchor_strategy": "top-1 vector result per query",
+      "betas": [
+        0.5,
+        0.7,
+        0.8
+      ],
+      "queries": [
+        {
+          "query": "optimization algorithms for convergence",
+          "beta": 0.5,
+          "anchor_id": "a7e310d2-946e-4490-84da-d8214e547168",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "hybrid_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "neural network architecture design",
+          "beta": 0.5,
+          "anchor_id": "403f7e17-5cc3-4983-a08b-e965d60e6551",
+          "anchor_domain": "stackexchange",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "statistical inference and uncertainty",
+          "beta": 0.5,
+          "anchor_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "distributed systems and fault tolerance",
+          "beta": 0.5,
+          "anchor_id": "c97025e9-3b4d-4037-a73a-cf885fbb7f6a",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "hybrid_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "protein folding and molecular structure",
+          "beta": 0.5,
+          "anchor_id": "b1795c07-93c6-4db5-938c-3290c471071d",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "regulatory compliance and risk assessment",
+          "beta": 0.5,
+          "anchor_id": "0ad16294-bf88-4ff3-bc35-80f8673a31f9",
+          "anchor_domain": "news",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "hybrid_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "gradient descent and loss functions",
+          "beta": 0.5,
+          "anchor_id": "4c042d52-af5b-49ac-85b9-1c63e7bd382b",
+          "anchor_domain": "news",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "hybrid_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "natural language understanding",
+          "beta": 0.5,
+          "anchor_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "hybrid_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "clinical trials and treatment efficacy",
+          "beta": 0.5,
+          "anchor_id": "15fb4250-bdbd-46dc-a61e-916947a34b9d",
+          "anchor_domain": "pubmed",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "market dynamics and price prediction",
+          "beta": 0.5,
+          "anchor_id": "9c18a47c-4c2e-42f4-813a-4e4537c4d9a6",
+          "anchor_domain": "news",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 10
+          },
+          "hybrid_domain_dist": {
+            "news": 10
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "optimization algorithms for convergence",
+          "beta": 0.7,
+          "anchor_id": "a7e310d2-946e-4490-84da-d8214e547168",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "hybrid_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "neural network architecture design",
+          "beta": 0.7,
+          "anchor_id": "403f7e17-5cc3-4983-a08b-e965d60e6551",
+          "anchor_domain": "stackexchange",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "statistical inference and uncertainty",
+          "beta": 0.7,
+          "anchor_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "distributed systems and fault tolerance",
+          "beta": 0.7,
+          "anchor_id": "c97025e9-3b4d-4037-a73a-cf885fbb7f6a",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "hybrid_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "protein folding and molecular structure",
+          "beta": 0.7,
+          "anchor_id": "b1795c07-93c6-4db5-938c-3290c471071d",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "regulatory compliance and risk assessment",
+          "beta": 0.7,
+          "anchor_id": "0ad16294-bf88-4ff3-bc35-80f8673a31f9",
+          "anchor_domain": "news",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "hybrid_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "gradient descent and loss functions",
+          "beta": 0.7,
+          "anchor_id": "4c042d52-af5b-49ac-85b9-1c63e7bd382b",
+          "anchor_domain": "news",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "hybrid_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "natural language understanding",
+          "beta": 0.7,
+          "anchor_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "hybrid_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "clinical trials and treatment efficacy",
+          "beta": 0.7,
+          "anchor_id": "15fb4250-bdbd-46dc-a61e-916947a34b9d",
+          "anchor_domain": "pubmed",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "market dynamics and price prediction",
+          "beta": 0.7,
+          "anchor_id": "9c18a47c-4c2e-42f4-813a-4e4537c4d9a6",
+          "anchor_domain": "news",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 10
+          },
+          "hybrid_domain_dist": {
+            "news": 10
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "optimization algorithms for convergence",
+          "beta": 0.8,
+          "anchor_id": "a7e310d2-946e-4490-84da-d8214e547168",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "hybrid_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "neural network architecture design",
+          "beta": 0.8,
+          "anchor_id": "403f7e17-5cc3-4983-a08b-e965d60e6551",
+          "anchor_domain": "stackexchange",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "statistical inference and uncertainty",
+          "beta": 0.8,
+          "anchor_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "distributed systems and fault tolerance",
+          "beta": 0.8,
+          "anchor_id": "c97025e9-3b4d-4037-a73a-cf885fbb7f6a",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "hybrid_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "protein folding and molecular structure",
+          "beta": 0.8,
+          "anchor_id": "b1795c07-93c6-4db5-938c-3290c471071d",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "regulatory compliance and risk assessment",
+          "beta": 0.8,
+          "anchor_id": "0ad16294-bf88-4ff3-bc35-80f8673a31f9",
+          "anchor_domain": "news",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "hybrid_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "gradient descent and loss functions",
+          "beta": 0.8,
+          "anchor_id": "4c042d52-af5b-49ac-85b9-1c63e7bd382b",
+          "anchor_domain": "news",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "hybrid_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "natural language understanding",
+          "beta": 0.8,
+          "anchor_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "hybrid_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "clinical trials and treatment efficacy",
+          "beta": 0.8,
+          "anchor_id": "15fb4250-bdbd-46dc-a61e-916947a34b9d",
+          "anchor_domain": "pubmed",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "market dynamics and price prediction",
+          "beta": 0.8,
+          "anchor_id": "9c18a47c-4c2e-42f4-813a-4e4537c4d9a6",
+          "anchor_domain": "news",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 10
+          },
+          "hybrid_domain_dist": {
+            "news": 10
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        }
+      ]
+    },
+    "fix_ABC": {
+      "graph": {
+        "type": "combined",
+        "edges_per_domain": 150,
+        "domain_counts": {
+          "legal": 150,
+          "news": 150,
+          "pubmed": 150,
+          "stackexchange": 150,
+          "wikipedia": 150
+        },
+        "actual_edges": 900,
+        "cross_edges_added": 150
+      },
+      "top_k": 100,
+      "edges_used": 900,
+      "anchor_strategy": "top-1 vector result per query",
+      "betas": [
+        0.5,
+        0.7,
+        0.8
+      ],
+      "queries": [
+        {
+          "query": "optimization algorithms for convergence",
+          "beta": 0.5,
+          "anchor_id": "a7e310d2-946e-4490-84da-d8214e547168",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "hybrid_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "neural network architecture design",
+          "beta": 0.5,
+          "anchor_id": "403f7e17-5cc3-4983-a08b-e965d60e6551",
+          "anchor_domain": "stackexchange",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "statistical inference and uncertainty",
+          "beta": 0.5,
+          "anchor_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "distributed systems and fault tolerance",
+          "beta": 0.5,
+          "anchor_id": "c97025e9-3b4d-4037-a73a-cf885fbb7f6a",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "hybrid_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "protein folding and molecular structure",
+          "beta": 0.5,
+          "anchor_id": "b1795c07-93c6-4db5-938c-3290c471071d",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "regulatory compliance and risk assessment",
+          "beta": 0.5,
+          "anchor_id": "0ad16294-bf88-4ff3-bc35-80f8673a31f9",
+          "anchor_domain": "news",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "hybrid_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "gradient descent and loss functions",
+          "beta": 0.5,
+          "anchor_id": "4c042d52-af5b-49ac-85b9-1c63e7bd382b",
+          "anchor_domain": "news",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "hybrid_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "natural language understanding",
+          "beta": 0.5,
+          "anchor_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "hybrid_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "clinical trials and treatment efficacy",
+          "beta": 0.5,
+          "anchor_id": "15fb4250-bdbd-46dc-a61e-916947a34b9d",
+          "anchor_domain": "pubmed",
+          "set_diff": 1,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "nonzero_graph_scores_in_top10": 2,
+          "avg_graph_score_top10": 0.15,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "market dynamics and price prediction",
+          "beta": 0.5,
+          "anchor_id": "9c18a47c-4c2e-42f4-813a-4e4537c4d9a6",
+          "anchor_domain": "news",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 10
+          },
+          "hybrid_domain_dist": {
+            "news": 10
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "optimization algorithms for convergence",
+          "beta": 0.7,
+          "anchor_id": "a7e310d2-946e-4490-84da-d8214e547168",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "hybrid_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "neural network architecture design",
+          "beta": 0.7,
+          "anchor_id": "403f7e17-5cc3-4983-a08b-e965d60e6551",
+          "anchor_domain": "stackexchange",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "statistical inference and uncertainty",
+          "beta": 0.7,
+          "anchor_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "distributed systems and fault tolerance",
+          "beta": 0.7,
+          "anchor_id": "c97025e9-3b4d-4037-a73a-cf885fbb7f6a",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "hybrid_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "protein folding and molecular structure",
+          "beta": 0.7,
+          "anchor_id": "b1795c07-93c6-4db5-938c-3290c471071d",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "regulatory compliance and risk assessment",
+          "beta": 0.7,
+          "anchor_id": "0ad16294-bf88-4ff3-bc35-80f8673a31f9",
+          "anchor_domain": "news",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "hybrid_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "gradient descent and loss functions",
+          "beta": 0.7,
+          "anchor_id": "4c042d52-af5b-49ac-85b9-1c63e7bd382b",
+          "anchor_domain": "news",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "hybrid_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "natural language understanding",
+          "beta": 0.7,
+          "anchor_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "hybrid_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "clinical trials and treatment efficacy",
+          "beta": 0.7,
+          "anchor_id": "15fb4250-bdbd-46dc-a61e-916947a34b9d",
+          "anchor_domain": "pubmed",
+          "set_diff": 1,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "nonzero_graph_scores_in_top10": 2,
+          "avg_graph_score_top10": 0.15,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "market dynamics and price prediction",
+          "beta": 0.7,
+          "anchor_id": "9c18a47c-4c2e-42f4-813a-4e4537c4d9a6",
+          "anchor_domain": "news",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 10
+          },
+          "hybrid_domain_dist": {
+            "news": 10
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "optimization algorithms for convergence",
+          "beta": 0.8,
+          "anchor_id": "a7e310d2-946e-4490-84da-d8214e547168",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "hybrid_domain_dist": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "neural network architecture design",
+          "beta": 0.8,
+          "anchor_id": "403f7e17-5cc3-4983-a08b-e965d60e6551",
+          "anchor_domain": "stackexchange",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "statistical inference and uncertainty",
+          "beta": 0.8,
+          "anchor_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "hybrid_domain_dist": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "distributed systems and fault tolerance",
+          "beta": 0.8,
+          "anchor_id": "c97025e9-3b4d-4037-a73a-cf885fbb7f6a",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "hybrid_domain_dist": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "protein folding and molecular structure",
+          "beta": 0.8,
+          "anchor_id": "b1795c07-93c6-4db5-938c-3290c471071d",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "regulatory compliance and risk assessment",
+          "beta": 0.8,
+          "anchor_id": "0ad16294-bf88-4ff3-bc35-80f8673a31f9",
+          "anchor_domain": "news",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "hybrid_domain_dist": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "gradient descent and loss functions",
+          "beta": 0.8,
+          "anchor_id": "4c042d52-af5b-49ac-85b9-1c63e7bd382b",
+          "anchor_domain": "news",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "hybrid_domain_dist": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "natural language understanding",
+          "beta": 0.8,
+          "anchor_id": "51c44702-28fb-40b5-85dd-9a6a95cdc5a8",
+          "anchor_domain": "wikipedia",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "hybrid_domain_dist": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "clinical trials and treatment efficacy",
+          "beta": 0.8,
+          "anchor_id": "15fb4250-bdbd-46dc-a61e-916947a34b9d",
+          "anchor_domain": "pubmed",
+          "set_diff": 1,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "hybrid_domain_dist": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "nonzero_graph_scores_in_top10": 2,
+          "avg_graph_score_top10": 0.15,
+          "max_graph_score_top10": 1.0
+        },
+        {
+          "query": "market dynamics and price prediction",
+          "beta": 0.8,
+          "anchor_id": "9c18a47c-4c2e-42f4-813a-4e4537c4d9a6",
+          "anchor_domain": "news",
+          "set_diff": 0,
+          "top1_changed": false,
+          "domain_dist_changed": false,
+          "vector_domain_dist": {
+            "news": 10
+          },
+          "hybrid_domain_dist": {
+            "news": 10
+          },
+          "nonzero_graph_scores_in_top10": 1,
+          "avg_graph_score_top10": 0.1,
+          "max_graph_score_top10": 1.0
+        }
+      ]
+    }
   }
 }

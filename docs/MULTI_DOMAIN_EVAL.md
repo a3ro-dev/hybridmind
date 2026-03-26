@@ -280,7 +280,8 @@ Five probe nodes were inserted after graph construction. For each, the raw embed
 ## 5. Key Findings
 
 1. **Graph density:** Only **6** cross-domain edges at threshold 0.45 on **7,510** nodes; news–wikipedia was the most connected pair (3 edges), contradicting the hypothesis that stackexchange–wikipedia would dominate.
-2. **Graph signal is structurally zero:** Across weight sweep (β 0.4–0.8) and density sweep (75–375 edges / 1–5%), every `graph_score` diagnostic read **0.0000**. Root cause: the anchor-free CRS fallback uses top-3 vector hits as reference nodes; at ≤5% edge coverage, P(any reference node has an edge) ≈ 27%, and when edges do exist they point to cross-domain nodes outside the top-12 candidate pool. Higher β cannot fix zero graph scores.
+2. **Graph signal is structurally zero with cross-domain-only edges:** Across weight sweep (β 0.4–0.8) and density sweep (75–375 edges / 1–5%), every `graph_score` read **0.0000**. Root cause: the anchor-free CRS uses top-3 vector hits as reference nodes; at ≤5% cross-domain edge coverage those nodes are rarely connected to anything in the top-12 candidate pool. Higher β cannot fix zero graph scores.
+3. **Intra-domain edges unlock graph signal:** Adding 150 intra-domain edges per domain (750 total) caused **10/10 queries** to receive non-zero graph scores (avg_gs=0.30, driven by the 3 auto-anchor reference nodes at distance 0 = score 1.0). **1/10 concept queries** ("regulatory compliance and risk assessment") had its top-10 set reordered — the first retrieval-level graph effect in the entire evaluation. Domain distribution was unchanged (legal 7, news 2, pubmed 1 for both vector and hybrid).
 3. **No domain diversification:** Hybrid returned identical top-10 sets to vector for **10/10** concept queries; mean unique domains was **2.5** for both modes.
 4. **Hidden gems absent:** Hybrid found the same **6/6** linked partner nodes as vector; hidden-gem count was **0**; hybrid improved rank by mean **3.2 positions** without expanding recall.
 5. **Conditioning effect doubled:** Mean raw-vs-conditioned embedding cosine diff was **0.01927** vs **0.00977** arXiv baseline — graph conditioning is measurably stronger at multi-domain scale.
@@ -386,3 +387,144 @@ None of these three conditions was satisfied in any sweep configuration. The fix
 - **Crossover β** is the minimum graph weight at which the graph component overrides vector ranking for ≥1 query.
 - At β=0.8 the graph score was still 0.0 for every query — no crossover exists in this configuration because the structural conditions for non-zero graph scores were never met.
 - The density sweep confirms edge density alone is insufficient: at 375 edges (~5%), graph score remained zero because the reference-node / candidate overlap probability is still too low.
+
+
+---
+
+## Appendix: Phase 3 Fix Results
+
+*Generated: 2026-03-27 00:28:46. Three structural fixes that allow the graph component to produce non-zero scores.*
+
+**Root cause (confirmed Phase 2):** anchor-free CRS with <5% edge coverage → graph_score=0 for 100% of queries.
+Three independent fixes were applied and stacked.
+
+---
+
+### Fix A — Intra-Domain Edges (top_k=12, no anchor override)
+
+**Graph edges active:** 750 | **top_k:** 12 | **betas tested:** [0.5, 0.7, 0.8]
+> Intra-domain edges: top-150 cosine-similar pairs sampled per domain (500-node sample), 1 domains. Reference nodes now have ≥1 in-domain neighbor in the graph.
+
+**Summary by beta:**
+
+| Beta | SetDiff queries | Queries w/ nonzero graph score | Avg max graph score |
+| ---: | ---: | ---: | ---: |
+| 0.5 | 1/10 | 10/10 | 1.0 |
+| 0.7 | 1/10 | 10/10 | 1.0 |
+| 0.8 | 1/10 | 10/10 | 1.0 |
+
+**Per-query breakdown (set_diff / queries with nonzero graph score in top-10):**
+
+| Query | b=0.5 Δ / gs>0 | b=0.7 Δ / gs>0 | b=0.8 Δ / gs>0 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| optimization algorithms for convergence | 0 / 3 | 0 / 3 | 0 / 3 |
+| neural network architecture design | 0 / 3 | 0 / 3 | 0 / 3 |
+| statistical inference and uncertainty | 0 / 3 | 0 / 3 | 0 / 3 |
+| distributed systems and fault tolerance | 0 / 3 | 0 / 3 | 0 / 3 |
+| protein folding and molecular structure | 0 / 3 | 0 / 3 | 0 / 3 |
+| regulatory compliance and risk assessment | 1 / 4 | 1 / 4 | 1 / 4 |
+| gradient descent and loss functions | 0 / 3 | 0 / 3 | 0 / 3 |
+| natural language understanding | 0 / 3 | 0 / 3 | 0 / 3 |
+| clinical trials and treatment efficacy | 0 / 3 | 0 / 3 | 0 / 3 |
+| market dynamics and price prediction | 0 / 3 | 0 / 3 | 0 / 3 |
+
+---
+
+### Fix B — Large Candidate Pool (top_k=100, intra-domain graph active)
+
+**Graph edges active:** 750 | **top_k:** 100 | **betas tested:** [0.5, 0.7, 0.8]
+> Candidate pool expanded from 12 to 100.  Cross-domain neighbors of reference nodes can now enter the scoring window even if they rank ~20–80 in pure vector space.
+
+**Summary by beta:**
+
+| Beta | SetDiff queries | Queries w/ nonzero graph score | Avg max graph score |
+| ---: | ---: | ---: | ---: |
+| 0.5 | 1/10 | 10/10 | 1.0 |
+| 0.7 | 1/10 | 10/10 | 1.0 |
+| 0.8 | 1/10 | 10/10 | 1.0 |
+
+**Per-query breakdown (set_diff / queries with nonzero graph score in top-10):**
+
+| Query | b=0.5 Δ / gs>0 | b=0.7 Δ / gs>0 | b=0.8 Δ / gs>0 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| optimization algorithms for convergence | 0 / 3 | 0 / 3 | 0 / 3 |
+| neural network architecture design | 0 / 3 | 0 / 3 | 0 / 3 |
+| statistical inference and uncertainty | 0 / 3 | 0 / 3 | 0 / 3 |
+| distributed systems and fault tolerance | 0 / 3 | 0 / 3 | 0 / 3 |
+| protein folding and molecular structure | 0 / 3 | 0 / 3 | 0 / 3 |
+| regulatory compliance and risk assessment | 2 / 5 | 2 / 5 | 2 / 5 |
+| gradient descent and loss functions | 0 / 3 | 0 / 3 | 0 / 3 |
+| natural language understanding | 0 / 3 | 0 / 3 | 0 / 3 |
+| clinical trials and treatment efficacy | 0 / 3 | 0 / 3 | 0 / 3 |
+| market dynamics and price prediction | 0 / 3 | 0 / 3 | 0 / 3 |
+
+---
+
+### Fix C — Explicit Anchor Nodes (top_k=12, intra-domain graph active)
+
+**Graph edges active:** 750 | **top_k:** 12 | **betas tested:** [0.5, 0.7, 0.8]
+> Explicit anchor = top-1 vector result per query.  Bypasses the auto-anchor fallback; guarantees the reference node was chosen for this query, not just the nearest vector hits.
+
+**Summary by beta:**
+
+| Beta | SetDiff queries | Queries w/ nonzero graph score | Avg max graph score |
+| ---: | ---: | ---: | ---: |
+| 0.5 | 0/10 | 10/10 | 1.0 |
+| 0.7 | 0/10 | 10/10 | 1.0 |
+| 0.8 | 0/10 | 10/10 | 1.0 |
+
+**Per-query breakdown (set_diff / queries with nonzero graph score in top-10):**
+
+| Query | b=0.5 Δ / gs>0 | b=0.7 Δ / gs>0 | b=0.8 Δ / gs>0 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| optimization algorithms for convergence | 0 / 1 | 0 / 1 | 0 / 1 |
+| neural network architecture design | 0 / 1 | 0 / 1 | 0 / 1 |
+| statistical inference and uncertainty | 0 / 1 | 0 / 1 | 0 / 1 |
+| distributed systems and fault tolerance | 0 / 1 | 0 / 1 | 0 / 1 |
+| protein folding and molecular structure | 0 / 1 | 0 / 1 | 0 / 1 |
+| regulatory compliance and risk assessment | 0 / 1 | 0 / 1 | 0 / 1 |
+| gradient descent and loss functions | 0 / 1 | 0 / 1 | 0 / 1 |
+| natural language understanding | 0 / 1 | 0 / 1 | 0 / 1 |
+| clinical trials and treatment efficacy | 0 / 1 | 0 / 1 | 0 / 1 |
+| market dynamics and price prediction | 0 / 1 | 0 / 1 | 0 / 1 |
+
+---
+
+### Fix A+B+C Combined (intra+cross graph, top_k=100, explicit anchor)
+
+**Graph edges active:** 900 | **top_k:** 100 | **betas tested:** [0.5, 0.7, 0.8]
+> Combined intra+cross-domain graph (150 edges/domain + 150 cross-domain), top_k=100, explicit anchor.  Maximum-signal configuration.
+
+**Summary by beta:**
+
+| Beta | SetDiff queries | Queries w/ nonzero graph score | Avg max graph score |
+| ---: | ---: | ---: | ---: |
+| 0.5 | 1/10 | 10/10 | 1.0 |
+| 0.7 | 1/10 | 10/10 | 1.0 |
+| 0.8 | 1/10 | 10/10 | 1.0 |
+
+**Per-query breakdown (set_diff / queries with nonzero graph score in top-10):**
+
+| Query | b=0.5 Δ / gs>0 | b=0.7 Δ / gs>0 | b=0.8 Δ / gs>0 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| optimization algorithms for convergence | 0 / 1 | 0 / 1 | 0 / 1 |
+| neural network architecture design | 0 / 1 | 0 / 1 | 0 / 1 |
+| statistical inference and uncertainty | 0 / 1 | 0 / 1 | 0 / 1 |
+| distributed systems and fault tolerance | 0 / 1 | 0 / 1 | 0 / 1 |
+| protein folding and molecular structure | 0 / 1 | 0 / 1 | 0 / 1 |
+| regulatory compliance and risk assessment | 0 / 1 | 0 / 1 | 0 / 1 |
+| gradient descent and loss functions | 0 / 1 | 0 / 1 | 0 / 1 |
+| natural language understanding | 0 / 1 | 0 / 1 | 0 / 1 |
+| clinical trials and treatment efficacy | 1 / 2 | 1 / 2 | 1 / 2 |
+| market dynamics and price prediction | 0 / 1 | 0 / 1 | 0 / 1 |
+
+---
+
+### Interpretation
+
+- **SetDiff > 0** means the graph component successfully promoted at least one node into the top-10 that pure vector missed.
+- **Nonzero graph score** is the prerequisite: if graph scores are all zero, no weight value can produce a set diff.
+- **Why avg_max_gs = 1.0 for all fixes:** The auto-anchor mechanism uses the top-3 vector results as reference nodes. Each reference node has distance 0 from itself → graph score `1/(1+0) = 1.0`. With 3 reference nodes in top-10, `avg(graph_scores_top10) = 3×1.0 / 10 = 0.30`. This is reflected in the avg=0.30, max=1.0 per query numbers.
+- **Fix C (explicit anchor) underperforms Fix A:** Using a single explicit anchor vs the auto-anchor's 3 reference nodes means only 1 node gets gs=1.0 (instead of 3), and fewer candidates get gs>0. This reduces the chance of any node being promoted past the rank-10/11 gap, explaining 0/10 set_diff for Fix C vs 1/10 for Fix A.
+- **Marginal reranking signal:** The 1/10 query change shows the graph operates near the margin — the score gap between rank 10 and rank 11 is typically 0.001–0.007 vector units; at β=0.5–0.8, graph boosts of `β × 0.5 = 0.25–0.40` on intra-domain neighbors at distance 1 are sufficient to cross this gap only when vector scores are closely clustered.
+- **No domain diversification:** All observed set_diffs were same-domain swaps (one legal node for another). Cross-domain diversification would require graph edges that bridge the query's reference nodes to nodes from other domains at distance 1 — not yet achieved with intra-only edges.
