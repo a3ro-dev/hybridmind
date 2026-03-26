@@ -1,632 +1,1694 @@
 {
-  "setup": {
-    "total_nodes": 7000,
-    "domain_distribution": {
-      "wikipedia": 2000,
-      "stackexchange": 2000,
-      "pubmed": 1000,
-      "news": 2000,
-      "legal": 0
+  "metadata": {
+    "generated_at": "2026-03-26 20:39:13",
+    "base_url": "http://127.0.0.1:8000",
+    "edge_threshold": 0.45,
+    "vector_weight": 0.6,
+    "graph_weight": 0.4,
+    "baseline_1000_nodes": {
+      "p50_ms": 13.0,
+      "p95_ms": 16.0
+    }
+  },
+  "system": {
+    "hybridmind_version": "1.0.0",
+    "embedding_model": "all-MiniLM-L6-v2",
+    "weights": {
+      "vector": 0.6,
+      "graph": 0.4
+    },
+    "health_before_clear": {
+      "status": "healthy",
+      "timestamp": 1774537753.5203671,
+      "uptime_seconds": 787.3,
+      "components": {
+        "embedding": {
+          "status": "healthy",
+          "latency_ms": 6.84,
+          "model": "all-MiniLM-L6-v2"
+        },
+        "vector_index": {
+          "status": "healthy",
+          "size": 7515,
+          "dimension": 384
+        },
+        "graph_index": {
+          "status": "healthy",
+          "nodes": 7515,
+          "edges": 6
+        },
+        "database": {
+          "status": "healthy",
+          "nodes": 7515,
+          "size_bytes": 42352640
+        },
+        "cache": {
+          "status": "healthy",
+          "hits": 0,
+          "misses": 662,
+          "hit_rate": 0.0,
+          "size": 0,
+          "maxsize": 1000,
+          "ttl_seconds": 300,
+          "avg_ttl_remaining": 0
+        }
+      },
+      "metrics": {
+        "cpu_percent": 22.1,
+        "memory_percent": 68.2,
+        "memory_available_mb": 5123,
+        "disk_percent": 81.1
+      }
+    },
+    "stats_before_clear": {
+      "total_nodes": 7515,
+      "total_edges": 6,
+      "edge_types": {
+        "analogous_to": 6
+      },
+      "avg_edges_per_node": 0.0,
+      "vector_index_size": 7515,
+      "database_size_bytes": 42352640
+    },
+    "hardware": {
+      "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
+      "gpus": [
+        "NVIDIA GeForce RTX 4050 Laptop GPU",
+        "Intel(R) UHD Graphics"
+      ]
+    },
+    "platform": {
+      "os": "Windows-11-10.0.26100-SP0",
+      "python": "3.14.3"
     }
   },
   "loading": {
+    "clear": {
+      "response": {
+        "status": "success",
+        "message": "Database cleared"
+      },
+      "post_clear_health_nodes": 0,
+      "post_clear_health_edges": 0
+    },
     "wikipedia": {
-      "count": 2000,
-      "time": 43.972546339035034
+      "requested": 2000,
+      "actual_loaded": 2000,
+      "load_time_s": 79.59,
+      "errors": [],
+      "created_ids_sample": [
+        "5e994983-5e62-4270-b2f6-74546edcd42b",
+        "ead69ee2-9a19-4f54-909b-ddfdd19b0dd2",
+        "6b92907c-0f55-4af8-b2cb-468c62fef269",
+        "4c039492-a2e3-4749-a06b-fa0223148274",
+        "58027606-0f5f-4108-8900-0255251701da"
+      ],
+      "dataset": "wikimedia/wikipedia",
+      "config": "20231101.en",
+      "sample_size": 2000
     },
     "stackexchange": {
-      "count": 2000,
-      "time": 40.745851278305054
+      "requested": 2000,
+      "actual_loaded": 2000,
+      "load_time_s": 98.2,
+      "errors": [],
+      "created_ids_sample": [
+        "a85e19df-9dae-47f8-9cc6-842bd258f284",
+        "53b65df4-12d2-4ce6-8d8d-fe911e808e11",
+        "1f8b754e-daf5-40e3-b46c-f2ceb8a4acf5",
+        "0296a4af-4876-4772-99e3-4e24063f5b07",
+        "e61d4320-4858-45f2-9178-5b5412b567f9"
+      ],
+      "dataset": "HuggingFaceH4/stack-exchange-preferences",
+      "config": null,
+      "sample_size": 2000,
+      "score_field_used": "answers[0].pm_score"
     },
     "pubmed": {
-      "count": 1000,
-      "time": 19.290565252304077
+      "requested": 1000,
+      "actual_loaded": 1000,
+      "load_time_s": 41.07,
+      "errors": [],
+      "created_ids_sample": [
+        "dc3e6d25-a107-4e39-9630-9dced8b4b18a",
+        "d2d25e4f-aa89-445f-8963-858909be6416",
+        "4ca1aea5-f5d1-41fc-9d99-d4a75451db35",
+        "28eef2cc-4dfb-4ae7-b802-2587fece003f",
+        "c2c32f68-85fa-4f7b-a10c-5d4d7b94a678"
+      ],
+      "dataset": "pubmed_qa",
+      "config": "pqa_labeled",
+      "sample_size": 1000,
+      "label_field": "final_decision"
     },
     "news": {
-      "count": 2000,
-      "time": 20.551668167114258
+      "requested": 2000,
+      "actual_loaded": 2000,
+      "load_time_s": 80.31,
+      "errors": [],
+      "created_ids_sample": [
+        "2af7e106-2152-4691-aaea-a5af3f9f5fb3",
+        "8deea211-589d-461a-af7c-aea2afd8de37",
+        "38d34ed3-bce8-49ea-94b6-191794821688",
+        "75ab76f1-bef4-4dc1-8046-5732f9b122d2",
+        "9a4250c4-d8dc-4170-b4fb-85cc20e0e835"
+      ],
+      "dataset": "ag_news",
+      "config": null,
+      "sample_size": 2000,
+      "per_category": {
+        "2": 500,
+        "3": 500,
+        "1": 500,
+        "0": 500
+      }
     },
     "legal": {
-      "count": 0,
-      "time": 0.7039272785186768
+      "requested": 510,
+      "actual_loaded": 510,
+      "load_time_s": 25.89,
+      "errors": [],
+      "created_ids_sample": [
+        "995f4091-46f4-4bc2-88e8-cec1890d3366",
+        "a278cc04-7f5d-4ab1-9c86-bd0d20709b05",
+        "19853939-cd4f-42eb-b099-dd80ad8cd53c",
+        "fefe1e35-be7d-48a6-b360-181cd696ff40",
+        "9985d7e1-cdea-4b50-b452-be5952b1752d"
+      ],
+      "dataset": "umarbutler/better-cuad",
+      "config": null,
+      "sample_size": 1000,
+      "fallback_used": true
+    },
+    "verification": {
+      "expected_total_nodes": 7510,
+      "health_total_nodes": 7510,
+      "health_total_edges": 0,
+      "stats": {
+        "total_nodes": 7510,
+        "total_edges": 0,
+        "edge_types": {},
+        "avg_edges_per_node": 0.0,
+        "vector_index_size": 7510,
+        "database_size_bytes": 42352640
+      }
     }
   },
   "graph_construction": {
-    "total_cross_domain_edges": 136,
+    "loaded_domains": [
+      "legal",
+      "news",
+      "pubmed",
+      "stackexchange",
+      "wikipedia"
+    ],
+    "domain_pair_count": 10,
+    "total_cross_domain_edges": 6,
     "edge_counts_per_pair": {
-      "wikipedia-stackexchange": 27,
-      "wikipedia-pubmed": 19,
-      "wikipedia-news": 58,
-      "stackexchange-pubmed": 0,
-      "stackexchange-news": 1,
-      "pubmed-news": 31
+      "legal-news": 1,
+      "legal-pubmed": 0,
+      "legal-stackexchange": 0,
+      "legal-wikipedia": 0,
+      "news-pubmed": 0,
+      "news-stackexchange": 0,
+      "news-wikipedia": 3,
+      "pubmed-stackexchange": 0,
+      "pubmed-wikipedia": 2,
+      "stackexchange-wikipedia": 0
     },
-    "threshold_tests": {
-      "0.25": 255,
-      "0.30": 136,
-      "0.35": 39
+    "pair_best_examples": {
+      "legal-news": {
+        "edge_id": "d56d457c-47d0-40ca-8229-a759ed11ce6f",
+        "source_id": "879fb471-abf3-440a-a8ad-5020a0ded842",
+        "target_id": "8c52e1d7-bcdf-4dd2-b565-0419f5f0eb66",
+        "source_domain": "legal",
+        "target_domain": "news",
+        "weight": 0.4639,
+        "source_text": "-1 - TELKOM CONTRACT No. 076C/01 LICENCE AND MAINTENANCE AGREEMENT entered into by and between SYSTEMS APPLICATIONS PRODUCTS (AFRICA) (PTY) LIMITED (\"SAP AFRICA\") a company incorporated in accordance with the laws of the Republic of South Africa with offices at SAP Business Park, 1 Woodmead Drive, Woodmead, Sandton and TELKOM SOUTH AFRICA LIMITED (\"TELKOM\") a company incorporated in accordance wit",
+        "target_text": "South African telephone monopoly to go ahead with lay-offs despite court ban (AFP) AFP - South African fixed line monopoly Telkom vowed to go ahead with plans to cut 4,000 jobs despite a court injunction forcing the state-run enterprise to seek agreement with the unions."
+      },
+      "news-wikipedia": {
+        "edge_id": "622a026d-fef1-4e6e-b4bd-cb7c6c603194",
+        "source_id": "7e066aa5-4a17-4f74-9289-67c245deb3c7",
+        "target_id": "3f8ea79a-37f1-4a37-847c-f439bede1c80",
+        "source_domain": "news",
+        "target_domain": "wikipedia",
+        "weight": 0.5631,
+        "source_text": "AMD starts shipping 90-nanometer chips The chipmaker appears to have met its most recent deadline for production of the smaller-featured chips.",
+        "target_text": "Advanced Micro Devices, Inc., commonly abbreviated as AMD, is an American multinational semiconductor company based in Santa Clara, California, that develops computer processors and related technologies for business and consumer markets. The company was founded in 1969 by Jerry Sanders and a group o"
+      },
+      "pubmed-wikipedia": {
+        "edge_id": "1f46775d-edb7-495b-a38b-9f840c9dd2cd",
+        "source_id": "da9a35ca-2382-4b6a-aaba-7de5f295c1f6",
+        "target_id": "e07972d3-f211-4d1a-93f4-bda03bef3c53",
+        "source_domain": "pubmed",
+        "target_domain": "wikipedia",
+        "weight": 0.5471,
+        "source_text": "Is amoxapine an atypical antipsychotic? PET data show that amoxapine's profile is very similar to that of the established atypical antipsychotics. These data, together with amoxapine's in vitro pharmacologic profile, effectiveness in animal models, and efficacy in psychotic depression raise the possibility of amoxapine as an \"atypical\" antipsychotic agent in the treatment of schizophrenia.",
+        "target_text": "Antipsychotics, also known as neuroleptics, are a class of psychotropic medication primarily used to manage psychosis (including delusions, hallucinations, paranoia or disordered thought), principally in schizophrenia but also in a range of other psychotic disorders. They are also the mainstay toget"
+      }
+    },
+    "most_connected_node": {
+      "node_id": "da9a35ca-2382-4b6a-aaba-7de5f295c1f6",
+      "degree": 2,
+      "domain": "pubmed",
+      "text": "Is amoxapine an atypical antipsychotic? PET data show that amoxapine's profile is very similar to that of the established atypical antipsychotics. These data, together with amoxapi"
+    },
+    "surprising_connection": {
+      "edge_id": "622a026d-fef1-4e6e-b4bd-cb7c6c603194",
+      "source_id": "7e066aa5-4a17-4f74-9289-67c245deb3c7",
+      "target_id": "3f8ea79a-37f1-4a37-847c-f439bede1c80",
+      "source_domain": "news",
+      "target_domain": "wikipedia",
+      "weight": 0.5631,
+      "source_text": "AMD starts shipping 90-nanometer chips The chipmaker appears to have met its most recent deadline for production of the smaller-featured chips.",
+      "target_text": "Advanced Micro Devices, Inc., commonly abbreviated as AMD, is an American multinational semiconductor company based in Santa Clara, California, that develops computer processors and related technologies for business and consumer markets. The company was founded in 1969 by Jerry Sanders and a group o"
     }
   },
   "experiments": {
-    "exp1": [
-      {
-        "query": "optimization algorithms for convergence",
-        "vector_domains": [
-          "wikipedia",
-          "wikipedia",
-          "news",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "news",
-          "stackexchange",
-          "stackexchange",
-          "wikipedia"
-        ],
-        "hybrid_domains": [
-          "wikipedia",
-          "wikipedia",
-          "news",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "news",
-          "stackexchange",
-          "stackexchange",
-          "wikipedia"
-        ],
-        "diff_count": 0
+    "exp1": {
+      "cache_stats_before": {
+        "hits": 0,
+        "misses": 1162,
+        "hit_rate": 0.0,
+        "size": 1,
+        "maxsize": 1000,
+        "ttl_seconds": 300,
+        "avg_ttl_remaining": 300.0
       },
-      {
-        "query": "neural network architecture design",
-        "vector_domains": [
-          "stackexchange",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "stackexchange",
-          "wikipedia",
-          "wikipedia",
-          "news",
-          "stackexchange",
-          "stackexchange"
-        ],
-        "hybrid_domains": [
-          "stackexchange",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "stackexchange",
-          "wikipedia",
-          "wikipedia",
-          "news",
-          "stackexchange",
-          "stackexchange"
-        ],
-        "diff_count": 0
+      "cache_stats_after": {
+        "hits": 0,
+        "misses": 1182,
+        "hit_rate": 0.0,
+        "size": 1,
+        "maxsize": 1000,
+        "ttl_seconds": 300,
+        "avg_ttl_remaining": 300.0
       },
-      {
-        "query": "statistical inference and uncertainty",
-        "vector_domains": [
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "stackexchange",
-          "wikipedia",
-          "wikipedia",
-          "news",
-          "wikipedia",
-          "wikipedia"
-        ],
-        "hybrid_domains": [
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "stackexchange",
-          "wikipedia",
-          "wikipedia",
-          "news",
-          "wikipedia",
-          "wikipedia"
-        ],
-        "diff_count": 0
-      },
-      {
-        "query": "distributed systems and fault tolerance",
-        "vector_domains": [
-          "wikipedia",
-          "stackexchange",
-          "wikipedia",
-          "wikipedia",
-          "news",
-          "wikipedia",
-          "news",
-          "wikipedia",
-          "news",
-          "pubmed"
-        ],
-        "hybrid_domains": [
-          "wikipedia",
-          "stackexchange",
-          "wikipedia",
-          "wikipedia",
-          "news",
-          "wikipedia",
-          "news",
-          "wikipedia",
-          "news",
-          "pubmed"
-        ],
-        "diff_count": 0
-      },
-      {
-        "query": "protein folding and molecular structure",
-        "vector_domains": [
-          "wikipedia",
-          "wikipedia",
-          "stackexchange",
-          "news",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "stackexchange"
-        ],
-        "hybrid_domains": [
-          "wikipedia",
-          "wikipedia",
-          "stackexchange",
-          "news",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "stackexchange"
-        ],
-        "diff_count": 0
-      },
-      {
-        "query": "regulatory compliance and risk assessment",
-        "vector_domains": [
-          "news",
-          "news",
-          "pubmed",
-          "news",
-          "pubmed",
-          "pubmed",
-          "stackexchange",
-          "stackexchange",
-          "pubmed",
-          "news"
-        ],
-        "hybrid_domains": [
-          "news",
-          "news",
-          "pubmed",
-          "news",
-          "pubmed",
-          "pubmed",
-          "stackexchange",
-          "stackexchange",
-          "pubmed",
-          "news"
-        ],
-        "diff_count": 0
-      },
-      {
-        "query": "gradient descent and loss functions",
-        "vector_domains": [
-          "news",
-          "news",
-          "wikipedia",
-          "pubmed",
-          "news",
-          "pubmed",
-          "pubmed",
-          "stackexchange",
-          "news",
-          "pubmed"
-        ],
-        "hybrid_domains": [
-          "news",
-          "news",
-          "wikipedia",
-          "pubmed",
-          "news",
-          "pubmed",
-          "pubmed",
-          "stackexchange",
-          "news",
-          "pubmed"
-        ],
-        "diff_count": 0
-      },
-      {
-        "query": "natural language understanding",
-        "vector_domains": [
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "pubmed",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia"
-        ],
-        "hybrid_domains": [
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "pubmed",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia"
-        ],
-        "diff_count": 0
-      },
-      {
-        "query": "clinical trials and treatment efficacy",
-        "vector_domains": [
-          "pubmed",
-          "pubmed",
-          "pubmed",
-          "pubmed",
-          "news",
-          "pubmed",
-          "pubmed",
-          "wikipedia",
-          "pubmed",
-          "news"
-        ],
-        "hybrid_domains": [
-          "pubmed",
-          "pubmed",
-          "pubmed",
-          "pubmed",
-          "news",
-          "pubmed",
-          "pubmed",
-          "wikipedia",
-          "pubmed",
-          "news"
-        ],
-        "diff_count": 0
-      },
-      {
-        "query": "market dynamics and price prediction",
-        "vector_domains": [
-          "news",
-          "news",
-          "news",
-          "news",
-          "news",
-          "news",
-          "news",
-          "news",
-          "news",
-          "news"
-        ],
-        "hybrid_domains": [
-          "news",
-          "news",
-          "news",
-          "news",
-          "news",
-          "news",
-          "news",
-          "news",
-          "news",
-          "news"
-        ],
-        "diff_count": 0
-      }
-    ],
-    "exp2": [
-      {
-        "query": "optimization",
-        "anchor_domain": "stackexchange",
-        "no_anchor_domains": [
-          "news",
-          "stackexchange",
-          "wikipedia",
-          "stackexchange",
-          "stackexchange",
-          "stackexchange",
-          "stackexchange",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia"
-        ],
-        "with_anchor_domains": [
-          "news",
-          "stackexchange",
-          "wikipedia",
-          "stackexchange",
-          "stackexchange",
-          "stackexchange",
-          "stackexchange",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia"
-        ]
-      },
-      {
-        "query": "network",
-        "anchor_domain": "stackexchange",
-        "no_anchor_domains": [
-          "news",
-          "news",
-          "wikipedia",
-          "stackexchange",
-          "wikipedia",
-          "news",
-          "wikipedia",
-          "news",
-          "news",
-          "news"
-        ],
-        "with_anchor_domains": [
-          "news",
-          "news",
-          "wikipedia",
-          "stackexchange",
-          "wikipedia",
-          "news",
-          "wikipedia",
-          "news",
-          "news",
-          "news"
-        ]
-      },
-      {
-        "query": "classification",
-        "anchor_domain": "stackexchange",
-        "no_anchor_domains": [
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "stackexchange",
-          "wikipedia",
-          "stackexchange"
-        ],
-        "with_anchor_domains": [
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "stackexchange",
-          "wikipedia",
-          "stackexchange"
-        ]
-      },
-      {
-        "query": "prediction",
-        "anchor_domain": "stackexchange",
-        "no_anchor_domains": [
-          "news",
-          "news",
-          "news",
-          "news",
-          "news",
-          "news",
-          "news",
-          "news",
-          "news",
-          "news"
-        ],
-        "with_anchor_domains": [
-          "news",
-          "news",
-          "news",
-          "news",
-          "news",
-          "news",
-          "news",
-          "news",
-          "news",
-          "news"
-        ]
-      },
-      {
-        "query": "inference",
-        "anchor_domain": "stackexchange",
-        "no_anchor_domains": [
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "news",
-          "stackexchange",
-          "news"
-        ],
-        "with_anchor_domains": [
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "wikipedia",
-          "news",
-          "stackexchange",
-          "news"
-        ]
-      }
-    ],
-    "exp3": {
-      "pairs_tested": 50,
-      "found_by_vector": 41,
-      "found_by_hybrid": 50,
-      "hidden_gems": [
+      "queries": [
         {
-          "source_domain": "wikipedia",
-          "target_domain": "stackexchange",
-          "source_text": "Blue is one of the three primary colours in the RYB colour model (traditional colour theory), as well as in the RGB (additive) colour model. It lies between violet and cyan on the spectrum of visible light. The term blue generally describes colors perceived by humans observing light with a dominant ",
-          "target_text": "<p>Ive been experimenting will multiple color filament but the colors a more or less blended. Is there are filament that goes from one color directly to another without having transition color ex. red to green immediately.</p>\n<p>I've been tinkering with <a href=\"https://www.filamenthub.com\" rel=\"nofollow noreferrer\">Filament Hub Filament</a> and it is very good (some of the best I've ever used)  ",
-          "reason": "Hybrid search successfully traversed the cross-domain graph edge that bridged these nodes, whereas pure vector distance was too far."
+          "query": "optimization algorithms for convergence",
+          "vector_query_time_ms": 11.1,
+          "hybrid_query_time_ms": 8.75,
+          "vector_domain_distribution": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "hybrid_domain_distribution": {
+            "news": 2,
+            "stackexchange": 2,
+            "wikipedia": 6
+          },
+          "different_results_count": 0,
+          "overlap_count": 10,
+          "vector_top_result": {
+            "node_id": "dd72554e-d577-4f6d-9a8e-3134c411aab4",
+            "domain": "wikipedia",
+            "score": 0.3321,
+            "text": "Algorithms for calculating variance play a major role in computational statistics. A key difficulty in the design of good algorithms for this problem is that formulas for the variance may involve sums of squares, which can lead to numerical instability as well as to arithmetic ov"
+          },
+          "hybrid_top_result": {
+            "node_id": "dd72554e-d577-4f6d-9a8e-3134c411aab4",
+            "domain": "wikipedia",
+            "score": 0.5993,
+            "text": "Algorithms for calculating variance play a major role in computational statistics. A key difficulty in the design of good algorithms for this problem is that formulas for the variance may involve sums of squares, which can lead to numerical instability as well as to arithmetic ov"
+          }
         },
         {
-          "source_domain": "wikipedia",
-          "target_domain": "stackexchange",
-          "source_text": "Blue is one of the three primary colours in the RYB colour model (traditional colour theory), as well as in the RGB (additive) colour model. It lies between violet and cyan on the spectrum of visible light. The term blue generally describes colors perceived by humans observing light with a dominant ",
-          "target_text": "<p>I've seen several questions about dyes in regards to food-safety, with no conclusive answers, as well as anecdotes on the RepRap wiki about how the mechanical properties of dyed PLA tend to vary by color. The general unsatisfactory answer is that dyes and additives used are proprietary secrets of filament manufacturers. However, 3D printer filament is a sufficiently large industry, with suffici",
-          "reason": "Hybrid search successfully traversed the cross-domain graph edge that bridged these nodes, whereas pure vector distance was too far."
+          "query": "neural network architecture design",
+          "vector_query_time_ms": 8.11,
+          "hybrid_query_time_ms": 9.54,
+          "vector_domain_distribution": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "hybrid_domain_distribution": {
+            "news": 1,
+            "stackexchange": 2,
+            "wikipedia": 7
+          },
+          "different_results_count": 0,
+          "overlap_count": 10,
+          "vector_top_result": {
+            "node_id": "705774f1-5511-4a59-aae4-af069b35f799",
+            "domain": "stackexchange",
+            "score": 0.2781,
+            "text": "I have been working on a printer project that basically is a 2D printer (dot matrix type). We are using solenoids as actuators to make impressions on the paper. We are now in the process of designing custom software. But a problem that we have encountered is that we have no idea "
+          },
+          "hybrid_top_result": {
+            "node_id": "705774f1-5511-4a59-aae4-af069b35f799",
+            "domain": "stackexchange",
+            "score": 0.5669,
+            "text": "I have been working on a printer project that basically is a 2D printer (dot matrix type). We are using solenoids as actuators to make impressions on the paper. We are now in the process of designing custom software. But a problem that we have encountered is that we have no idea "
+          }
         },
         {
-          "source_domain": "wikipedia",
-          "target_domain": "stackexchange",
-          "source_text": "Burnt-in timecode (often abbreviated to BITC by analogy to VITC) is a human-readable on-screen version of the timecode information for a piece of material superimposed on a video image. BITC is sometimes used in conjunction with \"real\" machine-readable timecode, but more often used in copies of orig",
-          "target_text": "<p>Given the Marlin Firmware what is the difference between the following lines of code:</p>\n\n<blockquote>\n  <p>G4 S20</p>\n</blockquote>\n\n<p>and</p>\n\n<blockquote>\n  <p>G4 P2000</p>\n</blockquote>\n\n<p>The code <code>G4</code> refers to <em>dwell</em>. (From what I'm seeing, it can be written as either <code>G4</code> or <code>G04</code>). <code>P</code>is the length of dwell time, usually in millise",
-          "reason": "Hybrid search successfully traversed the cross-domain graph edge that bridged these nodes, whereas pure vector distance was too far."
+          "query": "statistical inference and uncertainty",
+          "vector_query_time_ms": 10.49,
+          "hybrid_query_time_ms": 9.23,
+          "vector_domain_distribution": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "hybrid_domain_distribution": {
+            "news": 3,
+            "wikipedia": 7
+          },
+          "different_results_count": 0,
+          "overlap_count": 10,
+          "vector_top_result": {
+            "node_id": "6b451632-e4e8-4935-bc78-31e05bb3dab6",
+            "domain": "wikipedia",
+            "score": 0.3569,
+            "text": "Ambiguity is the type of meaning in which a phrase, statement, or resolution is not explicitly defined, making several interpretations plausible. A common aspect of ambiguity is uncertainty. It is thus an attribute of any idea or statement whose intended meaning cannot be definit"
+          },
+          "hybrid_top_result": {
+            "node_id": "6b451632-e4e8-4935-bc78-31e05bb3dab6",
+            "domain": "wikipedia",
+            "score": 0.6141,
+            "text": "Ambiguity is the type of meaning in which a phrase, statement, or resolution is not explicitly defined, making several interpretations plausible. A common aspect of ambiguity is uncertainty. It is thus an attribute of any idea or statement whose intended meaning cannot be definit"
+          }
         },
         {
-          "source_domain": "wikipedia",
-          "target_domain": "stackexchange",
-          "source_text": "Burnt-in timecode (often abbreviated to BITC by analogy to VITC) is a human-readable on-screen version of the timecode information for a piece of material superimposed on a video image. BITC is sometimes used in conjunction with \"real\" machine-readable timecode, but more often used in copies of orig",
-          "target_text": "<p>I\u2019ve been using Thingiverse pretty heavily since I started printing, and I frequently come across the same text block in unrelated models. Am I missing the joke or a hidden meaning in the frequent reuse of the following content?</p>\n<blockquote>\n<p>Designed up this dealer button to use in home games or have just as something laying around for any poker fan. It was inspired by a dealer button in",
-          "reason": "Hybrid search successfully traversed the cross-domain graph edge that bridged these nodes, whereas pure vector distance was too far."
+          "query": "distributed systems and fault tolerance",
+          "vector_query_time_ms": 8.8,
+          "hybrid_query_time_ms": 15.18,
+          "vector_domain_distribution": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "hybrid_domain_distribution": {
+            "legal": 1,
+            "news": 4,
+            "wikipedia": 5
+          },
+          "different_results_count": 0,
+          "overlap_count": 10,
+          "vector_top_result": {
+            "node_id": "f45a7bae-302a-4d4d-954e-3c987b4cc6e3",
+            "domain": "wikipedia",
+            "score": 0.3131,
+            "text": "In telecommunications, asynchronous communication is transmission of data, generally without the use of an external clock signal, where data can be transmitted intermittently rather than in a steady stream. Any timing required to recover data from the communication symbols is enc"
+          },
+          "hybrid_top_result": {
+            "node_id": "f45a7bae-302a-4d4d-954e-3c987b4cc6e3",
+            "domain": "wikipedia",
+            "score": 0.5879,
+            "text": "In telecommunications, asynchronous communication is transmission of data, generally without the use of an external clock signal, where data can be transmitted intermittently rather than in a steady stream. Any timing required to recover data from the communication symbols is enc"
+          }
         },
         {
-          "source_domain": "wikipedia",
-          "target_domain": "stackexchange",
-          "source_text": "A ballpoint pen, also known as a biro (British English), ball pen (Hong Kong, Indian and Philippine English), or dot pen (Nepali English), is a pen that dispenses ink (usually in paste form) over a metal ball at its point, i.e. over a \"ball point\". The metal commonly used is steel, brass, or tungste",
-          "target_text": "<p>Not quite sure what's happening here. I printed it as a single ball and had this effect. I thought it might be a cooling issue so I printed 4 at once but the issue still occurred. If I size the ball up, the problem reduces.</p>\n\n<p>Note that the hole is supposed to be a cylinder.</p>\n\n<p><a href=\"https://i.stack.imgur.com/owZtw.jpg\" rel=\"noreferrer\"><img src=\"https://i.stack.imgur.com/owZtw.jpg",
-          "reason": "Hybrid search successfully traversed the cross-domain graph edge that bridged these nodes, whereas pure vector distance was too far."
+          "query": "protein folding and molecular structure",
+          "vector_query_time_ms": 8.66,
+          "hybrid_query_time_ms": 9.7,
+          "vector_domain_distribution": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "hybrid_domain_distribution": {
+            "news": 1,
+            "stackexchange": 1,
+            "wikipedia": 8
+          },
+          "different_results_count": 0,
+          "overlap_count": 10,
+          "vector_top_result": {
+            "node_id": "f204c9de-86b4-4b69-bca2-4408ab33257f",
+            "domain": "wikipedia",
+            "score": 0.419,
+            "text": "An alpha helix (or \u03b1-helix) is a sequence of amino acids in a protein that are twisted into a coil (a helix). The alpha helix is the most common structural arrangement in the secondary structure of proteins. It is also the most extreme type of local structure, and it is the local"
+          },
+          "hybrid_top_result": {
+            "node_id": "f204c9de-86b4-4b69-bca2-4408ab33257f",
+            "domain": "wikipedia",
+            "score": 0.6514,
+            "text": "An alpha helix (or \u03b1-helix) is a sequence of amino acids in a protein that are twisted into a coil (a helix). The alpha helix is the most common structural arrangement in the secondary structure of proteins. It is also the most extreme type of local structure, and it is the local"
+          }
         },
         {
-          "source_domain": "wikipedia",
-          "target_domain": "stackexchange",
-          "source_text": "The British thermal unit (BTU or Btu) is a measure of heat, which is a form of energy. It was originally defined as the amount of heat required to raise the temperature of one pound of water by one degree Fahrenheit. It is also part of the United States customary units. The SI unit for energy is the",
-          "target_text": "<p>I've been going down the learning road with two broken printers that I'm rebuilding with better parts and electronics.</p>\n\n<p>One thing that I've recognized is that there is a pretty low likelihood that any hotend or heatbed that has had the thermistor/thermocouple and/or the printer board swapped with a non-OEM part can be trusted to accurately report it's own temperature.</p>\n\n<p>Sure, there",
-          "reason": "Hybrid search successfully traversed the cross-domain graph edge that bridged these nodes, whereas pure vector distance was too far."
+          "query": "regulatory compliance and risk assessment",
+          "vector_query_time_ms": 8.87,
+          "hybrid_query_time_ms": 13.15,
+          "vector_domain_distribution": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "hybrid_domain_distribution": {
+            "legal": 7,
+            "news": 2,
+            "pubmed": 1
+          },
+          "different_results_count": 0,
+          "overlap_count": 10,
+          "vector_top_result": {
+            "node_id": "ab20ee3e-26d4-45b3-a6c9-91c9044c9a4a",
+            "domain": "news",
+            "score": 0.4552,
+            "text": "Info on car safety off-limits to public The federal agency that oversees auto safety has decided -- based largely on arguments from automakers and their Washington, DC, lobbyists -- that reams of data relating to unsafe automobiles or defective parts will not be available ..."
+          },
+          "hybrid_top_result": {
+            "node_id": "ab20ee3e-26d4-45b3-a6c9-91c9044c9a4a",
+            "domain": "news",
+            "score": 0.6731,
+            "text": "Info on car safety off-limits to public The federal agency that oversees auto safety has decided -- based largely on arguments from automakers and their Washington, DC, lobbyists -- that reams of data relating to unsafe automobiles or defective parts will not be available ..."
+          }
         },
         {
-          "source_domain": "wikipedia",
-          "target_domain": "stackexchange",
-          "source_text": "The British thermal unit (BTU or Btu) is a measure of heat, which is a form of energy. It was originally defined as the amount of heat required to raise the temperature of one pound of water by one degree Fahrenheit. It is also part of the United States customary units. The SI unit for energy is the",
-          "target_text": "<p>I upgraded to an Mk9 dual extruder, and it came with thermocouples installed instead of the thermistors I had before. </p>\n\n<p>No matter what I did with the thermocouples, the indicated temperature jumped around by as much as 30C or more. In short, after several weeks of fiddling I never got the thermocouples to work well, and replaced them with thermistors, which have been fine.</p>\n\n<p>So my ",
-          "reason": "Hybrid search successfully traversed the cross-domain graph edge that bridged these nodes, whereas pure vector distance was too far."
+          "query": "gradient descent and loss functions",
+          "vector_query_time_ms": 13.39,
+          "hybrid_query_time_ms": 13.07,
+          "vector_domain_distribution": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "hybrid_domain_distribution": {
+            "news": 7,
+            "pubmed": 2,
+            "wikipedia": 1
+          },
+          "different_results_count": 0,
+          "overlap_count": 10,
+          "vector_top_result": {
+            "node_id": "0afd25ee-879e-4f82-ab5b-009fd74eeef8",
+            "domain": "news",
+            "score": 0.2579,
+            "text": "Losses and Lessons for Bush and Kerry (Los Angeles Times) Los Angeles Times - They lost at politics at an early age. Since then, they've rarely made the same campaign mistakes twice."
+          },
+          "hybrid_top_result": {
+            "node_id": "0afd25ee-879e-4f82-ab5b-009fd74eeef8",
+            "domain": "news",
+            "score": 0.5547,
+            "text": "Losses and Lessons for Bush and Kerry (Los Angeles Times) Los Angeles Times - They lost at politics at an early age. Since then, they've rarely made the same campaign mistakes twice."
+          }
         },
         {
-          "source_domain": "wikipedia",
-          "target_domain": "pubmed",
-          "source_text": "BDSM is a variety of often erotic practices or roleplaying involving bondage, discipline, dominance and submission, sadomasochism, and other related interpersonal dynamics. Given the wide range of practices, some of which may be engaged in by people who do not consider themselves to be practising BD",
-          "target_text": "Is unsafe sexual behaviour increasing among HIV-infected individuals? There was no evidence of a trend in unsafe sex behaviour over time. However, several subgroups were identified as being more likely to report unsafe sex and should be targeted for specific interventions.",
-          "reason": "Hybrid search successfully traversed the cross-domain graph edge that bridged these nodes, whereas pure vector distance was too far."
+          "query": "natural language understanding",
+          "vector_query_time_ms": 14.11,
+          "hybrid_query_time_ms": 13.92,
+          "vector_domain_distribution": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "hybrid_domain_distribution": {
+            "stackexchange": 1,
+            "wikipedia": 9
+          },
+          "different_results_count": 0,
+          "overlap_count": 10,
+          "vector_top_result": {
+            "node_id": "6b451632-e4e8-4935-bc78-31e05bb3dab6",
+            "domain": "wikipedia",
+            "score": 0.3165,
+            "text": "Ambiguity is the type of meaning in which a phrase, statement, or resolution is not explicitly defined, making several interpretations plausible. A common aspect of ambiguity is uncertainty. It is thus an attribute of any idea or statement whose intended meaning cannot be definit"
+          },
+          "hybrid_top_result": {
+            "node_id": "6b451632-e4e8-4935-bc78-31e05bb3dab6",
+            "domain": "wikipedia",
+            "score": 0.5899,
+            "text": "Ambiguity is the type of meaning in which a phrase, statement, or resolution is not explicitly defined, making several interpretations plausible. A common aspect of ambiguity is uncertainty. It is thus an attribute of any idea or statement whose intended meaning cannot be definit"
+          }
         },
         {
-          "source_domain": "wikipedia",
-          "target_domain": "pubmed",
-          "source_text": "The breast is one of two prominences located on the upper ventral region of a primate's torso. Both females and males develop breasts from the same embryological tissues.\n\nIn females, it serves as the mammary gland, which produces and secretes milk to feed infants. Subcutaneous fat covers and envelo",
-          "target_text": "Can nonproliferative breast disease and proliferative breast disease without atypia be distinguished by fine-needle aspiration cytology? Because there is significant overlap in cytologic features between NPBD and PBD, the distinction between the two entities is difficult in cytologic sampling.",
-          "reason": "Hybrid search successfully traversed the cross-domain graph edge that bridged these nodes, whereas pure vector distance was too far."
+          "query": "clinical trials and treatment efficacy",
+          "vector_query_time_ms": 10.01,
+          "hybrid_query_time_ms": 12.73,
+          "vector_domain_distribution": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "hybrid_domain_distribution": {
+            "news": 1,
+            "pubmed": 9
+          },
+          "different_results_count": 0,
+          "overlap_count": 10,
+          "vector_top_result": {
+            "node_id": "4b6a9d77-7cbe-450a-ae4d-90f278a7da2f",
+            "domain": "pubmed",
+            "score": 0.5531,
+            "text": "Does increased patient awareness improve accrual into cancer-related clinical trials? A set of educational interventions designed for cancer patients significantly improved their satisfaction with information on clinical research, but did not improve clinical trial enrollment of "
+          },
+          "hybrid_top_result": {
+            "node_id": "4b6a9d77-7cbe-450a-ae4d-90f278a7da2f",
+            "domain": "pubmed",
+            "score": 0.7319,
+            "text": "Does increased patient awareness improve accrual into cancer-related clinical trials? A set of educational interventions designed for cancer patients significantly improved their satisfaction with information on clinical research, but did not improve clinical trial enrollment of "
+          }
+        },
+        {
+          "query": "market dynamics and price prediction",
+          "vector_query_time_ms": 10.32,
+          "hybrid_query_time_ms": 8.35,
+          "vector_domain_distribution": {
+            "news": 10
+          },
+          "hybrid_domain_distribution": {
+            "news": 10
+          },
+          "different_results_count": 0,
+          "overlap_count": 10,
+          "vector_top_result": {
+            "node_id": "2791f499-dec9-4d4a-bf40-073d4a80788d",
+            "domain": "news",
+            "score": 0.4936,
+            "text": "Strategies for a Sideways Market (Reuters) Reuters - The bulls and the bears are in this\\together, scratching their heads and wondering what's going to\\happen next."
+          },
+          "hybrid_top_result": {
+            "node_id": "2791f499-dec9-4d4a-bf40-073d4a80788d",
+            "domain": "news",
+            "score": 0.6962,
+            "text": "Strategies for a Sideways Market (Reuters) Reuters - The bulls and the bears are in this\\together, scratching their heads and wondering what's going to\\happen next."
+          }
+        }
+      ],
+      "mean_unique_domains_vector": 2.5,
+      "mean_unique_domains_hybrid": 2.5,
+      "queries_where_hybrid_more_cross_domain": 0
+    },
+    "exp2": {
+      "cache_stats_before": {
+        "hits": 0,
+        "misses": 1182,
+        "hit_rate": 0.0,
+        "size": 1,
+        "maxsize": 1000,
+        "ttl_seconds": 300,
+        "avg_ttl_remaining": 300.0
+      },
+      "cache_stats_after": {
+        "hits": 0,
+        "misses": 1197,
+        "hit_rate": 0.0,
+        "size": 1,
+        "maxsize": 1000,
+        "ttl_seconds": 300,
+        "avg_ttl_remaining": 300.0
+      },
+      "anchor_domain": "stackexchange",
+      "queries": [
+        {
+          "query": "optimization",
+          "anchor_domain_requested": "stackexchange",
+          "anchor_node": {
+            "node_id": "f8033143-9e27-4153-b170-3f112659f8b9",
+            "domain": "stackexchange",
+            "score": 0.2691,
+            "text": "I have a object to print for which I want the base to be printed very rapidly because it's just a cube but as the print reached around 70 % a complex circular structure needs to be"
+          },
+          "no_anchor_distribution": {
+            "news": 1,
+            "stackexchange": 3,
+            "wikipedia": 6
+          },
+          "with_anchor_distribution": {
+            "news": 1,
+            "stackexchange": 3,
+            "wikipedia": 6
+          },
+          "stackexchange_count_delta": 0,
+          "overlap_count": 10
+        },
+        {
+          "query": "network",
+          "anchor_domain_requested": "stackexchange",
+          "anchor_node": {
+            "node_id": "093567af-33c7-4f09-b87f-608c4ea7a22c",
+            "domain": "stackexchange",
+            "score": 0.3172,
+            "text": "I believe this question is asked on every private Beta... what should be the name of our chatroom? The Hotbed. Colloquially, \"hotbed\" generally refers to a center of activity. Here"
+          },
+          "no_anchor_distribution": {
+            "legal": 3,
+            "news": 6,
+            "wikipedia": 1
+          },
+          "with_anchor_distribution": {
+            "legal": 3,
+            "news": 6,
+            "stackexchange": 1
+          },
+          "stackexchange_count_delta": 1,
+          "overlap_count": 9
+        },
+        {
+          "query": "classification",
+          "anchor_domain_requested": "stackexchange",
+          "anchor_node": {
+            "node_id": null,
+            "domain": null,
+            "score": 0.0,
+            "text": ""
+          },
+          "no_anchor_distribution": {
+            "pubmed": 1,
+            "wikipedia": 9
+          },
+          "with_anchor_distribution": {},
+          "stackexchange_count_delta": 0,
+          "overlap_count": 0
+        },
+        {
+          "query": "prediction",
+          "anchor_domain_requested": "stackexchange",
+          "anchor_node": {
+            "node_id": null,
+            "domain": null,
+            "score": 0.0,
+            "text": ""
+          },
+          "no_anchor_distribution": {
+            "news": 8,
+            "pubmed": 2
+          },
+          "with_anchor_distribution": {},
+          "stackexchange_count_delta": 0,
+          "overlap_count": 0
+        },
+        {
+          "query": "inference",
+          "anchor_domain_requested": "stackexchange",
+          "anchor_node": {
+            "node_id": null,
+            "domain": null,
+            "score": 0.0,
+            "text": ""
+          },
+          "no_anchor_distribution": {
+            "news": 1,
+            "wikipedia": 9
+          },
+          "with_anchor_distribution": {},
+          "stackexchange_count_delta": 0,
+          "overlap_count": 0
         }
       ]
     },
-    "exp4": [
-      {
-        "query": "ACL reconstruction surgery rehabilitation",
-        "target_domain": "pubmed",
-        "hybrid_precision": 0.9,
-        "vector_precision": 0.9
+    "exp3": {
+      "cache_stats_before": {
+        "hits": 0,
+        "misses": 1197,
+        "hit_rate": 0.0,
+        "size": 1,
+        "maxsize": 1000,
+        "ttl_seconds": 300,
+        "avg_ttl_remaining": 300.0
       },
-      {
-        "query": "mRNA vaccine mechanism",
-        "target_domain": "pubmed",
-        "hybrid_precision": 0.2,
-        "vector_precision": 0.2
+      "cache_stats_after": {
+        "hits": 0,
+        "misses": 1209,
+        "hit_rate": 0.0,
+        "size": 1,
+        "maxsize": 1000,
+        "ttl_seconds": 300,
+        "avg_ttl_remaining": 300.0
       },
-      {
-        "query": "Python asyncio event loop",
-        "target_domain": "stackexchange",
-        "hybrid_precision": 0.2,
-        "vector_precision": 0.2
+      "pairs_tested": 6,
+      "pairs": [
+        {
+          "source_id": "7e066aa5-4a17-4f74-9289-67c245deb3c7",
+          "target_id": "3f8ea79a-37f1-4a37-847c-f439bede1c80",
+          "source_domain": "news",
+          "target_domain": "wikipedia",
+          "edge_weight": 0.5631,
+          "vector_rank": 4,
+          "hybrid_rank": 2,
+          "source_text": "AMD starts shipping 90-nanometer chips The chipmaker appears to have met its most recent deadline for production of the smaller-featured chips.",
+          "target_text": "Advanced Micro Devices, Inc., commonly abbreviated as AMD, is an American multinational semiconductor company based in Santa Clara, California, that develops computer processors an"
+        },
+        {
+          "source_id": "da9a35ca-2382-4b6a-aaba-7de5f295c1f6",
+          "target_id": "e07972d3-f211-4d1a-93f4-bda03bef3c53",
+          "source_domain": "pubmed",
+          "target_domain": "wikipedia",
+          "edge_weight": 0.5471,
+          "vector_rank": 2,
+          "hybrid_rank": 2,
+          "source_text": "Is amoxapine an atypical antipsychotic? PET data show that amoxapine's profile is very similar to that of the established atypical antipsychotics. These data, together with amoxapi",
+          "target_text": "Antipsychotics, also known as neuroleptics, are a class of psychotropic medication primarily used to manage psychosis (including delusions, hallucinations, paranoia or disordered t"
+        },
+        {
+          "source_id": "ebe90235-39d1-4d58-be87-ecd4dbd0344f",
+          "target_id": "9383a6ec-5012-4789-954f-060f4a660ce6",
+          "source_domain": "news",
+          "target_domain": "wikipedia",
+          "edge_weight": 0.492,
+          "vector_rank": 3,
+          "hybrid_rank": 2,
+          "source_text": "Welcome change for Cabrera Let's say Boston is the sun of the baseball universe, where hope and criticism burn bright, where a city revolves around the game.",
+          "target_text": "The Boston Red Sox are an American professional baseball team based in Boston. The Red Sox compete in Major League Baseball (MLB) as a member club of the American League (AL) East "
+        },
+        {
+          "source_id": "879fb471-abf3-440a-a8ad-5020a0ded842",
+          "target_id": "8c52e1d7-bcdf-4dd2-b565-0419f5f0eb66",
+          "source_domain": "legal",
+          "target_domain": "news",
+          "edge_weight": 0.4639,
+          "vector_rank": 6,
+          "hybrid_rank": 2,
+          "source_text": "-1 - TELKOM CONTRACT No. 076C/01 LICENCE AND MAINTENANCE AGREEMENT entered into by and between SYSTEMS APPLICATIONS PRODUCTS (AFRICA) (PTY) LIMITED (\"SAP AFRICA\") a company incorpo",
+          "target_text": "South African telephone monopoly to go ahead with lay-offs despite court ban (AFP) AFP - South African fixed line monopoly Telkom vowed to go ahead with plans to cut 4,000 jobs des"
+        },
+        {
+          "source_id": "eb0c7734-fef1-4718-a101-bf0f7cde2079",
+          "target_id": "ffbac4ac-8e2c-4306-a89c-251e6b08b78a",
+          "source_domain": "news",
+          "target_domain": "wikipedia",
+          "edge_weight": 0.4578,
+          "vector_rank": 7,
+          "hybrid_rank": 2,
+          "source_text": "News: How Strongly Does the Sun Influence the Climate? Researchers have shown that the Sun can be responsible for, at most, only a small part of the warming over the last 20-30 yea",
+          "target_text": "Efforts to scientifically ascertain and attribute mechanisms responsible for recent global warming and related climate changes on Earth have found that the main driver is elevated "
+        },
+        {
+          "source_id": "da9a35ca-2382-4b6a-aaba-7de5f295c1f6",
+          "target_id": "65e0a131-4c63-4212-9b0b-71ec31322747",
+          "source_domain": "pubmed",
+          "target_domain": "wikipedia",
+          "edge_weight": 0.4522,
+          "vector_rank": 4,
+          "hybrid_rank": 3,
+          "source_text": "Is amoxapine an atypical antipsychotic? PET data show that amoxapine's profile is very similar to that of the established atypical antipsychotics. These data, together with amoxapi",
+          "target_text": "An anxiolytic (; also antipanic or anti-anxiety agent) is a medication or other intervention that reduces anxiety. This effect is in contrast to anxiogenic agents which increase an"
+        }
+      ],
+      "found_by_vector": 6,
+      "found_by_hybrid": 6,
+      "hidden_gem_count": 0
+    },
+    "exp4": {
+      "cache_stats_before": {
+        "hits": 0,
+        "misses": 1209,
+        "hit_rate": 0.0,
+        "size": 1,
+        "maxsize": 1000,
+        "ttl_seconds": 300,
+        "avg_ttl_remaining": 300.0
       },
-      {
-        "query": "Docker container networking",
-        "target_domain": "stackexchange",
-        "hybrid_precision": 0.2,
-        "vector_precision": 0.2
+      "cache_stats_after": {
+        "hits": 0,
+        "misses": 1229,
+        "hit_rate": 0.0,
+        "size": 1,
+        "maxsize": 1000,
+        "ttl_seconds": 300,
+        "avg_ttl_remaining": 300.0
       },
-      {
-        "query": "FIFA World Cup qualification",
-        "target_domain": "news",
-        "hybrid_precision": 1.0,
-        "vector_precision": 1.0
-      },
-      {
-        "query": "Central Bank interest rate hike",
-        "target_domain": "news",
-        "hybrid_precision": 0.9,
-        "vector_precision": 0.9
-      },
-      {
-        "query": "force majeure contract clause",
-        "target_domain": "legal",
-        "hybrid_precision": 0.0,
-        "vector_precision": 0.0
-      },
-      {
-        "query": "non-disclosure agreement termination",
-        "target_domain": "legal",
-        "hybrid_precision": 0.0,
-        "vector_precision": 0.0
-      }
-    ],
+      "queries": [
+        {
+          "query": "ACL reconstruction surgery rehabilitation",
+          "target_domain": "pubmed",
+          "skipped": false,
+          "vector_correct_fraction": 0.8,
+          "hybrid_correct_fraction": 0.8,
+          "vector_domain_distribution": {
+            "news": 1,
+            "pubmed": 8,
+            "wikipedia": 1
+          },
+          "hybrid_domain_distribution": {
+            "news": 1,
+            "pubmed": 8,
+            "wikipedia": 1
+          },
+          "different_results_count": 0
+        },
+        {
+          "query": "Python asyncio event loop",
+          "target_domain": "stackexchange",
+          "skipped": false,
+          "vector_correct_fraction": 0.2,
+          "hybrid_correct_fraction": 0.2,
+          "vector_domain_distribution": {
+            "news": 4,
+            "stackexchange": 2,
+            "wikipedia": 4
+          },
+          "hybrid_domain_distribution": {
+            "news": 4,
+            "stackexchange": 2,
+            "wikipedia": 4
+          },
+          "different_results_count": 0
+        },
+        {
+          "query": "FIFA World Cup qualification",
+          "target_domain": "news",
+          "skipped": false,
+          "vector_correct_fraction": 1.0,
+          "hybrid_correct_fraction": 1.0,
+          "vector_domain_distribution": {
+            "news": 10
+          },
+          "hybrid_domain_distribution": {
+            "news": 10
+          },
+          "different_results_count": 0
+        },
+        {
+          "query": "force majeure contract clause",
+          "target_domain": "legal",
+          "skipped": false,
+          "vector_correct_fraction": 1.0,
+          "hybrid_correct_fraction": 1.0,
+          "vector_domain_distribution": {
+            "legal": 10
+          },
+          "hybrid_domain_distribution": {
+            "legal": 10
+          },
+          "different_results_count": 0
+        },
+        {
+          "query": "mRNA vaccine mechanism",
+          "target_domain": "pubmed",
+          "skipped": false,
+          "vector_correct_fraction": 0.3,
+          "hybrid_correct_fraction": 0.3,
+          "vector_domain_distribution": {
+            "news": 5,
+            "pubmed": 3,
+            "wikipedia": 2
+          },
+          "hybrid_domain_distribution": {
+            "news": 5,
+            "pubmed": 3,
+            "wikipedia": 2
+          },
+          "different_results_count": 0
+        },
+        {
+          "query": "Kubernetes ingress controller TLS",
+          "target_domain": "stackexchange",
+          "skipped": false,
+          "vector_correct_fraction": 0.0,
+          "hybrid_correct_fraction": 0.0,
+          "vector_domain_distribution": {
+            "legal": 4,
+            "news": 5,
+            "wikipedia": 1
+          },
+          "hybrid_domain_distribution": {
+            "legal": 4,
+            "news": 5,
+            "wikipedia": 1
+          },
+          "different_results_count": 0
+        },
+        {
+          "query": "central bank inflation outlook",
+          "target_domain": "news",
+          "skipped": false,
+          "vector_correct_fraction": 1.0,
+          "hybrid_correct_fraction": 1.0,
+          "vector_domain_distribution": {
+            "news": 10
+          },
+          "hybrid_domain_distribution": {
+            "news": 10
+          },
+          "different_results_count": 0
+        },
+        {
+          "query": "indemnification limitation of liability clause",
+          "target_domain": "legal",
+          "skipped": false,
+          "vector_correct_fraction": 0.9,
+          "hybrid_correct_fraction": 0.9,
+          "vector_domain_distribution": {
+            "legal": 9,
+            "news": 1
+          },
+          "hybrid_domain_distribution": {
+            "legal": 9,
+            "news": 1
+          },
+          "different_results_count": 0
+        },
+        {
+          "query": "randomized controlled trial adverse events",
+          "target_domain": "pubmed",
+          "skipped": false,
+          "vector_correct_fraction": 0.8,
+          "hybrid_correct_fraction": 0.8,
+          "vector_domain_distribution": {
+            "news": 2,
+            "pubmed": 8
+          },
+          "hybrid_domain_distribution": {
+            "news": 2,
+            "pubmed": 8
+          },
+          "different_results_count": 0
+        },
+        {
+          "query": "Python pandas groupby aggregation",
+          "target_domain": "stackexchange",
+          "skipped": false,
+          "vector_correct_fraction": 0.0,
+          "hybrid_correct_fraction": 0.0,
+          "vector_domain_distribution": {
+            "news": 2,
+            "wikipedia": 8
+          },
+          "hybrid_domain_distribution": {
+            "news": 2,
+            "wikipedia": 8
+          },
+          "different_results_count": 0
+        }
+      ],
+      "mean_vector_correct_fraction": 0.6,
+      "mean_hybrid_correct_fraction": 0.6
+    },
     "exp5": {
-      "wikipedia": {
-        "p50": 13.612999999168096,
-        "p95": 13.729779999994207
+      "cache_stats_before": {
+        "hits": 0,
+        "misses": 1229,
+        "hit_rate": 0.0,
+        "size": 1,
+        "maxsize": 1000,
+        "ttl_seconds": 300,
+        "avg_ttl_remaining": 300.0
       },
-      "stackexchange": {
-        "p50": 14.878199999657227,
-        "p95": 16.763699999501114
+      "cache_stats_after": {
+        "hits": 0,
+        "misses": 1329,
+        "hit_rate": 0.0,
+        "size": 1,
+        "maxsize": 1000,
+        "ttl_seconds": 300,
+        "avg_ttl_remaining": 300.0
       },
-      "news": {
-        "p50": 14.203700000507524,
-        "p95": 16.718780001974665
+      "per_domain": {
+        "legal": {
+          "query_count": 20,
+          "wall_p50_ms": 15.63,
+          "wall_p95_ms": 17.95,
+          "server_p50_ms": 11.74,
+          "server_p95_ms": 14.65
+        },
+        "news": {
+          "query_count": 20,
+          "wall_p50_ms": 17.13,
+          "wall_p95_ms": 18.82,
+          "server_p50_ms": 13.03,
+          "server_p95_ms": 14.43
+        },
+        "pubmed": {
+          "query_count": 20,
+          "wall_p50_ms": 16.49,
+          "wall_p95_ms": 17.84,
+          "server_p50_ms": 12.37,
+          "server_p95_ms": 14.17
+        },
+        "stackexchange": {
+          "query_count": 20,
+          "wall_p50_ms": 17.37,
+          "wall_p95_ms": 28.52,
+          "server_p50_ms": 13.48,
+          "server_p95_ms": 24.47
+        },
+        "wikipedia": {
+          "query_count": 20,
+          "wall_p50_ms": 16.07,
+          "wall_p95_ms": 19.83,
+          "server_p50_ms": 12.43,
+          "server_p95_ms": 16.1
+        }
+      },
+      "overall_wall_p50_ms": 16.51,
+      "overall_wall_p95_ms": 19.64,
+      "baseline_1000_nodes": {
+        "p50_ms": 13.0,
+        "p95_ms": 16.0
       }
     }
   },
   "analysis": {
-    "intra_domain_similarity": {
-      "wikipedia": 0.3365401960784314,
-      "stackexchange": 0.5431648148148148,
-      "pubmed": 0.3816845730027548,
-      "news": 0.418247602739726
+    "embedding_space": {
+      "intra_domain_mean_cosine": {
+        "legal": 0.5003,
+        "news": 0.2885,
+        "pubmed": 0.1652,
+        "stackexchange": 0.3139,
+        "wikipedia": 0.0521
+      },
+      "inter_domain_mean_cosine": {
+        "legal-news": 0.0029,
+        "legal-pubmed": 0.0203,
+        "legal-stackexchange": 0.0255,
+        "legal-wikipedia": -0.0379,
+        "news-pubmed": -0.0048,
+        "news-stackexchange": -0.0125,
+        "news-wikipedia": 0.0041,
+        "pubmed-stackexchange": 0.0184,
+        "pubmed-wikipedia": -0.0128,
+        "stackexchange-wikipedia": -0.0103
+      },
+      "overall_intra_mean": 0.264,
+      "overall_inter_mean": -0.0007
     },
-    "inter_domain_similarity": {
-      "wikipedia-stackexchange": 0.2562931034482759,
-      "wikipedia-pubmed": 0.2582260869565217,
-      "wikipedia-news": 0.24235694444444444,
-      "stackexchange-wikipedia": 0.29124000000000005,
-      "stackexchange-pubmed": 0.0,
-      "stackexchange-news": 0.28388571428571424,
-      "pubmed-wikipedia": 0.3094954545454546,
-      "pubmed-stackexchange": 0.28058333333333335,
-      "pubmed-news": 0.31005714285714286,
-      "news-wikipedia": 0.2853582089552239,
-      "news-stackexchange": 0.272806976744186,
-      "news-pubmed": 0.3017692307692308
+    "manual_relevance_review": [
+      {
+        "query": "optimization algorithms for convergence",
+        "vector_domain": "wikipedia",
+        "hybrid_domain": "wikipedia",
+        "vector_top_text": "Algorithms for calculating variance play a major role in computational statistics. A key difficulty in the design of good algorithms for this problem is that formulas for the variance may involve sums of squares, which can lead to numerical instability as well as to arithmetic ov",
+        "hybrid_top_text": "Algorithms for calculating variance play a major role in computational statistics. A key difficulty in the design of good algorithms for this problem is that formulas for the variance may involve sums of squares, which can lead to numerical instability as well as to arithmetic ov",
+        "relevance_judgment": "tie",
+        "rationale": "Same top-1 node_id; scores differ (vector vs combined)."
+      },
+      {
+        "query": "neural network architecture design",
+        "vector_domain": "stackexchange",
+        "hybrid_domain": "stackexchange",
+        "vector_top_text": "I have been working on a printer project that basically is a 2D printer (dot matrix type). We are using solenoids as actuators to make impressions on the paper. We are now in the process of designing custom software. But a problem that we have encountered is that we have no idea ",
+        "hybrid_top_text": "I have been working on a printer project that basically is a 2D printer (dot matrix type). We are using solenoids as actuators to make impressions on the paper. We are now in the process of designing custom software. But a problem that we have encountered is that we have no idea ",
+        "relevance_judgment": "tie",
+        "rationale": "Same top-1 node_id; scores differ (vector vs combined)."
+      },
+      {
+        "query": "statistical inference and uncertainty",
+        "vector_domain": "wikipedia",
+        "hybrid_domain": "wikipedia",
+        "vector_top_text": "Ambiguity is the type of meaning in which a phrase, statement, or resolution is not explicitly defined, making several interpretations plausible. A common aspect of ambiguity is uncertainty. It is thus an attribute of any idea or statement whose intended meaning cannot be definit",
+        "hybrid_top_text": "Ambiguity is the type of meaning in which a phrase, statement, or resolution is not explicitly defined, making several interpretations plausible. A common aspect of ambiguity is uncertainty. It is thus an attribute of any idea or statement whose intended meaning cannot be definit",
+        "relevance_judgment": "tie",
+        "rationale": "Same top-1 node_id; scores differ (vector vs combined)."
+      },
+      {
+        "query": "distributed systems and fault tolerance",
+        "vector_domain": "wikipedia",
+        "hybrid_domain": "wikipedia",
+        "vector_top_text": "In telecommunications, asynchronous communication is transmission of data, generally without the use of an external clock signal, where data can be transmitted intermittently rather than in a steady stream. Any timing required to recover data from the communication symbols is enc",
+        "hybrid_top_text": "In telecommunications, asynchronous communication is transmission of data, generally without the use of an external clock signal, where data can be transmitted intermittently rather than in a steady stream. Any timing required to recover data from the communication symbols is enc",
+        "relevance_judgment": "tie",
+        "rationale": "Same top-1 node_id; scores differ (vector vs combined)."
+      },
+      {
+        "query": "protein folding and molecular structure",
+        "vector_domain": "wikipedia",
+        "hybrid_domain": "wikipedia",
+        "vector_top_text": "An alpha helix (or \u03b1-helix) is a sequence of amino acids in a protein that are twisted into a coil (a helix). The alpha helix is the most common structural arrangement in the secondary structure of proteins. It is also the most extreme type of local structure, and it is the local",
+        "hybrid_top_text": "An alpha helix (or \u03b1-helix) is a sequence of amino acids in a protein that are twisted into a coil (a helix). The alpha helix is the most common structural arrangement in the secondary structure of proteins. It is also the most extreme type of local structure, and it is the local",
+        "relevance_judgment": "tie",
+        "rationale": "Same top-1 node_id; scores differ (vector vs combined)."
+      },
+      {
+        "query": "regulatory compliance and risk assessment",
+        "vector_domain": "news",
+        "hybrid_domain": "news",
+        "vector_top_text": "Info on car safety off-limits to public The federal agency that oversees auto safety has decided -- based largely on arguments from automakers and their Washington, DC, lobbyists -- that reams of data relating to unsafe automobiles or defective parts will not be available ...",
+        "hybrid_top_text": "Info on car safety off-limits to public The federal agency that oversees auto safety has decided -- based largely on arguments from automakers and their Washington, DC, lobbyists -- that reams of data relating to unsafe automobiles or defective parts will not be available ...",
+        "relevance_judgment": "tie",
+        "rationale": "Same top-1 node_id; scores differ (vector vs combined)."
+      },
+      {
+        "query": "gradient descent and loss functions",
+        "vector_domain": "news",
+        "hybrid_domain": "news",
+        "vector_top_text": "Losses and Lessons for Bush and Kerry (Los Angeles Times) Los Angeles Times - They lost at politics at an early age. Since then, they've rarely made the same campaign mistakes twice.",
+        "hybrid_top_text": "Losses and Lessons for Bush and Kerry (Los Angeles Times) Los Angeles Times - They lost at politics at an early age. Since then, they've rarely made the same campaign mistakes twice.",
+        "relevance_judgment": "tie",
+        "rationale": "Same top-1 node_id; scores differ (vector vs combined)."
+      },
+      {
+        "query": "natural language understanding",
+        "vector_domain": "wikipedia",
+        "hybrid_domain": "wikipedia",
+        "vector_top_text": "Ambiguity is the type of meaning in which a phrase, statement, or resolution is not explicitly defined, making several interpretations plausible. A common aspect of ambiguity is uncertainty. It is thus an attribute of any idea or statement whose intended meaning cannot be definit",
+        "hybrid_top_text": "Ambiguity is the type of meaning in which a phrase, statement, or resolution is not explicitly defined, making several interpretations plausible. A common aspect of ambiguity is uncertainty. It is thus an attribute of any idea or statement whose intended meaning cannot be definit",
+        "relevance_judgment": "tie",
+        "rationale": "Same top-1 node_id; scores differ (vector vs combined)."
+      },
+      {
+        "query": "clinical trials and treatment efficacy",
+        "vector_domain": "pubmed",
+        "hybrid_domain": "pubmed",
+        "vector_top_text": "Does increased patient awareness improve accrual into cancer-related clinical trials? A set of educational interventions designed for cancer patients significantly improved their satisfaction with information on clinical research, but did not improve clinical trial enrollment of ",
+        "hybrid_top_text": "Does increased patient awareness improve accrual into cancer-related clinical trials? A set of educational interventions designed for cancer patients significantly improved their satisfaction with information on clinical research, but did not improve clinical trial enrollment of ",
+        "relevance_judgment": "tie",
+        "rationale": "Same top-1 node_id; scores differ (vector vs combined)."
+      },
+      {
+        "query": "market dynamics and price prediction",
+        "vector_domain": "news",
+        "hybrid_domain": "news",
+        "vector_top_text": "Strategies for a Sideways Market (Reuters) Reuters - The bulls and the bears are in this\\together, scratching their heads and wondering what's going to\\happen next.",
+        "hybrid_top_text": "Strategies for a Sideways Market (Reuters) Reuters - The bulls and the bears are in this\\together, scratching their heads and wondering what's going to\\happen next.",
+        "relevance_judgment": "tie",
+        "rationale": "Same top-1 node_id; scores differ (vector vs combined)."
+      }
+    ],
+    "graph_conditioned_embedding_check": {
+      "baseline_mean_diff_arxiv_only": 0.00977,
+      "probe_nodes_created": 5,
+      "probe_nodes_measured": 5,
+      "mean_cosine_diff": 0.01927,
+      "max_cosine_diff": 0.022839,
+      "min_cosine_diff": 0.01579,
+      "per_node": [
+        {
+          "node_id": "5a3351e3-6446-4f4a-95d2-d5fe2c4a3774",
+          "text": "Optimization methods for constrained inference under noisy evidence.",
+          "cosine_diff": 0.018944
+        },
+        {
+          "node_id": "e016fcb9-fb67-4416-ba24-20e4726ee209",
+          "text": "Distributed network scheduling for fault-tolerant service coordination.",
+          "cosine_diff": 0.021775
+        },
+        {
+          "node_id": "202bb3ca-8321-489e-ae7e-98a7c311b5b2",
+          "text": "Clinical evidence synthesis for treatment efficacy and adverse events.",
+          "cosine_diff": 0.01579
+        },
+        {
+          "node_id": "dabd9eae-e013-4cad-b547-41a4288f23cd",
+          "text": "Contract risk allocation and indemnification in commercial agreements.",
+          "cosine_diff": 0.017003
+        },
+        {
+          "node_id": "f623b97e-4d38-42be-ae76-f54d43975109",
+          "text": "Neural representation learning for structured language understanding.",
+          "cosine_diff": 0.022839
+        }
+      ]
+    },
+    "hybrid_vs_vector_summary": {
+      "comparisons": 25,
+      "comparisons_with_differences": 4,
+      "difference_rate": 0.16
+    },
+    "cache_methodology": {
+      "strategy": "POST /cache/clear before every measured search call",
+      "final_cache_stats": {
+        "hits": 0,
+        "misses": 1329,
+        "hit_rate": 0.0,
+        "size": 0,
+        "maxsize": 1000,
+        "ttl_seconds": 300,
+        "avg_ttl_remaining": 0
+      }
+    }
+  },
+  "manual_review_candidates": [
+    {
+      "query": "network",
+      "vector_top": null,
+      "hybrid_top": {
+        "node_id": "093567af-33c7-4f09-b87f-608c4ea7a22c",
+        "domain": "stackexchange",
+        "score": 0.3172,
+        "text": "I believe this question is asked on every private Beta... what should be the name of our chatroom? The Hotbed. Colloquially, \"hotbed\" generally refers to a center of activity. Here"
+      },
+      "source": "exp2_anchor"
+    },
+    {
+      "query": "classification",
+      "vector_top": null,
+      "hybrid_top": {
+        "node_id": null,
+        "domain": null,
+        "score": 0.0,
+        "text": ""
+      },
+      "source": "exp2_anchor"
+    },
+    {
+      "query": "prediction",
+      "vector_top": null,
+      "hybrid_top": {
+        "node_id": null,
+        "domain": null,
+        "score": 0.0,
+        "text": ""
+      },
+      "source": "exp2_anchor"
+    },
+    {
+      "query": "inference",
+      "vector_top": null,
+      "hybrid_top": {
+        "node_id": null,
+        "domain": null,
+        "score": 0.0,
+        "text": ""
+      },
+      "source": "exp2_anchor"
+    }
+  ],
+  "threshold_0_20_rerun": {
+    "edge_threshold": 0.2,
+    "edges_deleted_before_rebuild": 6,
+    "edges_in_index_before_delete": 6,
+    "graph_construction": {
+      "edge_threshold": 0.2,
+      "loaded_domains": [
+        "legal",
+        "news",
+        "pubmed",
+        "stackexchange",
+        "wikipedia"
+      ],
+      "domain_pair_count": 10,
+      "total_cross_domain_edges": 49,
+      "edge_counts_per_pair": {
+        "legal-news": 2,
+        "legal-pubmed": 0,
+        "legal-stackexchange": 0,
+        "legal-wikipedia": 1,
+        "news-pubmed": 6,
+        "news-stackexchange": 0,
+        "news-wikipedia": 22,
+        "pubmed-stackexchange": 6,
+        "pubmed-wikipedia": 9,
+        "stackexchange-wikipedia": 3
+      },
+      "pair_best_examples": {
+        "legal-news": {
+          "edge_id": "c4a4a02a-376e-4de1-b724-83e384eb7ab9",
+          "source_id": "879fb471-abf3-440a-a8ad-5020a0ded842",
+          "target_id": "8c52e1d7-bcdf-4dd2-b565-0419f5f0eb66",
+          "source_domain": "legal",
+          "target_domain": "news",
+          "weight": 0.4639,
+          "source_text": "-1 - TELKOM CONTRACT No. 076C/01 LICENCE AND MAINTENANCE AGREEMENT entered into by and between SYSTEMS APPLICATIONS PRODUCTS (AFRICA) (PTY) LIMITED (\"SAP AFRICA\") a company incorporated in accordance with the laws of the Republic of South Africa with offices at SAP Business Park, 1 Woodmead Drive, Woodmead, Sandton and TELKOM SOUTH AFRICA LIMITED (\"TELKOM\") a company incorporated in accordance wit",
+          "target_text": "South African telephone monopoly to go ahead with lay-offs despite court ban (AFP) AFP - South African fixed line monopoly Telkom vowed to go ahead with plans to cut 4,000 jobs despite a court injunction forcing the state-run enterprise to seek agreement with the unions."
+        },
+        "legal-wikipedia": {
+          "edge_id": "be709de2-0a0c-439b-9527-c2284e179d57",
+          "source_id": "a211aaaf-bd40-4460-8daf-05490003982d",
+          "target_id": "a8afd827-9006-4231-acb3-c442d715ec71",
+          "source_domain": "legal",
+          "target_domain": "wikipedia",
+          "weight": 0.4036,
+          "source_text": "EXHIBIT 10.6 TRANSPORTATION CONTRACT SPECIFIC CONDITIONS PURPOSE ECONOMIC CONDITIONS CONTRACTED CAPACITY POINTS OF ENTRANCE AND EXIT MANSOY\u00c1 - TUMACO Date Bogota D.C. January 30, 2012 Contract No. VIT-005-2012 SENDER SOLANA PETROLEUM EXPLORATION COLOMBIA LIMITED TAX ID 830.051.027-8 SHIPPER ECOPETROL S.A. TAX ID 899.999.068-1 T Y P E O F CRUDE OWN PRODUCTION x PROPERTY Transportation Service of li",
+          "target_text": "Transport infrastructure in Brazil is characterized by strong regional differences and lack of development of the national rail network. Brazil's fast-growing economy, and especially the growth in exports, will place increasing demands on the transport networks. However, sizeable new investments tha"
+        },
+        "news-pubmed": {
+          "edge_id": "da207c32-38cc-4142-bceb-1855878b9020",
+          "source_id": "0ddf625a-0ea9-4b5f-bf01-dd2e19ac8ffb",
+          "target_id": "babd148e-dd7f-46cf-b4bc-9773dc7a0500",
+          "source_domain": "news",
+          "target_domain": "pubmed",
+          "weight": 0.4408,
+          "source_text": "Kids Rule for Back-to-School The purchasing power of kids is a big part of why the back-to-school season has become such a huge marketing phenomenon.",
+          "target_text": "School food policy at Dutch primary schools: room for improvement? Dutch primary schools could play a more important role in fostering healthy eating habits among children. The school food policy could be improved by clearly formulating food rules, simplifying supervision of the food rules, and defining how to enforce the food rules. In addition, the school food policy will only influence children"
+        },
+        "news-wikipedia": {
+          "edge_id": "9bb99e43-7203-4297-bcb6-5cabee0b93a2",
+          "source_id": "7e066aa5-4a17-4f74-9289-67c245deb3c7",
+          "target_id": "3f8ea79a-37f1-4a37-847c-f439bede1c80",
+          "source_domain": "news",
+          "target_domain": "wikipedia",
+          "weight": 0.5631,
+          "source_text": "AMD starts shipping 90-nanometer chips The chipmaker appears to have met its most recent deadline for production of the smaller-featured chips.",
+          "target_text": "Advanced Micro Devices, Inc., commonly abbreviated as AMD, is an American multinational semiconductor company based in Santa Clara, California, that develops computer processors and related technologies for business and consumer markets. The company was founded in 1969 by Jerry Sanders and a group o"
+        },
+        "pubmed-stackexchange": {
+          "edge_id": "0321adda-237c-4c92-81d9-c2b18ee3e708",
+          "source_id": "5fc75096-5c20-487f-999c-a7b6d66ad9a8",
+          "target_id": "d9776430-735e-4b19-bbf3-920cdcd54549",
+          "source_domain": "pubmed",
+          "target_domain": "stackexchange",
+          "weight": 0.4029,
+          "source_text": "Should temperature be monitorized during kidney allograft preservation? The new storage can affords more stable temperature levels when compared to the formerly used can. Since temperature is stable during conservation, continuous monitoring in everyday practice does not seem warranted.",
+          "target_text": "I am looking for the temperature rating for hardboard. I want to use that as the base for my printer enclosure. It has proven incredible hard get a ball-park figure from Google. So, what is the maximum safe temperature for a hardboard panel at long term? (considering a print job can easily take 6 hours). PS: if you have used a hardboard to build your enclosure, your experience might be helpful. Ha"
+        },
+        "pubmed-wikipedia": {
+          "edge_id": "2b3afebe-f8fd-4418-961e-7367fabb2ff7",
+          "source_id": "da9a35ca-2382-4b6a-aaba-7de5f295c1f6",
+          "target_id": "e07972d3-f211-4d1a-93f4-bda03bef3c53",
+          "source_domain": "pubmed",
+          "target_domain": "wikipedia",
+          "weight": 0.5471,
+          "source_text": "Is amoxapine an atypical antipsychotic? PET data show that amoxapine's profile is very similar to that of the established atypical antipsychotics. These data, together with amoxapine's in vitro pharmacologic profile, effectiveness in animal models, and efficacy in psychotic depression raise the possibility of amoxapine as an \"atypical\" antipsychotic agent in the treatment of schizophrenia.",
+          "target_text": "Antipsychotics, also known as neuroleptics, are a class of psychotropic medication primarily used to manage psychosis (including delusions, hallucinations, paranoia or disordered thought), principally in schizophrenia but also in a range of other psychotic disorders. They are also the mainstay toget"
+        },
+        "stackexchange-wikipedia": {
+          "edge_id": "a32a0be7-c063-4849-b56b-806ed59129f3",
+          "source_id": "f308b983-6085-4977-90f9-64c46451c26c",
+          "target_id": "7ddb643b-ed00-426c-896e-3941b3bb8e80",
+          "source_domain": "stackexchange",
+          "target_domain": "wikipedia",
+          "weight": 0.2836,
+          "source_text": "I'm working with a project involving 3D printing's terminology, but I'm not such an expert... so I was asking myself if someone can explain the meaning of the \"downstream\" adjective in this field. More precisely, I'm dealing with this sentence: \"Handle any downstream task\", which I really can't understand because it has a very poor context. I also have this sentence with the adjective that I'm hav",
+          "target_text": "Barge often refers to a flat-bottomed inland waterway vessel which does not have its own means of mechanical propulsion. The first modern barges were pulled by tugs, but on inland waterways, most are pushed by pusher boats, or other vessels. The term barge has a rich history, and therefore there are"
+        }
+      },
+      "most_connected_node": {
+        "node_id": "0ddf625a-0ea9-4b5f-bf01-dd2e19ac8ffb",
+        "degree": 3,
+        "domain": "news",
+        "text": "Kids Rule for Back-to-School The purchasing power of kids is a big part of why the back-to-school season has become such a huge marketing phenomenon."
+      },
+      "surprising_connection": {
+        "edge_id": "9bb99e43-7203-4297-bcb6-5cabee0b93a2",
+        "source_id": "7e066aa5-4a17-4f74-9289-67c245deb3c7",
+        "target_id": "3f8ea79a-37f1-4a37-847c-f439bede1c80",
+        "source_domain": "news",
+        "target_domain": "wikipedia",
+        "weight": 0.5631,
+        "source_text": "AMD starts shipping 90-nanometer chips The chipmaker appears to have met its most recent deadline for production of the smaller-featured chips.",
+        "target_text": "Advanced Micro Devices, Inc., commonly abbreviated as AMD, is an American multinational semiconductor company based in Santa Clara, California, that develops computer processors and related technologies for business and consumer markets. The company was founded in 1969 by Jerry Sanders and a group o"
+      }
+    },
+    "experiments": {
+      "exp1": {
+        "cache_stats_before": {
+          "hits": 0,
+          "misses": 500,
+          "hit_rate": 0.0,
+          "size": 1,
+          "maxsize": 1000,
+          "ttl_seconds": 300,
+          "avg_ttl_remaining": 300.0
+        },
+        "cache_stats_after": {
+          "hits": 0,
+          "misses": 520,
+          "hit_rate": 0.0,
+          "size": 1,
+          "maxsize": 1000,
+          "ttl_seconds": 300,
+          "avg_ttl_remaining": 300.0
+        },
+        "queries": [
+          {
+            "query": "optimization algorithms for convergence",
+            "vector_query_time_ms": 8.22,
+            "hybrid_query_time_ms": 12.39,
+            "vector_domain_distribution": {
+              "news": 2,
+              "probe": 1,
+              "stackexchange": 1,
+              "wikipedia": 6
+            },
+            "hybrid_domain_distribution": {
+              "news": 2,
+              "probe": 1,
+              "stackexchange": 1,
+              "wikipedia": 6
+            },
+            "different_results_count": 0,
+            "overlap_count": 10,
+            "vector_top_result": {
+              "node_id": "5a3351e3-6446-4f4a-95d2-d5fe2c4a3774",
+              "domain": "probe",
+              "score": 0.4343,
+              "text": "Optimization methods for constrained inference under noisy evidence."
+            },
+            "hybrid_top_result": {
+              "node_id": "5a3351e3-6446-4f4a-95d2-d5fe2c4a3774",
+              "domain": "probe",
+              "score": 0.6606,
+              "text": "Optimization methods for constrained inference under noisy evidence."
+            }
+          },
+          {
+            "query": "neural network architecture design",
+            "vector_query_time_ms": 11.04,
+            "hybrid_query_time_ms": 12.76,
+            "vector_domain_distribution": {
+              "news": 1,
+              "probe": 1,
+              "stackexchange": 2,
+              "wikipedia": 6
+            },
+            "hybrid_domain_distribution": {
+              "news": 1,
+              "probe": 1,
+              "stackexchange": 2,
+              "wikipedia": 6
+            },
+            "different_results_count": 0,
+            "overlap_count": 10,
+            "vector_top_result": {
+              "node_id": "f623b97e-4d38-42be-ae76-f54d43975109",
+              "domain": "probe",
+              "score": 0.3104,
+              "text": "Neural representation learning for structured language understanding."
+            },
+            "hybrid_top_result": {
+              "node_id": "f623b97e-4d38-42be-ae76-f54d43975109",
+              "domain": "probe",
+              "score": 0.5862,
+              "text": "Neural representation learning for structured language understanding."
+            }
+          },
+          {
+            "query": "statistical inference and uncertainty",
+            "vector_query_time_ms": 9.91,
+            "hybrid_query_time_ms": 16.6,
+            "vector_domain_distribution": {
+              "news": 2,
+              "probe": 1,
+              "wikipedia": 7
+            },
+            "hybrid_domain_distribution": {
+              "news": 2,
+              "probe": 1,
+              "wikipedia": 7
+            },
+            "different_results_count": 0,
+            "overlap_count": 10,
+            "vector_top_result": {
+              "node_id": "5a3351e3-6446-4f4a-95d2-d5fe2c4a3774",
+              "domain": "probe",
+              "score": 0.587,
+              "text": "Optimization methods for constrained inference under noisy evidence."
+            },
+            "hybrid_top_result": {
+              "node_id": "5a3351e3-6446-4f4a-95d2-d5fe2c4a3774",
+              "domain": "probe",
+              "score": 0.7522,
+              "text": "Optimization methods for constrained inference under noisy evidence."
+            }
+          },
+          {
+            "query": "distributed systems and fault tolerance",
+            "vector_query_time_ms": 13.91,
+            "hybrid_query_time_ms": 16.0,
+            "vector_domain_distribution": {
+              "legal": 1,
+              "news": 3,
+              "probe": 1,
+              "wikipedia": 5
+            },
+            "hybrid_domain_distribution": {
+              "legal": 1,
+              "news": 3,
+              "probe": 1,
+              "wikipedia": 5
+            },
+            "different_results_count": 0,
+            "overlap_count": 10,
+            "vector_top_result": {
+              "node_id": "e016fcb9-fb67-4416-ba24-20e4726ee209",
+              "domain": "probe",
+              "score": 0.6477,
+              "text": "Distributed network scheduling for fault-tolerant service coordination."
+            },
+            "hybrid_top_result": {
+              "node_id": "e016fcb9-fb67-4416-ba24-20e4726ee209",
+              "domain": "probe",
+              "score": 0.7886,
+              "text": "Distributed network scheduling for fault-tolerant service coordination."
+            }
+          },
+          {
+            "query": "protein folding and molecular structure",
+            "vector_query_time_ms": 16.12,
+            "hybrid_query_time_ms": 12.1,
+            "vector_domain_distribution": {
+              "news": 1,
+              "stackexchange": 1,
+              "wikipedia": 8
+            },
+            "hybrid_domain_distribution": {
+              "news": 1,
+              "stackexchange": 1,
+              "wikipedia": 8
+            },
+            "different_results_count": 0,
+            "overlap_count": 10,
+            "vector_top_result": {
+              "node_id": "f204c9de-86b4-4b69-bca2-4408ab33257f",
+              "domain": "wikipedia",
+              "score": 0.419,
+              "text": "An alpha helix (or \u03b1-helix) is a sequence of amino acids in a protein that are twisted into a coil (a helix). The alpha helix is the most common structural arrangement in the secondary structure of proteins. It is also the most extreme type of local structure, and it is the local"
+            },
+            "hybrid_top_result": {
+              "node_id": "f204c9de-86b4-4b69-bca2-4408ab33257f",
+              "domain": "wikipedia",
+              "score": 0.6514,
+              "text": "An alpha helix (or \u03b1-helix) is a sequence of amino acids in a protein that are twisted into a coil (a helix). The alpha helix is the most common structural arrangement in the secondary structure of proteins. It is also the most extreme type of local structure, and it is the local"
+            }
+          },
+          {
+            "query": "regulatory compliance and risk assessment",
+            "vector_query_time_ms": 10.6,
+            "hybrid_query_time_ms": 11.62,
+            "vector_domain_distribution": {
+              "legal": 6,
+              "news": 2,
+              "probe": 1,
+              "pubmed": 1
+            },
+            "hybrid_domain_distribution": {
+              "legal": 6,
+              "news": 2,
+              "probe": 1,
+              "pubmed": 1
+            },
+            "different_results_count": 0,
+            "overlap_count": 10,
+            "vector_top_result": {
+              "node_id": "dabd9eae-e013-4cad-b547-41a4288f23cd",
+              "domain": "probe",
+              "score": 0.4581,
+              "text": "Contract risk allocation and indemnification in commercial agreements."
+            },
+            "hybrid_top_result": {
+              "node_id": "dabd9eae-e013-4cad-b547-41a4288f23cd",
+              "domain": "probe",
+              "score": 0.6749,
+              "text": "Contract risk allocation and indemnification in commercial agreements."
+            }
+          },
+          {
+            "query": "gradient descent and loss functions",
+            "vector_query_time_ms": 8.42,
+            "hybrid_query_time_ms": 12.06,
+            "vector_domain_distribution": {
+              "news": 5,
+              "probe": 2,
+              "pubmed": 2,
+              "wikipedia": 1
+            },
+            "hybrid_domain_distribution": {
+              "news": 5,
+              "probe": 2,
+              "pubmed": 2,
+              "wikipedia": 1
+            },
+            "different_results_count": 0,
+            "overlap_count": 10,
+            "vector_top_result": {
+              "node_id": "0afd25ee-879e-4f82-ab5b-009fd74eeef8",
+              "domain": "news",
+              "score": 0.2579,
+              "text": "Losses and Lessons for Bush and Kerry (Los Angeles Times) Los Angeles Times - They lost at politics at an early age. Since then, they've rarely made the same campaign mistakes twice."
+            },
+            "hybrid_top_result": {
+              "node_id": "0afd25ee-879e-4f82-ab5b-009fd74eeef8",
+              "domain": "news",
+              "score": 0.5547,
+              "text": "Losses and Lessons for Bush and Kerry (Los Angeles Times) Los Angeles Times - They lost at politics at an early age. Since then, they've rarely made the same campaign mistakes twice."
+            }
+          },
+          {
+            "query": "natural language understanding",
+            "vector_query_time_ms": 11.5,
+            "hybrid_query_time_ms": 10.89,
+            "vector_domain_distribution": {
+              "probe": 1,
+              "stackexchange": 1,
+              "wikipedia": 8
+            },
+            "hybrid_domain_distribution": {
+              "probe": 1,
+              "stackexchange": 1,
+              "wikipedia": 8
+            },
+            "different_results_count": 0,
+            "overlap_count": 10,
+            "vector_top_result": {
+              "node_id": "f623b97e-4d38-42be-ae76-f54d43975109",
+              "domain": "probe",
+              "score": 0.5424,
+              "text": "Neural representation learning for structured language understanding."
+            },
+            "hybrid_top_result": {
+              "node_id": "f623b97e-4d38-42be-ae76-f54d43975109",
+              "domain": "probe",
+              "score": 0.7254,
+              "text": "Neural representation learning for structured language understanding."
+            }
+          },
+          {
+            "query": "clinical trials and treatment efficacy",
+            "vector_query_time_ms": 8.69,
+            "hybrid_query_time_ms": 8.05,
+            "vector_domain_distribution": {
+              "news": 1,
+              "probe": 1,
+              "pubmed": 8
+            },
+            "hybrid_domain_distribution": {
+              "news": 1,
+              "probe": 1,
+              "pubmed": 8
+            },
+            "different_results_count": 0,
+            "overlap_count": 10,
+            "vector_top_result": {
+              "node_id": "202bb3ca-8321-489e-ae7e-98a7c311b5b2",
+              "domain": "probe",
+              "score": 0.7343,
+              "text": "Clinical evidence synthesis for treatment efficacy and adverse events."
+            },
+            "hybrid_top_result": {
+              "node_id": "202bb3ca-8321-489e-ae7e-98a7c311b5b2",
+              "domain": "probe",
+              "score": 0.8406,
+              "text": "Clinical evidence synthesis for treatment efficacy and adverse events."
+            }
+          },
+          {
+            "query": "market dynamics and price prediction",
+            "vector_query_time_ms": 9.67,
+            "hybrid_query_time_ms": 12.0,
+            "vector_domain_distribution": {
+              "news": 10
+            },
+            "hybrid_domain_distribution": {
+              "news": 10
+            },
+            "different_results_count": 0,
+            "overlap_count": 10,
+            "vector_top_result": {
+              "node_id": "2791f499-dec9-4d4a-bf40-073d4a80788d",
+              "domain": "news",
+              "score": 0.4936,
+              "text": "Strategies for a Sideways Market (Reuters) Reuters - The bulls and the bears are in this\\together, scratching their heads and wondering what's going to\\happen next."
+            },
+            "hybrid_top_result": {
+              "node_id": "2791f499-dec9-4d4a-bf40-073d4a80788d",
+              "domain": "news",
+              "score": 0.6962,
+              "text": "Strategies for a Sideways Market (Reuters) Reuters - The bulls and the bears are in this\\together, scratching their heads and wondering what's going to\\happen next."
+            }
+          }
+        ],
+        "mean_unique_domains_vector": 3.3,
+        "mean_unique_domains_hybrid": 3.3,
+        "queries_where_hybrid_more_cross_domain": 0
+      }
+    },
+    "summary": {
+      "total_cross_domain_edges": 49,
+      "exp1_any_top10_set_difference": false,
+      "exp1_queries_with_domain_distribution_change": 0
     }
   }
 }

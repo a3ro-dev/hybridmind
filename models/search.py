@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 class VectorSearchRequest(BaseModel):
     query_text: str = Field(..., min_length=1)
-    top_k: int = Field(default=10, ge=1, le=100)
+    top_k: int = Field(default=10, ge=1, le=200)
     min_score: float = Field(default=0.0, ge=0.0, le=1.0)
     filter_metadata: Optional[Dict[str, Any]] = None
 
@@ -20,7 +20,7 @@ class GraphSearchRequest(BaseModel):
 
 class HybridSearchRequest(BaseModel):
     query_text: str = Field(..., min_length=1)
-    top_k: int = Field(default=10, ge=1, le=100)
+    top_k: int = Field(default=10, ge=1, le=200)
     vector_weight: float = Field(default=0.6, ge=0.0, le=1.0)
     graph_weight: float = Field(default=0.4, ge=0.0, le=1.0)
     anchor_nodes: Optional[List[str]] = None

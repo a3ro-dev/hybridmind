@@ -44,14 +44,18 @@ Detailed analysis available in [PERFORMANCE.md](file:///d:/yugaantar/benchmarks/
 
 ## 🧠 Setup & Quickstart
 
+Use the **project `.venv`** for every `pip`, `python`, and `uvicorn` command (do not rely on the global interpreter).
+
 ```bash
 # 1. Prepare environment
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+.\.venv\Scripts\Activate.ps1   # Windows PowerShell
+# .\.venv\Scripts\activate.bat # Windows cmd
+# source .venv/bin/activate    # macOS/Linux
 pip install -r requirements.txt
 
-# 2. Start server
-uvicorn main:app --port 8000
+# 2. Start server (explicit interpreter — same as Cursor uses via .vscode/settings.json)
+.\.venv\Scripts\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
 ### Basic SDK Usage
