@@ -504,7 +504,7 @@ def create_default_mind(name: str = "hybridmind", data_dir: str = "data") -> Min
     if not mind.exists:
         mind.initialize(metadata={
             "description": "HybridMind Vector + Graph Database",
-            "author": "CodeHashira"
+            "author": "a3ro-dev"
         })
     
     return mind

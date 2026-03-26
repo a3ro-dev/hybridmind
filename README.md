@@ -8,9 +8,22 @@ Pure vector retrieval ignores explicit relational structure; graph-only retrieva
 
 ## Approach
 
-**Contextual Relevance Score (CRS).** For query \(q\) and candidate node \(n\), \(CRS = \alpha V(q,n) + \beta G(A,n)\) with \(\alpha+\beta=1\). \(V\) is cosine similarity between query and node embeddings; \(G\) is graph proximity from anchor set \(A\) via \(\max_{a\in A} 1/(1+d(a,n))\) on shortest directed paths (either direction). Defaults \(\alpha=0.6\), \(\beta=0.4\) (“semantic primacy”). When anchors are omitted, the top-3 vector hits define \(A\). Formal definition, anchor policy, and weight discussion: [docs/ALGORITHM.md](docs/ALGORITHM.md).
+**Contextual Relevance Score (CRS).** Hybrid retrieval ranks candidates by a convex mix of vector similarity and graph proximity:
 
-**Graph-conditioned embeddings (GCE).** At ingest, the stored embedding is a normalized blend of the text embedding and the mean of the top-5 vector neighbors: \(0.7 \cdot e_{\text{raw}} + 0.3 \cdot e_{\text{neighbors}}\) (see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) Embedding Engine). Motivation and limitations: [docs/ALGORITHM.md](docs/ALGORITHM.md) §3.
+```text
+CRS(q,n) = α·V(q,n) + β·G(A,n),     α + β = 1
+```
+
+| Symbol | Meaning |
+|--------|---------|
+| q, n | Query and candidate node |
+| V(q,n) | Cosine similarity between query and node embeddings |
+| G(A,n) | Graph score: max over anchors a in A of 1/(1 + d(a,n)); d is shortest directed path length (either direction) |
+| A | Anchor set; if omitted, defaults to the top-3 vector hits |
+
+Default weights α = 0.6, β = 0.4 (semantic primacy). Full definition, anchors, and weight rationale: [docs/ALGORITHM.md](docs/ALGORITHM.md).
+
+**Graph-conditioned embeddings (GCE).** At ingest, stored vectors are L2-normalized after blending the text embedding with the mean of the top-5 vector neighbors: **0.7·e_raw + 0.3·e_neighbors** ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), Embedding Engine). Formulation and caveats: [docs/ALGORITHM.md](docs/ALGORITHM.md) §3.
 
 ## Architecture
 
@@ -73,7 +86,7 @@ Multi-corpus load and retrieval experiments (Wikipedia, Stack Exchange, PubMed Q
 | Mean raw vs conditioned embedding separation (probes): **0.01927** vs **0.00977** single-corpus baseline in [docs/ALGORITHM.md](docs/ALGORITHM.md) | §4.3 |
 | Hybrid latency (100 queries, ~7.5k nodes): wall **16.51 ms** p50, **19.64 ms** p95; vs **13 / 16 ms** p50/p95 at 1k nodes | §3.5 |
 
-ArXiv-scale ablation (NDCG, \(\alpha\) sweep) and BM25-limitations caveat: [docs/ALGORITHM.md](docs/ALGORITHM.md) §2.5, §4. Micro-benchmarks (single-machine CPU): [benchmarks/PERFORMANCE.md](benchmarks/PERFORMANCE.md).
+ArXiv-scale ablation (NDCG, α sweep) and BM25-limitations caveat: [docs/ALGORITHM.md](docs/ALGORITHM.md) §2.5, §4. Micro-benchmarks (single-machine CPU): [benchmarks/PERFORMANCE.md](benchmarks/PERFORMANCE.md).
 
 ## Citation
 
@@ -89,4 +102,4 @@ ArXiv-scale ablation (NDCG, \(\alpha\) sweep) and BM25-limitations caveat: [docs
 
 ## License
 
-[MIT License](LICENSE) (Copyright (c) 2025 CodeHashira Team).
+[MIT License](LICENSE).

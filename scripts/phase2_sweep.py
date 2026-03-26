@@ -261,6 +261,26 @@ def run_weight_sweep(api: APIClient) -> Dict[str, Any]:
         first_diff_beta = next((r["beta"] for r in per_beta if r["set_diff"] > 0), None)
         any_diff = any(r["set_diff"] > 0 for r in per_beta)
 
+        # Diagnose: for the highest-beta run, check graph scores of rank-11/12 nodes
+        # Use the last beta's hybrid results (beta=0.8) for diagnostics
+        last_beta_results = api.hybrid_search(query, top_k=TOP_K, vector_weight=0.2, graph_weight=0.8)
+        h_by_id = {r["node_id"]: r for r in last_beta_results}
+        graph_score_diagnostics = []
+        if len(v_results) >= 11:
+            for rank_idx in [9, 10, 11]:  # rank-10, 11, 12 (0-indexed)
+                if rank_idx < len(v_results):
+                    node = v_results[rank_idx]
+                    nid = node["node_id"]
+                    h_node = h_by_id.get(nid, {})
+                    graph_score_diagnostics.append({
+                        "rank_in_vector": rank_idx + 1,
+                        "node_id": nid,
+                        "domain": node.get("metadata", {}).get("domain"),
+                        "vector_score": round(score_of(node), 4),
+                        "graph_score_at_b08": round(h_node.get("graph_score") or 0.0, 4),
+                        "combined_score_at_b08": round(h_node.get("combined_score") or 0.0, 4),
+                    })
+
         results_by_query.append({
             "query": query,
             "vector_top1": v_top1,
@@ -269,6 +289,7 @@ def run_weight_sweep(api: APIClient) -> Dict[str, Any]:
             "per_beta": per_beta,
             "first_beta_with_diff": first_diff_beta,
             "any_diff_across_betas": any_diff,
+            "rank11_12_graph_diagnostics": graph_score_diagnostics,
         })
         diff_summary = {b["beta"]: b["set_diff"] for b in per_beta}
         tqdm.write(f"  {query[:50]:<50} | gap={score_gap} | diffs={diff_summary}")
@@ -399,7 +420,7 @@ def run_density_sweep(api: APIClient, store: EmbeddingStore) -> Dict[str, Any]:
                 "n_queries_top1_changed": n_top1_diff,
                 "queries": query_rows,
             })
-            print(f"    density={target} β={beta}: set_diff={n_set_diff}/10, domain_diff={n_domain_diff}/10, top1_diff={n_top1_diff}/10")
+            print(f"    density={target} beta={beta}: set_diff={n_set_diff}/10, domain_diff={n_domain_diff}/10, top1_diff={n_top1_diff}/10")
 
         results_per_density.append({
             "target_edges": target,
@@ -600,6 +621,13 @@ def main() -> None:
 
     # Phase 1: Weight sweep on current graph state (6 edges, 7510 nodes)
     ws_results = run_weight_sweep(api)
+
+    # Save weight sweep immediately so a density crash doesn't lose it
+    prev_data = json.loads(RESULTS_FILE.read_text(encoding="utf-8"))
+    prev_data.setdefault("phase2_sweep", {})["weight_sweep"] = ws_results
+    prev_data["phase2_sweep"]["generated_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    RESULTS_FILE.write_text(json.dumps(prev_data, indent=2), encoding="utf-8")
+    print("Weight sweep saved to JSON.")
 
     # Phase 2: Density sweep (rebuilds + restores graph)
     ds_results = run_density_sweep(api, store)

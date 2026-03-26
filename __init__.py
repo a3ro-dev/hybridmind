@@ -6,5 +6,5 @@ with graph-based relationships to deliver superior AI retrieval.
 """
 
 __version__ = "1.0.0"
-__author__ = "CodeHashira Team"
+__author__ = "a3ro-dev"
 
