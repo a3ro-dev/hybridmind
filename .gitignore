@@ -83,3 +83,5 @@ phase3_run.log
 *.db-wal
 *.db-shm
 *.db-journal
+
+memorybench/
