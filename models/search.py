@@ -27,6 +27,8 @@ class HybridSearchRequest(BaseModel):
     max_depth: int = Field(default=2, ge=1, le=5)
     min_score: float = Field(default=0.0, ge=0.0, le=1.0)
     edge_type_weights: Optional[Dict[str, float]] = None
+    filter_metadata: Optional[Dict[str, Any]] = None
+    deduplicate: bool = Field(default=True, description="Deduplicate results with identical text")
 
 
 class SearchResult(BaseModel):

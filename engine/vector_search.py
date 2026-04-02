@@ -59,16 +59,17 @@ class VectorSearchEngine:
         # Generate query embedding
         query_embedding = self.embedding_engine.embed(query_text)
         
-        # Search vector index (get more than needed for filtering)
-        search_k = top_k * 3 if filter_metadata else top_k
+        # Search vector index (get extra candidates for filtering + dedup headroom)
+        search_k = top_k * 5 if filter_metadata else top_k * 3
         candidates = self.vector_index.search(
             query_embedding,
             top_k=search_k,
             min_score=min_score
         )
         
-        # Fetch node details and apply filters
+        # Fetch node details, apply filters, and deduplicate by text
         results = []
+        seen_texts: set = set()
         for node_id, score in candidates:
             node = self.sqlite_store.get_node(node_id)
             if node is None:
@@ -77,6 +78,12 @@ class VectorSearchEngine:
             # Apply metadata filter
             if filter_metadata and not self._matches_filter(node["metadata"], filter_metadata):
                 continue
+            
+            # Deduplicate: skip if we already have a result with identical text
+            text_key = node["text"].strip()
+            if text_key in seen_texts:
+                continue
+            seen_texts.add(text_key)
             
             results.append({
                 "node_id": node_id,

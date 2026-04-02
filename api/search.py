@@ -171,7 +171,9 @@ async def hybrid_search(
         "graph_weight": request.graph_weight,
         "anchor_nodes": request.anchor_nodes,
         "max_depth": request.max_depth,
-        "min_score": request.min_score
+        "min_score": request.min_score,
+        "filter_metadata": request.filter_metadata,
+        "deduplicate": request.deduplicate
     }
     
     cached = cache.get("hybrid", cache_params)
@@ -189,7 +191,9 @@ async def hybrid_search(
         anchor_nodes=request.anchor_nodes,
         max_depth=request.max_depth,
         edge_type_weights=request.edge_type_weights,
-        min_score=request.min_score
+        min_score=request.min_score,
+        filter_metadata=request.filter_metadata,
+        deduplicate=request.deduplicate
     )
     
     search_results = [

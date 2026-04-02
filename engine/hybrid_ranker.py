@@ -48,7 +48,9 @@ class HybridRanker:
         anchor_nodes: Optional[List[str]] = None,
         max_depth: int = 2,
         edge_type_weights: Optional[Dict[str, float]] = None,
-        min_score: float = 0.0
+        min_score: float = 0.0,
+        filter_metadata: Optional[Dict[str, Any]] = None,
+        deduplicate: bool = True
     ) -> Tuple[List[Dict[str, Any]], float, int]:
         """
         Perform hybrid vector + graph search.
@@ -62,6 +64,8 @@ class HybridRanker:
             max_depth: Maximum graph traversal depth
             edge_type_weights: Bonus weights for edge types
             min_score: Minimum combined score threshold
+            filter_metadata: Optional metadata filters (e.g., container tag)
+            deduplicate: If True, remove results with identical text content
             
         Returns:
             Tuple of (results, query_time_ms, total_candidates)
@@ -77,11 +81,13 @@ class HybridRanker:
             alpha, beta = 0.5, 0.5
         
         # Step 1: Vector search - get candidates
-        vector_k = top_k * 3  # Get more candidates for re-ranking
+        # Request extra candidates for re-ranking + dedup headroom
+        vector_k = top_k * 5 if deduplicate else top_k * 3
         vector_results, _, _ = self.vector_engine.search(
             query_text=query_text,
             top_k=vector_k,
-            min_score=0.0  # We'll filter later
+            min_score=0.0,  # We'll filter later
+            filter_metadata=filter_metadata
         )
         
         if not vector_results:
@@ -146,8 +152,22 @@ class HybridRanker:
                 "reasoning": reasoning
             })
         
-        # Step 5: Sort by combined score and take top-k
+        # Step 5: Sort by combined score
         hybrid_results.sort(key=lambda x: -x["combined_score"])
+        
+        # Step 6: Deduplicate by text content (keep highest-scoring copy)
+        if deduplicate:
+            seen_texts: Set[str] = set()
+            deduped = []
+            for result in hybrid_results:
+                # Normalize text for comparison (strip whitespace)
+                text_key = result["text"].strip()
+                if text_key not in seen_texts:
+                    seen_texts.add(text_key)
+                    deduped.append(result)
+            hybrid_results = deduped
+        
+        # Take top-k
         hybrid_results = hybrid_results[:top_k]
         
         query_time_ms = (time.perf_counter() - start_time) * 1000

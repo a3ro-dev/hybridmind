@@ -234,20 +234,24 @@ class MindFile:
                     with open(item, 'r+b') as f:
                         fsync_file(f)
                         
-            # 5. Atomically rename/swap the files into the main directory
-            # We copy files rather than rename the whole directory because SQLite db might be open/locked by the app in Windows
+            # 5. Atomically rename/swap the files into the main directory.
+            # SQLite's backup API already wrote store.db data atomically via the
+            # connection backup above, so we only need to swap non-SQLite files.
+            # On Windows, store.db / store.db-wal / store.db-shm are held open by
+            # the live connection and cannot be replaced (WinError 32 / OSError).
+            SQLITE_LOCKED_PREFIXES = (SQLITE_FILE,)
             for item in temp_dir.iterdir():
                 if item.is_file():
+                    # Skip SQLite files — they are managed by the live connection
+                    if any(item.name.startswith(p) for p in SQLITE_LOCKED_PREFIXES):
+                        continue
                     target = self.path / item.name
                     try:
-                        # Attempt atomic replace for files
                         os.replace(str(item), str(target))
-                    except PermissionError:
-                        # SQLite DB file (and its -wal / -shm) are open and locked by the application, so skip them
-                        if item.name.startswith(SQLITE_FILE):
-                            pass
-                        else:
-                            raise
+                    except OSError as e:
+                        # Broad OSError catches WinError 32 and PermissionError
+                        logger.warning(f"Could not replace {item.name} (skipping): {e}")
+                        raise
             
             # Cleanup temp dir
             shutil.rmtree(temp_dir, ignore_errors=True)
