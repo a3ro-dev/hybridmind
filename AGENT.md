@@ -13,7 +13,7 @@ Stack: Python / FastAPI / FAISS / NetworkX / SQLite
 
 1. [System Overview](#1-system-overview)
 2. [Architecture](#2-architecture)
-3. [Core Algorithm: CRS](#3-core-algorithm-crs)
+3. [Scoring and Retrieval](#3-scoring-and-retrieval)
 4. [Storage Layer](#4-storage-layer)
 5. [Engine Layer](#5-engine-layer)
 6. [API Specification](#6-api-specification)
@@ -31,7 +31,7 @@ Stack: Python / FastAPI / FAISS / NetworkX / SQLite
 
 ### 1.1 What It Is
 
-HybridMind is a hybrid database combining vector embeddings with graph-based relationships for AI retrieval. It implements a Contextual Relevance Score (CRS) algorithm that unifies semantic similarity and relational context into a single ranking system.
+HybridMind is a hybrid database combining vector embeddings with graph-based relationships for AI retrieval. It uses weighted linear score fusion combining vector similarity and graph proximity into a single ranking system.
 
 ### 1.2 Problem Solved
 
@@ -39,7 +39,7 @@ HybridMind is a hybrid database combining vector embeddings with graph-based rel
 |----------|----------|----------|
 | Vector-Only | Semantic similarity | No relationship reasoning |
 | Graph-Only | Deep traversals, relationships | No semantic search |
-| HybridMind | Both capabilities | Principled scoring via CRS |
+| HybridMind | Both capabilities | Weighted late fusion of semantic and structural signals |
 
 ### 1.3 Core Capabilities
 
@@ -77,7 +77,7 @@ HybridMind is a hybrid database combining vector embeddings with graph-based rel
 +------------------------------------------------------------------+
 |                        Query Engine                              |
 |  +-------------+  +-------------+  +---------------------------+ |
-|  |Vector Search|  |Graph Search |  |  Hybrid Ranker (CRS)      | |
+|  |Vector Search|  |Graph Search |  |  Hybrid Ranker            | |
 |  |  (FAISS)    |  | (NetworkX)  |  |  Score Fusion & Ranking   | |
 |  +-------------+  +-------------+  +---------------------------+ |
 +------------------------------------------------------------------+
@@ -124,12 +124,12 @@ HybridMind is a hybrid database combining vector embeddings with graph-based rel
 
 ---
 
-## 3. CORE ALGORITHM: CRS
+## 3. SCORING AND RETRIEVAL
 
 ### 3.1 Formula
 
 ```
-CRS = alpha * V + beta * G + gamma * R
+Fused Score = alpha * V + beta * G + gamma * R
 ```
 
 Where:
@@ -194,15 +194,15 @@ FUNCTION hybrid_search(query_text, top_k, alpha, beta, anchor_nodes):
     RETURN sorted_results[:top_k]
 ```
 
-### 3.5 CRS Validation Example
+### 3.5 Validation Example
 
 ```
 Query: "neural network deep learning"
-Formula: CRS = 0.6*V + 0.4*G
+Formula: Fused Score = 0.6*V + 0.4*G
 
-Result 1: V=0.5130 G=1.0000 CRS=0.7078 (expected=0.7078) PASS
-Result 2: V=0.4627 G=1.0000 CRS=0.6776 (expected=0.6776) PASS
-Result 3: V=0.4522 G=1.0000 CRS=0.6713 (expected=0.6713) PASS
+Result 1: V=0.5130 G=1.0000 Score=0.7078 (expected=0.7078) PASS
+Result 2: V=0.4627 G=1.0000 Score=0.6776 (expected=0.6776) PASS
+Result 3: V=0.4522 G=1.0000 Score=0.6713 (expected=0.6713) PASS
 ```
 
 ### 3.6 Weight Justification: Why α=0.6, β=0.4?
@@ -215,11 +215,9 @@ The default weights (α=0.6 for vector, β=0.4 for graph) were chosen based on:
 
 2. **Graph as Context Enhancer**: Graph relationships provide contextual re-ranking rather than primary relevance. A 40% weight allows meaningful graph influence without overshadowing semantic matches.
 
-3. **Literature Support**: Research on hybrid retrieval systems (e.g., REALM, RAG) typically weights semantic similarity higher (60-70%) with structural/contextual factors as secondary signals.
-
 #### Empirical Validation
 
-Run the ablation study endpoint to validate for your dataset:
+Default weights were tuned empirically on an ArXiv sample (n=150); validated by ablation — see ALGORITHM.md. Run the ablation study endpoint to validate for your dataset:
 
 ```bash
 curl -X POST "http://localhost:8000/comparison/ablation?query=neural+networks&top_k=10"
@@ -415,7 +413,7 @@ Responsibilities:
 ### 5.3 Hybrid Ranker
 
 Responsibilities:
-- Score fusion using CRS formula
+- Score fusion using hybrid formula
 - Configurable alpha/beta weights
 - Anchor node support
 - Edge type bonuses
@@ -614,7 +612,7 @@ Returns: Nodes reachable within depth hops.
 
 ### 8.3 Hybrid Search
 
-Combined vector + graph search using CRS algorithm.
+Combined vector + graph search using weighted score fusion.
 
 ```bash
 curl -X POST http://localhost:8000/search/hybrid \
@@ -628,7 +626,7 @@ curl -X POST http://localhost:8000/search/hybrid \
   }'
 ```
 
-Returns: Nodes ranked by CRS combining semantic and structural relevance.
+Returns: Nodes ranked by hybrid score combining semantic and structural relevance.
 
 ### 8.4 Compare Mode
 
@@ -703,10 +701,12 @@ Duration:        80.01 seconds
 |----------|-------|----------|
 | API Endpoints | 16 | Root, Nodes, Edges, Search |
 | Edge Cases | 48 | Input validation, boundaries |
-| Search Engines | 9 | Vector, Graph, Hybrid, CRS |
+| Search Engines | 9 | Vector, Graph, Hybrid Scoring |
 | Storage Layer | 13 | SQLite, Vector Index, Graph Index |
 
 ### 10.2 Database Statistics
+
+**Note:** Metrics reflect the ArXiv demo dataset. LoCoMo benchmark evaluation used session-isolated ingestion — see LOCOMO_BENCHMARK_REPORT.md.
 
 ```
 Total Nodes:        1,000
@@ -748,10 +748,11 @@ Edge Types Distribution:
 
 | Weakness | Impact | Mitigation Path |
 |----------|--------|-----------------|
-| Linear Weight Combination | CRS may miss non-linear relationships | Implement learned weighting |
+| Linear Weight Combination | Fused score may miss non-linear relationships | Implement learned weighting |
 | Graph Score Requires Anchor | Without anchors, uses top vector results | Allow semantic graph scoring |
 | No Multi-hop Semantic Search | Cannot combine deep traversal with semantics | Implement iterative hybrid expansion |
 | Fixed Embedding Model | Tied to MiniLM-L6-v2 | Add model configuration |
+| Graph Signal Scarcity | Graph signal requires sufficient edge density. With purely cross-domain edges at <10% node coverage, graph scores are structurally zero for ~73% of queries. Intra-domain edges or explicit anchor nodes are required for non-zero graph contribution — see MULTI_DOMAIN_EVAL.md | Increase intra-domain edge extraction |
 
 ### 11.3 Scalability Limits
 
@@ -808,13 +809,15 @@ Query: "transformer attention" + anchor on known paper
 Hybrid process:
   1. Vector finds semantically similar papers
   2. Graph boosts papers connected to anchor
-  3. CRS ranks by combined relevance
+  3. Hybrid score ranks by combined relevance
 Result: Discovers related work that vector missed, filters noise that graph included
 ```
 
-### 12.4 KILLER DEMO: The Hidden Gem Discovery
+### 12.4 ILLUSTRATIVE EXAMPLE: The Hidden Gem Discovery
 
-This is THE demo to prove hybrid search value. Run this exact scenario:
+**Note:** This is an illustrative example output, not empirical results. Multi-domain evaluations showed 0 actual hidden gems found (hybrid and vector returned identical top sets). The scenario below demonstrates the theoretical capability when dense intra-domain edges are present.
+
+Run this exact scenario:
 
 **Setup Query:** "neural network optimization"
 
@@ -855,9 +858,9 @@ curl -X POST http://localhost:8000/search/hybrid \
   }'
 ```
 
-**Expected Hybrid Results (THE MAGIC):**
-| Rank | ID | V Score | G Score | CRS | Why Different |
-|------|-----|---------|---------|-----|---------------|
+**Expected Hybrid Results:**
+| Rank | ID | V Score | G Score | Fused Score | Why Different |
+|------|-----|---------|---------|-------------|---------------|
 | 1 | arxiv-0042 | 0.68 | 0.50 | 0.61 | High semantic + connected |
 | 2 | **arxiv-0077** | 0.45 | **1.00** | **0.58** | **HIDDEN GEM: directly connected** |
 | 3 | arxiv-0089 | 0.65 | 0.33 | 0.52 | High semantic, 2-hop away |
@@ -867,7 +870,7 @@ curl -X POST http://localhost:8000/search/hybrid \
 **The Key Insight:**
 - **arxiv-0077** wasn't in vector top-5 (low semantic score 0.45)
 - But it's DIRECTLY connected to the anchor (graph score 1.0)
-- CRS promotes it to position #2 — **THIS IS THE HIDDEN GEM**
+- The fused score promotes it to position #2 — **THIS IS THE HIDDEN GEM**
 
 **Step 4: Prove the Gem's Value**
 ```bash
@@ -1036,7 +1039,7 @@ hybridmind/
 │   │   ├── embedding.py        # Embedding generation
 │   │   ├── vector_search.py    # Vector search logic
 │   │   ├── graph_search.py     # Graph traversal logic
-│   │   └── hybrid_ranker.py    # CRS hybrid ranking
+│   │   └── hybrid_ranker.py    # Hybrid ranking mechanism
 │   └── api/
 │       ├── nodes.py            # Node CRUD endpoints
 │       ├── edges.py            # Edge CRUD endpoints
@@ -1137,7 +1140,7 @@ A: Switch FAISS from IndexFlatIP to IndexIVFFlat or IndexHNSW for approximate ne
 A: SQLite is zero-config for local demo. Storage layer is abstracted; PostgreSQL swap is straightforward for production.
 
 **Q: What if a node has no graph connections?**
-A: Graph score becomes 0, CRS falls back to pure vector score. Algorithm degrades gracefully.
+A: Graph score becomes 0, fused score falls back to pure vector score. System degrades gracefully.
 
 **Q: Can users provide their own embeddings?**
 A: Yes. API accepts pre-computed embeddings in node creation request.
