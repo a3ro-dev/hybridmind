@@ -27,7 +27,8 @@ class HybridRanker:
     def __init__(
         self,
         vector_engine: VectorSearchEngine,
-        graph_engine: GraphSearchEngine
+        graph_engine: GraphSearchEngine,
+        bm25_index: Optional[Any] = None
     ):
         """
         Initialize hybrid ranker.
@@ -35,9 +36,11 @@ class HybridRanker:
         Args:
             vector_engine: Vector search engine
             graph_engine: Graph search engine
+            bm25_index: Optional BM25 index for exact matching
         """
         self.vector_engine = vector_engine
         self.graph_engine = graph_engine
+        self.bm25_index = bm25_index
     
     def search(
         self,
@@ -50,206 +53,162 @@ class HybridRanker:
         edge_type_weights: Optional[Dict[str, float]] = None,
         min_score: float = 0.0,
         filter_metadata: Optional[Dict[str, Any]] = None,
-        deduplicate: bool = True
+        deduplicate: bool = True,
+        search_mode: str = "hybrid"
     ) -> Tuple[List[Dict[str, Any]], float, int]:
-        """
-        Perform hybrid vector + graph search.
-        
-        Args:
-            query_text: Search query text
-            top_k: Number of results to return
-            vector_weight: Weight for vector similarity (α)
-            graph_weight: Weight for graph proximity (β)
-            anchor_nodes: Optional anchor nodes for graph scoring
-            max_depth: Maximum graph traversal depth
-            edge_type_weights: Bonus weights for edge types
-            min_score: Minimum combined score threshold
-            filter_metadata: Optional metadata filters (e.g., container tag)
-            deduplicate: If True, remove results with identical text content
-            
-        Returns:
-            Tuple of (results, query_time_ms, total_candidates)
-        """
         start_time = time.perf_counter()
         
-        # Normalize weights
-        total_weight = vector_weight + graph_weight
-        if total_weight > 0:
-            alpha = vector_weight / total_weight
-            beta = graph_weight / total_weight
-        else:
-            alpha, beta = 0.5, 0.5
-        
-        # Step 1: Vector search - get candidates
-        # Request extra candidates for re-ranking + dedup headroom
         vector_k = top_k * 5 if deduplicate else top_k * 3
+        # Expand candidates to accommodate SGMem sentence chunks
+        vector_k = max(40, vector_k * 2)
+        
+        # Step 1: Run parallel Vector and BM25 search
         vector_results, _, _ = self.vector_engine.search(
             query_text=query_text,
             top_k=vector_k,
-            min_score=0.0,  # We'll filter later
-            filter_metadata=filter_metadata
+            min_score=0.0,
+            filter_metadata=None # Filter after RRF and Rollup to prevent missing children
         )
         
-        if not vector_results:
-            query_time_ms = (time.perf_counter() - start_time) * 1000
-            return [], round(query_time_ms, 2), 0
+        bm25_results = []
+        if self.bm25_index:
+            bm25_hits = self.bm25_index.search(query_text, top_k=vector_k)
+            for n_id, score in bm25_hits:
+                node = self.vector_engine.sqlite_store.get_node(n_id)
+                if node:
+                    bm25_results.append({
+                        "node_id": n_id,
+                        "text": node["text"],
+                        "metadata": node["metadata"],
+                        "bm25_score": score
+                    })
+
+        # Step 2: Apply Reciprocal Rank Fusion (RRF)
+        k_rrf = 60
+        scores = {}
+        node_data = {}
         
-        # Step 2: Determine reference nodes for graph scoring
+        for rank, res in enumerate(vector_results):
+            nid = res["node_id"]
+            node_data[nid] = res
+            scores[nid] = scores.get(nid, 0.0) + (1.0 / (k_rrf + rank + 1))
+            
+        for rank, res in enumerate(bm25_results):
+            nid = res["node_id"]
+            if nid not in node_data:
+                node_data[nid] = res
+                node_data[nid]["vector_score"] = 0.0  # Fallback for contract
+            scores[nid] = scores.get(nid, 0.0) + (1.0 / (k_rrf + rank + 1))
+            
+        # Step 3: SGMem Chunk Rollup to Parent
+        rolled_up_scores = {}
+        rolled_up_nodes = {}
+        
+        for nid, score in scores.items():
+            meta = node_data[nid].get("metadata", {})
+            if meta.get("is_sentence_chunk") and meta.get("parent_id"):
+                parent_id = meta["parent_id"]
+                rolled_up_scores[parent_id] = rolled_up_scores.get(parent_id, 0.0) + score
+                if parent_id not in rolled_up_nodes:
+                    p_node = self.vector_engine.sqlite_store.get_node(parent_id)
+                    if p_node:
+                        p_data = {
+                            "node_id": parent_id,
+                            "text": p_node["text"],
+                            "metadata": p_node["metadata"],
+                            "vector_score": node_data[nid].get("vector_score", 0.0)
+                        }
+                        rolled_up_nodes[parent_id] = p_data
+            else:
+                rolled_up_scores[nid] = rolled_up_scores.get(nid, 0.0) + score
+                rolled_up_nodes[nid] = node_data[nid]
+                
+        # Get top rolled up nodes
+        sorted_rrf = sorted(rolled_up_scores.items(), key=lambda x: -x[1])
+        candidate_ids = [nid for nid, _ in sorted_rrf[:vector_k] if nid in rolled_up_nodes]
+        
+        # Filter metadata (Now that roll_ups are complete)
+        filtered_candidates = []
+        for nid in candidate_ids:
+            if filter_metadata:
+                meta = rolled_up_nodes[nid]["metadata"]
+                skip = False
+                for k, v in filter_metadata.items():
+                    if meta.get(k) != v:
+                        skip = True
+                        break
+                if skip: continue
+            filtered_candidates.append(nid)
+            
+        candidate_ids = filtered_candidates[:vector_k]
+        
+        if not candidate_ids:
+            return [], round((time.perf_counter() - start_time) * 1000, 2), 0
+            
+        # Step 4: Compute Graph Scores
         if anchor_nodes:
             reference_nodes = anchor_nodes
         else:
-            # Use top vector results as references
-            reference_nodes = [r["node_id"] for r in vector_results[:3]]
-        
-        # Step 3: Compute graph scores for all candidates
-        candidate_ids = [r["node_id"] for r in vector_results]
+            reference_nodes = candidate_ids[:3]
+            
         graph_scores = self.graph_engine.compute_proximity_scores(
             node_ids=candidate_ids,
             reference_nodes=reference_nodes,
             max_depth=max_depth,
-            edge_type_weights=edge_type_weights
+            edge_type_weights={"next_turn": 1.0, "same_session": 0.5, "belongs_to": 0.1, **(edge_type_weights or {})}
         )
         
-        # Step 4: Compute hybrid scores and build results
+        graph_ranks = {nid: rank for rank, (nid, score) in enumerate(sorted(graph_scores.items(), key=lambda item: -item[1])) if score > 0}
+        
+        # Compose Final Output
         hybrid_results = []
-        
-        for result in vector_results:
-            node_id = result["node_id"]
-            vector_score = result["vector_score"]
-            graph_score = graph_scores.get(node_id, 0.0)
+        for nid in candidate_ids:
+            base_rrf = rolled_up_scores[nid]
+            g_rank = graph_ranks.get(nid, -1)
+            g_score = graph_scores.get(nid, 0.0)
             
-            # Compute CRS
-            combined_score = self._compute_crs(
-                vector_score=vector_score,
-                graph_score=graph_score,
-                alpha=alpha,
-                beta=beta,
-                edge_type_weights=edge_type_weights,
-                node_id=node_id
-            )
-            
-            if combined_score < min_score:
-                continue
-            
-            # Generate reasoning
-            reasoning = self._generate_reasoning(
-                vector_score=vector_score,
-                graph_score=graph_score,
-                combined_score=combined_score,
-                alpha=alpha,
-                beta=beta,
-                reference_nodes=reference_nodes,
-                node_id=node_id
-            )
-            
+            total_score = base_rrf
+            if g_rank >= 0:
+                total_score += (1.0 / (k_rrf + g_rank + 1))
+                
             hybrid_results.append({
-                "node_id": node_id,
-                "text": result["text"],
-                "metadata": result["metadata"],
-                "vector_score": round(vector_score, 4),
-                "graph_score": round(graph_score, 4),
-                "combined_score": round(combined_score, 4),
-                "reasoning": reasoning
+                "node_id": nid,
+                "text": rolled_up_nodes[nid]["text"],
+                "metadata": rolled_up_nodes[nid]["metadata"],
+                "vector_score": rolled_up_nodes[nid].get("vector_score", 0.0),
+                "graph_score": g_score,
+                "combined_score": total_score,
+                "reasoning": f"RRF Hybrid Score: {total_score:.4f}"
             })
-        
-        # Step 5: Sort by combined score
-        hybrid_results.sort(key=lambda x: -x["combined_score"])
-        
-        # Step 6: Deduplicate by text content (keep highest-scoring copy)
+            
         if deduplicate:
             seen_texts: Set[str] = set()
             deduped = []
             for result in hybrid_results:
-                # Normalize text for comparison (strip whitespace)
                 text_key = result["text"].strip()
                 if text_key not in seen_texts:
                     seen_texts.add(text_key)
                     deduped.append(result)
             hybrid_results = deduped
+            
+        # Step 5: Exact Match Cross-Encoder Re-Ranking Boost
+        def bm25_overlap(query: str, text: str) -> float:
+            q_terms = set(query.lower().split())
+            t_terms = text.lower().split()
+            if not q_terms: return 0.0
+            overlap = sum(1 for qt in q_terms if qt in t_terms)
+            return overlap / len(q_terms)
+            
+        for r in hybrid_results[:top_k * 2]:
+            boost = bm25_overlap(query_text, r["text"])
+            r["combined_score"] += boost * 0.15  # Major boost for exact keyword matches
+            
+        hybrid_results.sort(key=lambda x: -x["combined_score"])
         
-        # Take top-k
-        hybrid_results = hybrid_results[:top_k]
+        hybrid_results = [r for r in hybrid_results if r["combined_score"] >= min_score][:top_k]
         
         query_time_ms = (time.perf_counter() - start_time) * 1000
-        
-        return hybrid_results, round(query_time_ms, 2), len(vector_results)
-    
-    def _compute_crs(
-        self,
-        vector_score: float,
-        graph_score: float,
-        alpha: float,
-        beta: float,
-        edge_type_weights: Optional[Dict[str, float]] = None,
-        node_id: Optional[str] = None
-    ) -> float:
-        """
-        Compute Contextual Relevance Score.
-        
-        CRS = α * V + β * G + γ * R
-        
-        Args:
-            vector_score: Vector similarity score (0-1)
-            graph_score: Graph proximity score (0-1)
-            alpha: Vector weight
-            beta: Graph weight
-            edge_type_weights: Edge type bonus weights
-            node_id: Node ID for relationship bonus
-            
-        Returns:
-            Combined CRS score (0-1)
-        """
-        # Base score
-        base_score = (alpha * vector_score) + (beta * graph_score)
-        
-        # Relationship bonus (optional, additive)
-        rel_bonus = 0.0
-        if edge_type_weights and node_id:
-            # Get edges connected to this node
-            edges = self.graph_engine.graph_index.get_node_edges(node_id, direction="both")
-            for edge in edges:
-                edge_type = edge.get("type", "")
-                if edge_type in edge_type_weights:
-                    # Small additive bonus for valuable relationships
-                    rel_bonus += edge_type_weights[edge_type] * 0.05
-        
-        # Cap at 1.0
-        return min(1.0, base_score + rel_bonus)
-    
-    def _generate_reasoning(
-        self,
-        vector_score: float,
-        graph_score: float,
-        combined_score: float,
-        alpha: float,
-        beta: float,
-        reference_nodes: List[str],
-        node_id: str
-    ) -> str:
-        """Generate human-readable explanation of the score."""
-        parts = []
-        
-        # Vector contribution
-        if vector_score >= 0.8:
-            parts.append(f"High semantic similarity ({vector_score:.0%})")
-        elif vector_score >= 0.5:
-            parts.append(f"Moderate semantic similarity ({vector_score:.0%})")
-        else:
-            parts.append(f"Low semantic similarity ({vector_score:.0%})")
-        
-        # Graph contribution
-        if graph_score > 0:
-            if graph_score >= 0.5:
-                parts.append(f"strongly connected in graph ({graph_score:.0%})")
-            else:
-                parts.append(f"graph connection found ({graph_score:.0%})")
-        else:
-            parts.append("no direct graph connection")
-        
-        # Build final reasoning
-        if len(parts) >= 2:
-            return f"{parts[0]}, {parts[1]}"
-        return parts[0] if parts else "Combined score calculation"
+        return hybrid_results, round(query_time_ms, 2), len(candidate_ids)
     
     def compare_search_modes(
         self,

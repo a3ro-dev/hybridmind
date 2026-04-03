@@ -180,6 +180,26 @@ class SQLiteStore:
                 "created_at": row["created_at"],
                 "updated_at": row["updated_at"]
             }
+            
+    def get_latest_node_by_session(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """Get the most recently created node for a given session ID."""
+        with self._cursor() as cursor:
+            # Using JSON1 extension to filter by metadata field
+            cursor.execute("""
+                SELECT id, metadata, created_at 
+                FROM nodes 
+                WHERE json_extract(metadata, '$.sessionId') = ? 
+                AND deleted_at IS NULL
+                ORDER BY created_at DESC LIMIT 1
+            """, (session_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            return {
+                "id": row["id"],
+                "metadata": json.loads(row["metadata"]),
+                "created_at": row["created_at"]
+            }
     
     def update_node(
         self,

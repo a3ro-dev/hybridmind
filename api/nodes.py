@@ -17,11 +17,13 @@ from models.node import (
 from api.dependencies import (
     get_sqlite_store,
     get_vector_index,
+    get_bm25_index,
     get_graph_index,
     get_embedding_engine
 )
 from storage.sqlite_store import SQLiteStore
 from storage.vector_index import VectorIndex
+from storage.bm25_index import BM25Index
 from storage.graph_index import GraphIndex
 from engine.embedding import EmbeddingEngine
 from engine.cache import invalidate_cache
@@ -34,6 +36,7 @@ async def create_node(
     node: NodeCreate,
     sqlite_store: SQLiteStore = Depends(get_sqlite_store),
     vector_index: VectorIndex = Depends(get_vector_index),
+    bm25_index: BM25Index = Depends(get_bm25_index),
     graph_index: GraphIndex = Depends(get_graph_index),
     embedding_engine: EmbeddingEngine = Depends(get_embedding_engine)
 ) -> NodeResponse:
@@ -89,11 +92,56 @@ async def create_node(
         raw_embedding=raw_embedding
     )
     
-    # Add to vector index
-    vector_index.add(node_id, embedding)
-    
-    # Add to graph index (as isolated node initially)
+    # Add to graph
     graph_index.add_node(node_id)
+    
+    # Structural Edges (Priority 2)
+    session_id = (node.metadata or {}).get("sessionId")
+    if session_id:
+        prev_node = sqlite_store.get_latest_node_by_session(session_id)
+        if prev_node and prev_node["id"] != node_id:
+            # Temporal 'next_turn' edge
+            t_edge_id = str(uuid.uuid4())
+            sqlite_store.create_edge(t_edge_id, prev_node["id"], node_id, "next_turn", 1.0)
+            graph_index.add_edge(t_edge_id, prev_node["id"], node_id, "next_turn", 1.0)
+            
+            # Session 'same_session' edge
+            s_edge_id = str(uuid.uuid4())
+            sqlite_store.create_edge(s_edge_id, prev_node["id"], node_id, "same_session", 0.5)
+            graph_index.add_edge(s_edge_id, prev_node["id"], node_id, "same_session", 0.5)
+    
+    # Chunking / SGMem Approach (Priority 3)
+    import re
+    sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', node.text) if len(s.strip()) > 5]
+    if not sentences:
+        sentences = [node.text]
+        
+    for i, sentence in enumerate(sentences):
+        child_id = f"{node_id}_{i}"
+        child_embedding = embedding_engine.embed(sentence)
+        
+        # Link child sentence to parent map
+        sqlite_store.create_node(
+            node_id=child_id,
+            text=sentence,
+            metadata={"parent_id": node_id, "is_sentence_chunk": True},
+            embedding=child_embedding,
+            raw_embedding=child_embedding
+        )
+        graph_index.add_node(child_id)
+        
+        # Edge to parent
+        c_edge_id = str(uuid.uuid4())
+        sqlite_store.create_edge(c_edge_id, child_id, node_id, "belongs_to", 1.0)
+        graph_index.add_edge(c_edge_id, child_id, node_id, "belongs_to", 1.0)
+        
+        # Index children
+        vector_index.add(child_id, child_embedding)
+        bm25_index.add(child_id, sentence)
+    
+    # Also index the parent for general macro searches
+    vector_index.add(node_id, embedding)
+    bm25_index.add(node_id, node.text)
     
     # Invalidate search cache
     invalidate_cache()

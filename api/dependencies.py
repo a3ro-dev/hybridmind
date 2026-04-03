@@ -60,6 +60,11 @@ class DatabaseManager:
             dimension=settings.embedding_dimension,
             index_path=paths["vector_index"]
         )
+        
+        from storage.bm25_index import BM25Index
+        self.bm25_index = BM25Index(
+            index_path=str(Path(paths["root"]) / "bm25.pkl")
+        )
         self.graph_index = GraphIndex(index_path=paths["graph"])
         
         # Initialize embedding engine
@@ -82,7 +87,8 @@ class DatabaseManager:
         # Initialize hybrid ranker
         self.hybrid_ranker = HybridRanker(
             vector_engine=self.vector_engine,
-            graph_engine=self.graph_engine
+            graph_engine=self.graph_engine,
+            bm25_index=self.bm25_index
         )
         
         # Rebuild indexes from SQLite on startup
@@ -108,9 +114,15 @@ class DatabaseManager:
             
             # Add orphan nodes to graph
             nodes = self.sqlite_store.list_nodes(limit=10000)
+            bm25_batch = []
             for node in nodes:
                 if not self.graph_index.has_node(node["id"]):
                     self.graph_index.add_node(node["id"])
+                bm25_batch.append((node["id"], node["text"]))
+            
+            self.bm25_index.clear()
+            self.bm25_index.add_batch(bm25_batch)
+            logger.info(f"BM25 index rebuilt with {len(bm25_batch)} documents")
                     
         except Exception as e:
             logger.error(f"Error rebuilding indexes: {e}")
@@ -125,6 +137,7 @@ class DatabaseManager:
             "graph_node_count": self.graph_index.node_count,
             "graph_edge_count": self.graph_index.edge_count,
             "database_size_bytes": self.sqlite_store.get_database_size(),
+            "bm25_index_size": self.bm25_index.size,
             "embedding_model": settings.embedding_model,
             "embedding_dimension": settings.embedding_dimension
         }
@@ -133,6 +146,7 @@ class DatabaseManager:
         """Save indexes to disk and update .mind manifest."""
         try:
             stats = self.get_stats()
+            self.bm25_index.save()
             self.mind_file.create_snapshot(
                 sqlite_conn=self.sqlite_store._get_connection(),
                 vector_index=self.vector_index,
@@ -186,6 +200,12 @@ def get_sqlite_store() -> SQLiteStore:
     """FastAPI dependency for SQLite store."""
     return get_db_manager().sqlite_store
 
+
+from storage.bm25_index import BM25Index
+
+def get_bm25_index() -> BM25Index:
+    """FastAPI dependency for BM25 index."""
+    return get_db_manager().bm25_index
 
 def get_vector_index() -> VectorIndex:
     """FastAPI dependency for vector index."""
