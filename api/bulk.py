@@ -19,9 +19,11 @@ from api.dependencies import (
     get_graph_index,
     get_embedding_engine,
     get_db_manager,
+    get_bm25_index,
 )
 from storage.sqlite_store import SQLiteStore
 from storage.vector_index import VectorIndex
+from storage.bm25_index import BM25Index
 from storage.graph_index import GraphIndex
 from engine.embedding import EmbeddingEngine
 from engine.cache import invalidate_cache
@@ -123,6 +125,7 @@ async def bulk_create_nodes(
     vector_index: VectorIndex = Depends(get_vector_index),
     graph_index: GraphIndex = Depends(get_graph_index),
     embedding_engine: EmbeddingEngine = Depends(get_embedding_engine),
+    bm25_index: BM25Index = Depends(get_bm25_index),
 ):
     """
     Bulk create nodes with optional embedding generation.
@@ -210,6 +213,13 @@ async def bulk_create_nodes(
             vector_index.add_batch(vector_batch)
         except Exception as e:
             errors.append(f"Vector index batch add failed: {str(e)}")
+    
+    # Batch add to BM25 index
+    try:
+        bm25_batch = [(n["id"], n["text"]) for n in nodes_to_create]
+        bm25_index.add_batch(bm25_batch)
+    except Exception as e:
+        errors.append(f"BM25 index batch add failed: {str(e)}")
     
     # Invalidate cache
     invalidate_cache()
