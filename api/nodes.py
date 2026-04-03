@@ -120,11 +120,14 @@ async def create_node(
         child_id = f"{node_id}_{i}"
         child_embedding = embedding_engine.embed(sentence)
         
+        child_metadata = (node.metadata or {}).copy()
+        child_metadata.update({"parent_id": node_id, "is_sentence_chunk": True})
+        
         # Link child sentence to parent map
         sqlite_store.create_node(
             node_id=child_id,
             text=sentence,
-            metadata={"parent_id": node_id, "is_sentence_chunk": True},
+            metadata=child_metadata,
             embedding=child_embedding,
             raw_embedding=child_embedding
         )

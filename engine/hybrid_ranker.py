@@ -67,21 +67,25 @@ class HybridRanker:
             query_text=query_text,
             top_k=vector_k,
             min_score=0.0,
-            filter_metadata=None # Filter after RRF and Rollup to prevent missing children
+            filter_metadata=filter_metadata
         )
         
         bm25_results = []
         if self.bm25_index:
-            bm25_hits = self.bm25_index.search(query_text, top_k=vector_k)
+            bm25_hits = self.bm25_index.search(query_text, top_k=50000 if filter_metadata else vector_k)
             for n_id, score in bm25_hits:
                 node = self.vector_engine.sqlite_store.get_node(n_id)
                 if node:
+                    if filter_metadata and not self.vector_engine._matches_filter(node["metadata"], filter_metadata):
+                        continue
                     bm25_results.append({
                         "node_id": n_id,
                         "text": node["text"],
                         "metadata": node["metadata"],
                         "bm25_score": score
                     })
+                    if len(bm25_results) >= vector_k:
+                        break
 
         # Step 2: Apply Reciprocal Rank Fusion (RRF)
         k_rrf = 60
@@ -127,20 +131,7 @@ class HybridRanker:
         sorted_rrf = sorted(rolled_up_scores.items(), key=lambda x: -x[1])
         candidate_ids = [nid for nid, _ in sorted_rrf[:vector_k] if nid in rolled_up_nodes]
         
-        # Filter metadata (Now that roll_ups are complete)
-        filtered_candidates = []
-        for nid in candidate_ids:
-            if filter_metadata:
-                meta = rolled_up_nodes[nid]["metadata"]
-                skip = False
-                for k, v in filter_metadata.items():
-                    if meta.get(k) != v:
-                        skip = True
-                        break
-                if skip: continue
-            filtered_candidates.append(nid)
-            
-        candidate_ids = filtered_candidates[:vector_k]
+
         
         if not candidate_ids:
             return [], round((time.perf_counter() - start_time) * 1000, 2), 0
