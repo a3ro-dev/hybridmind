@@ -25,12 +25,24 @@ class BM25Index:
         
         self.doc_ids = []
         
-        if self.index_path and os.path.exists(self.index_path):
-            self.load()
+    def _init_nltk(self):
+        """Initialize NLTK stemmer if not already done."""
+        if not hasattr(self, '_stemmer'):
+            import nltk
+            try:
+                self._stemmer = nltk.stem.PorterStemmer()
+            except LookupError:
+                nltk.download('punkt')
+                nltk.download('punkt_tab')
+                self._stemmer = nltk.stem.PorterStemmer()
 
     def tokenize(self, text: str) -> List[str]:
-        # Simple whitespace + lowercase tokenization focusing on words
-        return text.lower().replace('.', ' ').replace(',', ' ').replace('!', ' ').replace('?', ' ').split()
+        """Tokenize using regex filtering and NLTK PorterStemmer."""
+        self._init_nltk()
+        import re
+        # Strip all non-alphanumeric characters, lowercase, split
+        tokens = re.findall(r'[a-z0-9]+', text.lower())
+        return [self._stemmer.stem(t) for t in tokens if len(t) > 1]
 
     def add(self, node_id: str, text: str):
         if node_id in self.doc_lengths:

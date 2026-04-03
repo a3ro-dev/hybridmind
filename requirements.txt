@@ -23,6 +23,7 @@ networkx>=3.2.1
 
 # Storage
 aiosqlite>=0.19.0
+nltk>=3.8.1
 
 # Caching & Rate Limiting
 cachetools>=5.3.0

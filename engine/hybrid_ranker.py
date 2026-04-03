@@ -88,7 +88,8 @@ class HybridRanker:
                         break
 
         # Step 2: Apply Reciprocal Rank Fusion (RRF)
-        k_rrf = 60
+        # Using a lower k (e.g., 20) instead of 60 makes the top ranks stand out much more
+        k_rrf = 20
         scores = {}
         node_data = {}
         
@@ -184,15 +185,15 @@ class HybridRanker:
             
         # Step 5: Exact Match Cross-Encoder Re-Ranking Boost
         def bm25_overlap(query: str, text: str) -> float:
-            q_terms = set(query.lower().split())
-            t_terms = text.lower().split()
+            q_terms = set(self.bm25_index.tokenize(query))
+            t_terms = set(self.bm25_index.tokenize(text))
             if not q_terms: return 0.0
             overlap = sum(1 for qt in q_terms if qt in t_terms)
             return overlap / len(q_terms)
             
         for r in hybrid_results[:top_k * 2]:
             boost = bm25_overlap(query_text, r["text"])
-            r["combined_score"] += boost * 0.15  # Major boost for exact keyword matches
+            r["combined_score"] += boost * 0.25  # Major boost for exact keyword matches
             
         hybrid_results.sort(key=lambda x: -x["combined_score"])
         
