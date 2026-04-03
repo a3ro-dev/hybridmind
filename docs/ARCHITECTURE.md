@@ -1,7 +1,7 @@
 # HybridMind Architecture
 
 ## Overview
-HybridMind is a hybrid vector + graph database designed for AI agent memory. It unifies semantic similarity and relational context into a single Contextual Relevance Score (CRS), enabling retrieval that is both semantically aware and structurally grounded.
+HybridMind is a local-native hybrid vector + graph database designed for AI agent memory. It unifies semantic similarity and relational context into a clean, self-contained implementation combining FAISS, NetworkX, and SQLite into a single `.mind` file format.
 
 ## System Architecture
 
@@ -16,7 +16,8 @@ HybridMind is a hybrid vector + graph database designed for AI agent memory. It 
 |                              Engine Layer                               |
 |  +------------------+  +------------------+  +------------------------+ |
 |  | Embedding Engine |  |  Query Engines   |  |   Hybrid Ranker        | |
-|  | (transformers)   |  | (Vector / Graph) |  |   (CRS Algorithm)      | |
+|  | (transformers)   |  | (Vector / Graph /|  |  (Late Fusion +        | |
+|  |                  |  |  BM25)           |  |    RRF Fusion)         | |
 |  +------------------+  +------------------+  +------------------------+ |
 +-------------------------------------------------------------------------+
                                     |
@@ -24,8 +25,8 @@ HybridMind is a hybrid vector + graph database designed for AI agent memory. It 
 +-------------------------------------------------------------------------+
 |                             Storage Layer                               |
 |  +-----------------+  +----------------------+  +--------------------+  |
-|  |  SQLite Store   |  |     Vector Index     |  |     Graph Index    |  |
-|  | (WAL Enabled)   |  |      (FAISS)         |  |     (NetworkX)     |  |
+|  |  SQLite Store   |  |   Vector / BM25      |  |     Graph Index    |  |
+|  | (WAL Enabled)   |  |  (FAISS / NLTK)      |  |     (NetworkX)     |  |
 |  +-----------------+  +----------------------+  +--------------------+  |
 +-------------------------------------------------------------------------+
                                     |
@@ -40,14 +41,14 @@ HybridMind is a hybrid vector + graph database designed for AI agent memory. It 
 
 ### Embedding Engine
 - **Model**: `all-MiniLM-L6-v2` (384 dimensions).
-- **Graph Conditioning**: At node ingest, the embedding is conditioned on the semantic neighborhood:
+- **Neighborhood Averaging**: At node ingest, the embedding is conditioned on its semantic neighborhood—a practical, non-training variant of GraphSAGE-style aggregation:
   `final_embedding = normalize(0.7 * own_embedding + 0.3 * mean_neighbor_embeddings)`
 - **Configuration**: α=0.7 is the default weight, ensuring the node's original content dominates while receiving a 30% contextual pull from its semantic peers.
 - **Thread Safety**: The model is serialized under the Python Global Interpreter Lock (GIL). High-concurrency throughput is limited to single-threaded execution (approx. 200ms per embedding).
 
-### CRS Algorithm
-The Contextual Relevance Score (CRS) is the core fusion mechanism:
-`CRS = 0.6 * V + 0.4 * G`
+### Late Fusion Scoring
+The system utilizes a weighted linear score fusion to combine semantic and structural signals:
+`Score = 0.6 * V + 0.4 * G`
 
 - **Vector Score (V)**: Cosine similarity between query and node embeddings. Range: 0.0 to 1.0.
 - **Graph Score (G)**: Proximity based on 1/(1+d), where d is shortest path length from internal or explicit anchor nodes.
@@ -71,6 +72,11 @@ The Contextual Relevance Score (CRS) is the core fusion mechanism:
 - **Index Type**: `IndexFlatIP` (Exact Nearest Neighbor using Inner Product).
 - **Mapping**: FAISS maintains integer indices mapped back to Node UUIDs via an internal `id_map`.
 - **Memory**: O(n·d) brute force search; fits in L2/L3 cache up to ~10,000 nodes for peak performance.
+
+#### Okapi BM25 Index
+- **Engine**: Pure Python implementation with `nltk` PorterStemmer.
+- **Role**: Addresses the single-hop factual recall limitation of vector similarity by prioritizing exact keyword matches, especially for entities and dates.
+- **Serialization**: Python Pickle (v5).
 
 #### NetworkX Graph Index
 - **Engine**: In-memory `DiGraph`.
@@ -111,13 +117,13 @@ The Python SDK (`HybridMemory`) provides high-level abstractions:
 3. **Candidate Selection**: FAISS performs a k-NN search to identify 3x the requested `top_k` results.
 4. **Anchor Identification**: If no `anchor_nodes` are provided, the top 3 vector results are used as anchors.
 5. **Relational Proximity**: NetworkX calculates shortest path distances from anchors to all candidates.
-6. **Fusion**: CRS scores are calculated for each candidate.
-7. **Refinement**: Results are re-ranked by CRS and truncated to `top_k`.
+6. **Fusion**: Candidate scores are calculated using the late fusion weights.
+7. **Refinement**: Results are re-ranked by their fused score and truncated to `top_k`.
 
 ## Design Decisions and Trade-offs
 - **Exact Vector Search**: Chose `IndexFlatIP` over IVF or HNSW for 100% recall quality. Acceptable up to ~10k nodes based on current L3 cache sizes.
 - **Local-First Architecture**: Chose SQLite/NetworkX (local) over Neo4j (remote) to minimize network latency within agent reasoning loops.
-- **Graph-Conditioned Embeddings**: Conditioning embeddings at ingest rather than just query-time provides semantic coherence even when graph edges are sparse.
+- **Neighborhood Averaging**: Conditioning embeddings at ingest rather than just query-time provides semantic coherence even when graph edges are sparse.
 
 ## Scalability Ceiling
 - **Memory**: FAISS (n × 384 × 4 bytes) + NetworkX overhead. Estimated ~18MB for 10k nodes.

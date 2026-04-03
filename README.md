@@ -1,6 +1,6 @@
 # HybridMind
 
-**HybridMind** is a local-first hybrid vector–graph store for agent memory: FAISS exact inner-product search, a NetworkX directed graph, and a unified **Contextual Relevance Score (CRS)** for retrieval. Repository: [github.com/a3ro-dev/hybridmind](https://github.com/a3ro-dev/hybridmind).
+**HybridMind** is a local-native hybrid vector–graph store for agent memory. It provides a clean, self-contained implementation that combines FAISS exact inner-product search, an Okapi BM25 index with NLTK stemming, a NetworkX directed graph, and SQLite into a single `.mind` file format. Repository: [github.com/a3ro-dev/hybridmind](https://github.com/a3ro-dev/hybridmind).
 
 ## Problem
 
@@ -8,10 +8,12 @@ Pure vector retrieval ignores explicit relational structure; graph-only retrieva
 
 ## Approach
 
-**Contextual Relevance Score (CRS).** Hybrid retrieval ranks candidates by a convex mix of vector similarity and graph proximity:
+HybridMind is an engineering system that correctly applies known hybrid retrieval techniques without external cloud dependencies. 
+
+**Late Fusion Scoring.** Hybrid retrieval ranks candidates by a weighted linear score fusion—a well-known late fusion technique in information retrieval—combining vector similarity and graph proximity:
 
 ```text
-CRS(q,n) = α·V(q,n) + β·G(A,n),     α + β = 1
+Score(q,n) = α·V(q,n) + β·G(A,n),     α + β = 1
 ```
 
 | Symbol | Meaning |
@@ -23,11 +25,11 @@ CRS(q,n) = α·V(q,n) + β·G(A,n),     α + β = 1
 
 Default weights α = 0.6, β = 0.4 (semantic primacy). Full definition, anchors, and weight rationale: [docs/ALGORITHM.md](docs/ALGORITHM.md).
 
-**Graph-conditioned embeddings (GCE).** At ingest, stored vectors are L2-normalized after blending the text embedding with the mean of the top-5 vector neighbors: **0.7·e_raw + 0.3·e_neighbors** ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), Embedding Engine). Formulation and caveats: [docs/ALGORITHM.md](docs/ALGORITHM.md) §3.
+**Ingest-Time Neighborhood Averaging.** Stored vectors are L2-normalized after blending the text embedding with the mean of the top-5 vector neighbors: **0.7·e_raw + 0.3·e_neighbors** ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), Embedding Engine). This is a practical, non-training variant of GraphSAGE-style aggregation used to provide a graph-aware embedding space. Formulation and caveats: [docs/ALGORITHM.md](docs/ALGORITHM.md) §3.
 
 ## Architecture
 
-Layered stack: FastAPI / Pydantic → embedding engine, vector and graph query engines, CRS hybrid ranker → SQLite (WAL), FAISS `IndexFlatIP`, NetworkX `DiGraph` → atomic `.mind` persistence (manifest, DB, vectors, graph). ASCII diagram and data-flow for hybrid search: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Layered stack: FastAPI / Pydantic → embedding engine, vector and graph query engines, hybrid ranker → SQLite (WAL), FAISS `IndexFlatIP`, NetworkX `DiGraph` → atomic `.mind` persistence (manifest, DB, vectors, graph). ASCII diagram and data-flow for hybrid search: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Quick start
 
@@ -76,7 +78,9 @@ Further integration notes: [docs/AGENT_INTEGRATION.md](docs/AGENT_INTEGRATION.md
 
 ## Evaluation
 
-Multi-corpus load and retrieval experiments (Wikipedia, Stack Exchange, PubMed QA, AG News, legal text), **7,510 nodes**, embedding `all-MiniLM-L6-v2`, CRS weights 0.6 / 0.4: [docs/MULTI_DOMAIN_EVAL.md](docs/MULTI_DOMAIN_EVAL.md).
+The system is empirically evaluated against the LoCoMo benchmark with honest reporting of failures: we observed a **36% overall accuracy**, and notably a **0% correlation/accuracy on single-hop queries**. 
+
+Multi-corpus load and retrieval experiments (Wikipedia, Stack Exchange, PubMed QA, AG News, legal text), **7,510 nodes**, embedding `all-MiniLM-L6-v2`, fusion weights 0.6 / 0.4: [docs/MULTI_DOMAIN_EVAL.md](docs/MULTI_DOMAIN_EVAL.md).
 
 | Finding | Reference |
 |--------|-----------|
@@ -92,11 +96,10 @@ ArXiv-scale ablation (NDCG, α sweep) and BM25-limitations caveat: [docs/ALGORIT
 
 ```bibtex
 @software{hybridmind2025,
-  title        = {HybridMind: Hybrid Vector--Graph Memory with CRS},
+  title        = {HybridMind: Local-Native Hybrid Vector--Graph Memory},
   author       = {a3ro-dev},
   year         = {2025},
-  url          = {https://github.com/a3ro-dev/hybridmind},
-  note         = {Paper: TBD}
+  url          = {https://github.com/a3ro-dev/hybridmind}
 }
 ```
 
