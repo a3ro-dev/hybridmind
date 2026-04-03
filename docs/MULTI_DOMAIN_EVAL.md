@@ -95,7 +95,7 @@ After the primary evaluation, edges were deleted and graph construction was re-e
 
 At 0.20, **news–wikipedia** dominates with 22 edges, consistent with named-entity overlap between headlines and encyclopedic articles. The stackexchange–wikipedia hypothesis (broad technical coverage) materialised weakly at 3 edges but still not dominantly. legal–pubmed and legal–stackexchange remained at zero even at 0.20.
 
-**Critically: Experiment 1 re-run on the 49-edge graph showed 0/10 queries with any hybrid–vector difference** in top-10 membership or domain distribution (see Section 3.1). The graph connectivity threshold is not the binding constraint; the CRS graph weight of 0.4 is insufficient to override vector similarity at this node count.
+**Critically: Experiment 1 re-run on the 49-edge graph showed 0/10 queries with any hybrid–vector difference** in top-10 membership or domain distribution (see Section 3.1). The graph connectivity threshold is not the binding constraint; the late fusion graph weight of 0.4 is insufficient to override vector similarity at this node count.
 
 ### 2.2 Embedding Space Analysis
 
@@ -139,7 +139,7 @@ Ten queries designed to span multiple domains; both `POST /search/vector` (top_k
 | market dynamics and price prediction      | news:10                    | (same)                     | 0     | news (0.494)         | news (0.696)         |
 
 
-**Summary:** Hybrid produced identical top-10 sets to vector for all 10 queries (mean unique domains: **2.5** for both; queries where hybrid diversified: **0**). Hybrid `combined_score` was systematically higher than vector `vector_score` (CRS additive rescaling), but rankings were unchanged. The same result held on the 49-edge rerun at threshold 0.20.
+**Summary:** Hybrid produced identical top-10 sets to vector for all 10 queries (mean unique domains: **2.5** for both; queries where hybrid diversified: **0**). Hybrid `combined_score` was systematically higher than vector `vector_score` (late fusion additive rescaling), but rankings were unchanged. The same result held on the 49-edge rerun at threshold 0.20.
 
 ### 3.2 Anchor-Based Domain Bridging (Experiment 2)
 
@@ -265,7 +265,7 @@ Five probe nodes were inserted after graph construction. For each, the raw embed
 | **Mean**                                                                | **0.01927** |
 
 
-**Mean diff 0.01927** vs arXiv-only baseline of **0.00977** — approximately **2× larger** conditioning signal on the denser, multi-domain graph. The conditioning effect scales with graph density even when retrieval rankings do not change: graph structure is being absorbed into stored embeddings, but the CRS weight (0.4) is not high enough to surface this in top-10 rankings at this scale.
+**Mean diff 0.01927** vs arXiv-only baseline of **0.00977** — approximately **2× larger** conditioning signal on the denser, multi-domain graph. The conditioning effect scales with graph density even when retrieval rankings do not change: graph structure is being absorbed into stored embeddings, but the late fusion weight (0.4) is not high enough to surface this in top-10 rankings at this scale.
 
 ### 4.4 Limitations of This Evaluation
 
@@ -280,7 +280,7 @@ Five probe nodes were inserted after graph construction. For each, the raw embed
 ## 5. Key Findings
 
 1. **Graph density:** Only **6** cross-domain edges at threshold 0.45 on **7,510** nodes; news–wikipedia was the most connected pair (3 edges), contradicting the hypothesis that stackexchange–wikipedia would dominate.
-2. **Graph signal is structurally zero with cross-domain-only edges:** Across weight sweep (β 0.4–0.8) and density sweep (75–375 edges / 1–5%), every `graph_score` read **0.0000**. Root cause: the anchor-free CRS uses top-3 vector hits as reference nodes; at ≤5% cross-domain edge coverage those nodes are rarely connected to anything in the top-12 candidate pool. Higher β cannot fix zero graph scores.
+2. **Graph signal is structurally zero with cross-domain-only edges:** Across weight sweep (β 0.4–0.8) and density sweep (75–375 edges / 1–5%), every `graph_score` read **0.0000**. Root cause: the anchor-free scoring fallback uses top-3 vector hits as reference nodes; at ≤5% cross-domain edge coverage those nodes are rarely connected to anything in the top-12 candidate pool. Higher β cannot fix zero graph scores.
 3. **Intra-domain edges unlock graph signal:** Adding 150 intra-domain edges per domain (750 total) caused **10/10 queries** to receive non-zero graph scores (avg_gs=0.30, driven by the 3 auto-anchor reference nodes at distance 0 = score 1.0). **1/10 concept queries** ("regulatory compliance and risk assessment") had its top-10 set reordered — the first retrieval-level graph effect in the entire evaluation. Domain distribution was unchanged (legal 7, news 2, pubmed 1 for both vector and hybrid).
 3. **No domain diversification:** Hybrid returned identical top-10 sets to vector for **10/10** concept queries; mean unique domains was **2.5** for both modes.
 4. **Hidden gems absent:** Hybrid found the same **6/6** linked partner nodes as vector; hidden-gem count was **0**; hybrid improved rank by mean **3.2 positions** without expanding recall.
@@ -294,7 +294,7 @@ Five probe nodes were inserted after graph construction. For each, the raw embed
 ## 6. Open Questions
 
 - **Explicit anchor experiments:** Every sweep used anchor-free hybrid search. The next experiment should re-run Experiment 3 with explicit `anchor_nodes` set to a node known to have ≥1 cross-domain edge; this is the only currently viable path to non-zero graph signal.
-- **Larger candidate pool:** Expanding `top_k` to 100+ so that cross-domain neighbors of the reference nodes enter the candidate set before CRS scoring. This tests whether the graph signal exists but is buried below rank 12.
+- **Larger candidate pool:** Expanding `top_k` to 100+ so that cross-domain neighbors of the reference nodes enter the candidate set before late fusion scoring. This tests whether the graph signal exists but is buried below rank 12.
 - **Intra-domain edges:** Build edges within each domain (e.g., top-10 cosine neighbors within Wikipedia) so reference nodes almost always have in-domain neighbors already in the vector top-12. This makes the graph structurally effective without changing the anchor mechanism.
 - **Embedding model choice:** MiniLM's short-sentence geometry places Stack Exchange Q&A near news, creating systematic cross-domain confusion. Sentence-BERT or domain-adaptive models may produce more separated clusters and richer cross-domain edges.
 - **Human relevance labels:** Exp 4 precision numbers (0.00 for stackexchange) should be validated against human annotation to distinguish model failure from corpus sparsity.
@@ -364,9 +364,9 @@ No rank promotions detected across any β value.
 
 ### A.3 Root Cause: Why Graph Scores Are Universally Zero
 
-Every diagnostic read of `graph_score_at_β=0.8` for vector ranks 10–12 returned **0.0000** across all 10 queries and all density levels. This is not a weight-tuning problem. It is a structural mismatch between how edges are built and how the CRS formula resolves reference nodes.
+Every diagnostic read of `graph_score_at_β=0.8` for vector ranks 10–12 returned **0.0000** across all 10 queries and all density levels. This is not a weight-tuning problem. It is a structural mismatch between how edges are built and how the scoring formula resolves reference nodes.
 
-**The CRS anchor-free fallback mechanism:**  
+**The anchor-free fallback mechanism:**  
 When no `anchor_nodes` are provided to `POST /search/hybrid`, `HybridRanker.search` uses the **top-3 vector results** as reference nodes for graph proximity scoring. Graph score for any candidate is then `1 / (1 + min_dist_to_reference)`, where distance is BFS hops in the graph index.
 
 **Why reference nodes have no useful edges:**  
@@ -395,7 +395,7 @@ None of these three conditions was satisfied in any sweep configuration. The fix
 
 *Generated: 2026-03-27 00:28:46. Three structural fixes that allow the graph component to produce non-zero scores.*
 
-**Root cause (confirmed Phase 2):** anchor-free CRS with <5% edge coverage → graph_score=0 for 100% of queries.
+**Root cause (confirmed Phase 2):** anchor-free scoring fallback with <5% edge coverage → graph_score=0 for 100% of queries.
 Three independent fixes were applied and stacked.
 
 ---

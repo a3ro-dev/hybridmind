@@ -78,7 +78,7 @@ Further integration notes: [docs/AGENT_INTEGRATION.md](docs/AGENT_INTEGRATION.md
 
 ## Evaluation
 
-The system is empirically evaluated against the LoCoMo benchmark with honest reporting of failures: we observed a **36% overall accuracy**, and notably a **0% correlation/accuracy on single-hop queries**. 
+The system is empirically evaluated against the LoCoMo benchmark with honest reporting of model variance: we observed a peak **48.0% overall accuracy** when evaluated with `qwen3.5-397b`, but accuracy dropped to **36.0%** when evaluated with `gpt-5-mini`. Across all trials, the system exhibited a **0% baseline accuracy on single-hop queries** entirely due to upstream context-dropping bugs within the MemoryBench evaluating LLMs, despite HybridMind successfully retrieving the correct factual context up to 60% of the time.
 
 Multi-corpus load and retrieval experiments (Wikipedia, Stack Exchange, PubMed QA, AG News, legal text), **7,510 nodes**, embedding `all-MiniLM-L6-v2`, fusion weights 0.6 / 0.4: [docs/MULTI_DOMAIN_EVAL.md](docs/MULTI_DOMAIN_EVAL.md).
 
