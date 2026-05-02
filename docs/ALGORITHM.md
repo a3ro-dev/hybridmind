@@ -102,10 +102,8 @@ Measured on 20 nodes in a 1,000-node database:
 ### 4.1 NLTK Porter Stemmer
 Traditional vector search struggles with "single-hop" fact recall where specific keywords and nouns matter more than semantic neighbors. HybridMind implements an Okapi BM25 Index alongside FAISS. To ensure robust matching without heavy dependencies, it relies on `nltk`'s `PorterStemmer` to strip suffixes (e.g. `researching` -> `research`), significantly improving recall for fact-based questions over simple whitespace tokenization.
 
-### 4.2 Reciprocal Rank Fusion and RRF Constant
-Vector results and BM25 results are fused using Reciprocal Rank Fusion (RRF):
-$$Score = \frac{1}{k_{rrf} + rank}$$
-We heavily tuned the $k_{rrf}$ constant, reducing it from the standard 60 down to **20**. This aggressively separates top-ranked exact matches from lower-ranked semantic fuzz, providing a significant boost to factual accuracy in the LOCOMO benchmarks.
+### 4.2 Exact Match Cross-Encoder Boost
+Vector results and BM25 results are combined by adding an exact-match boost to the vector similarity score for candidates that have high keyword overlap, effectively fusing semantic similarity with lexical precision without requiring a separate ranking pass.
 
 ## 5. Retrieval Quality
 
@@ -114,7 +112,7 @@ The evaluation pipeline utilizes BM25 overlap as a weak supervision signal for g
 **Limitation**: BM25 excels at keyword matching but fails to label semantic relevance that lacks exact keyword overlap. All metrics should be treated as directional.
 
 ### 5.2 Results
-The system was empirically evaluated against the LoCoMo benchmark with honest reporting of failures. We observed a **36% overall accuracy** on the benchmark. Most notably, the system exhibited a **0% baseline accuracy on single-hop fact recall** (prior to BM25 inclusion strategy refinements). Implementing NLTK-stemmed BM25 plus the lowered $k_{rrf}$ constant serves to mitigate these single-hop factual recall limitations, though achieving an optimally robust retrieval remains an active area of refinement.
+The system was empirically evaluated against the LoCoMo benchmark with honest reporting of failures. We observed a **36% overall accuracy** on the benchmark. Most notably, the system exhibited a **0% baseline accuracy on single-hop fact recall** (prior to BM25 inclusion strategy refinements). Implementing NLTK-stemmed BM25 plus the direct exact-match score boost serves to mitigate these single-hop factual recall limitations, though achieving an optimally robust retrieval remains an active area of refinement.
 
 ## 6. Complexity Analysis
 

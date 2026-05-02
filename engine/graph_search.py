@@ -158,7 +158,6 @@ class GraphSearchEngine:
             node_ids: List of nodes to score
             reference_nodes: Anchor nodes for proximity
             max_depth: Maximum path length
-            edge_type_weights: Bonus weights for edge types
             
         Returns:
             Dict mapping node_id to proximity score

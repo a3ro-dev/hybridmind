@@ -129,16 +129,15 @@ HybridMind is a hybrid database combining vector embeddings with graph-based rel
 ### 3.1 Formula
 
 ```
-Fused Score = alpha * V + beta * G + gamma * R
+Fused Score = alpha * V + beta * G
 ```
 
 Where:
 - `V` = Vector similarity score (cosine similarity, range 0-1)
 - `G` = Graph proximity score (inverse shortest path, range 0-1)
-- `R` = Relationship bonus (optional, based on edge types)
 - `alpha` = Vector weight (default: 0.6)
 - `beta` = Graph weight (default: 0.4)
-- `gamma` = Relationship bonus coefficient
+
 
 ### 3.2 Vector Score Computation
 
@@ -416,7 +415,6 @@ Responsibilities:
 - Score fusion using hybrid formula
 - Configurable alpha/beta weights
 - Anchor node support
-- Edge type bonuses
 - Score explanation generation
 
 ---
@@ -537,10 +535,6 @@ Base URL: `http://localhost:8000`
   "graph_weight": 0.4,
   "anchor_nodes": ["uuid1", "uuid2"],
   "max_depth": 2,
-  "edge_type_weights": {
-    "cites": 1.0,
-    "related_to": 0.5
-  },
   "min_score": 0.0
 }
 ```

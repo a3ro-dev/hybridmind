@@ -1,0 +1,10 @@
+{
+  "averaging_disabled": {
+    "probe_retrieved_top2_count": 2,
+    "total_queries": 3
+  },
+  "averaging_enabled": {
+    "probe_retrieved_top2_count": 3,
+    "total_queries": 3
+  }
+}
