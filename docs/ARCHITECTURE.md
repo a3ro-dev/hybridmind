@@ -17,7 +17,7 @@ HybridMind is a local-native hybrid vector + graph database designed for AI agen
 |  +------------------+  +------------------+  +------------------------+ |
 |  | Embedding Engine |  |  Query Engines   |  |   Hybrid Ranker        | |
 |  | (transformers)   |  | (Vector / Graph /|  |  (Late Fusion +        | |
-|  |                  |  |  BM25)           |  |    RRF Fusion)         | |
+|  |                  |  |  BM25)           |  |    Late Fusion)        | |
 |  +------------------+  +------------------+  +------------------------+ |
 +-------------------------------------------------------------------------+
                                     |

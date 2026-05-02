@@ -43,10 +43,10 @@ async def vector_search(
 ) -> SearchResponse:
     """
     Pure vector similarity search using cosine similarity.
-    
+
     Returns nodes ranked by semantic similarity to the query text.
     Uses the configured embedding model (all-MiniLM-L6-v2 by default).
-    
+
     Results are cached for 5 minutes for faster repeated queries.
     """
     # Check cache first
@@ -57,11 +57,11 @@ async def vector_search(
         "min_score": request.min_score,
         "filter_metadata": request.filter_metadata
     }
-    
+
     cached = cache.get("vector", cache_params)
     if cached:
         return SearchResponse(**cached)
-    
+
     # Execute search
     results, query_time_ms, total_candidates = vector_engine.search(
         query_text=request.query_text,
@@ -69,7 +69,7 @@ async def vector_search(
         min_score=request.min_score,
         filter_metadata=request.filter_metadata
     )
-    
+
     search_results = [
         SearchResult(
             node_id=r["node_id"],
@@ -80,17 +80,17 @@ async def vector_search(
         )
         for r in results
     ]
-    
+
     response = SearchResponse(
         results=search_results,
         query_time_ms=query_time_ms,
         total_candidates=total_candidates,
         search_type="vector"
     )
-    
+
     # Cache the result
     cache.set("vector", cache_params, response.model_dump())
-    
+
     return response
 
 
@@ -105,7 +105,7 @@ async def graph_search(
 ) -> SearchResponse:
     """
     Graph traversal search from a starting node.
-    
+
     Returns nodes reachable within the specified depth,
     ranked by graph proximity (closer nodes first).
     """
@@ -113,14 +113,14 @@ async def graph_search(
     start_node = sqlite_store.get_node(start_id)
     if start_node is None:
         raise HTTPException(status_code=404, detail=f"Start node {start_id} not found")
-    
+
     results, query_time_ms, total_candidates = graph_engine.traverse(
         start_id=start_id,
         depth=depth,
         edge_types=edge_types,
         direction=direction
     )
-    
+
     search_results = [
         SearchResult(
             node_id=r["node_id"],
@@ -133,7 +133,7 @@ async def graph_search(
         )
         for r in results
     ]
-    
+
     return SearchResponse(
         results=search_results,
         query_time_ms=query_time_ms,
@@ -149,17 +149,17 @@ async def hybrid_search(
 ) -> SearchResponse:
     """
     Hybrid vector + graph search using the CRS algorithm.
-    
+
     Combines semantic similarity (vector) with graph proximity
     using configurable weights:
-    
+
     **CRS = α * vector_score + β * graph_score**
-    
+
     Where α = vector_weight and β = graph_weight.
-    
+
     If anchor_nodes are provided, graph scores are computed relative
     to those nodes. Otherwise, the top vector results are used as anchors.
-    
+
     Results are cached for 5 minutes for faster repeated queries.
     """
     # Check cache first
@@ -175,13 +175,13 @@ async def hybrid_search(
         "filter_metadata": request.filter_metadata,
         "deduplicate": request.deduplicate
     }
-    
+
     cached = cache.get("hybrid", cache_params)
     if cached:
         # Return cached result with cache indicator
         cached_response = SearchResponse(**cached)
         return cached_response
-    
+
     # Execute search
     results, query_time_ms, total_candidates = hybrid_ranker.search(
         query_text=request.query_text,
@@ -190,12 +190,11 @@ async def hybrid_search(
         graph_weight=request.graph_weight,
         anchor_nodes=request.anchor_nodes,
         max_depth=request.max_depth,
-        edge_type_weights=request.edge_type_weights,
         min_score=request.min_score,
         filter_metadata=request.filter_metadata,
         deduplicate=request.deduplicate
     )
-    
+
     search_results = [
         SearchResult(
             node_id=r["node_id"],
@@ -208,17 +207,17 @@ async def hybrid_search(
         )
         for r in results
     ]
-    
+
     response = SearchResponse(
         results=search_results,
         query_time_ms=query_time_ms,
         total_candidates=total_candidates,
         search_type="hybrid"
     )
-    
+
     # Cache the result
     cache.set("hybrid", cache_params, response.model_dump())
-    
+
     return response
 
 
@@ -229,7 +228,7 @@ async def compare_search_modes(
 ) -> dict:
     """
     Compare results across vector-only, graph-only, and hybrid search.
-    
+
     Useful for demonstrating the advantages of hybrid search by
     showing how it combines the best of both approaches.
     """
@@ -240,7 +239,7 @@ async def compare_search_modes(
         graph_weight=request.graph_weight,
         anchor_nodes=request.anchor_nodes
     )
-    
+
     return {
         "query_text": request.query_text,
         "vector_only": {
@@ -297,13 +296,13 @@ async def find_path(
     source = sqlite_store.get_node(source_id)
     if source is None:
         raise HTTPException(status_code=404, detail=f"Source node {source_id} not found")
-    
+
     target = sqlite_store.get_node(target_id)
     if target is None:
         raise HTTPException(status_code=404, detail=f"Target node {target_id} not found")
-    
+
     path_result = graph_engine.find_path(source_id, target_id)
-    
+
     if path_result is None:
         return {
             "source_id": source_id,
@@ -311,7 +310,7 @@ async def find_path(
             "path_exists": False,
             "message": "No path exists between these nodes"
         }
-    
+
     return {
         "source_id": source_id,
         "target_id": target_id,
@@ -328,11 +327,11 @@ async def get_stats() -> StatsResponse:
     """
     db_manager = get_db_manager()
     stats = db_manager.get_stats()
-    
+
     total_edges = stats["total_edges"]
     total_nodes = stats["total_nodes"]
     avg_edges = total_edges / total_nodes if total_nodes > 0 else 0.0
-    
+
     return StatsResponse(
         total_nodes=stats["total_nodes"],
         total_edges=stats["total_edges"],
@@ -341,4 +340,3 @@ async def get_stats() -> StatsResponse:
         vector_index_size=stats["vector_index_size"],
         database_size_bytes=stats["database_size_bytes"]
     )
-

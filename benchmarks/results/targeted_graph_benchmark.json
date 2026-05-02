@@ -1,0 +1,26 @@
+{
+  "semantic_paraphrase": {
+    "vector_recall@3": 1.0,
+    "hybrid_recall@3": 1.0,
+    "graph_helped": false,
+    "graph_hurt": false
+  },
+  "exact_lexical": {
+    "vector_recall@3": 1.0,
+    "hybrid_recall@3": 1.0,
+    "graph_helped": false,
+    "graph_hurt": false
+  },
+  "edge_dependent_hop": {
+    "vector_recall@3": 0.0,
+    "hybrid_recall@3": 1.0,
+    "graph_helped": true,
+    "graph_hurt": false
+  },
+  "missing_anchor_failure": {
+    "vector_recall@3": 0.0,
+    "hybrid_recall@3": 0.0,
+    "graph_helped": false,
+    "graph_hurt": false
+  }
+}

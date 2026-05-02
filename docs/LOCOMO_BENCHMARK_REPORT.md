@@ -74,7 +74,7 @@ Search latency averaged **1.54s** across the evaluation suite.
 Prior iterations struggled heavily with single-hop fact recall (0% Hit@10) due to exact keyword dilution within dense FAISS embeddings. A pure Python Okapi BM25 index utilizing `nltk`'s PorterStemmer was integrated to handle morphological variations. While this successfully raised the retrieval hit rate to 60%, the downstream LLM interpretation remains broken. 
 
 ### Late Fusion Weight Balancing
-Tuning the Reciprocal Rank Fusion (RRF) algorithm identified that standard uniform score distribution (e.g., k=60) suppresses sharp keyword signals from the BM25 index. Lowering the `k` parameter to 20 was mathematically necessary to allow high-confidence exact matches to aggressively out-rank weaker semantic similarities in the late fusion scoring phase.
+Tuning the scoring system identified that directly adding a BM25 overlap score to the vector similarity allowed high-confidence exact matches to aggressively out-rank weaker semantic similarities in the late fusion scoring phase, avoiding the dilution effects of rank-based fusions.
 
 ### Sequential Database Performance
 Implementation of localized `containerTag` filtering alongside routine teardowns of SQLite benchmark fragments yielded stable execution overheads. The hybrid index safely maintains ~1,500ms median search latencies, establishing baseline capability bounds for concurrent vector and graph edge traversal within a strictly local Python environment without external cloud dependencies.

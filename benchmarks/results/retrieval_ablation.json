@@ -1,0 +1,22 @@
+{
+  "vector_only": {
+    "mean_precision@3": 0.47619047619047616,
+    "mean_recall@3": 1.0,
+    "mean_mrr": 1.0
+  },
+  "bm25_only": {
+    "mean_precision@3": 0.47619047619047616,
+    "mean_recall@3": 1.0,
+    "mean_mrr": 1.0
+  },
+  "hybrid": {
+    "mean_precision@3": 0.47619047619047616,
+    "mean_recall@3": 1.0,
+    "mean_mrr": 1.0
+  },
+  "hybrid_heavy_graph": {
+    "mean_precision@3": 0.47619047619047616,
+    "mean_recall@3": 1.0,
+    "mean_mrr": 1.0
+  }
+}
