@@ -115,9 +115,16 @@ class HybridRanker:
             nid = res["node_id"]
             if nid not in node_data:
                 node_data[nid] = res
-                boost = bm25_overlap(query_text, res["text"]) * 0.25
-                node_data[nid]["vector_score"] = 0.0
-                scores[nid] = boost
+                overlap = bm25_overlap(query_text, res["text"])
+                boost = overlap * 0.25
+        
+                # FIX: BM25-only hits lack a vector_score, meaning their max score is 0.25.
+                # Since weak semantic vector hits average 0.4-0.6, BM25-only exact matches 
+                # were mathematically incapable of ever reaching the top 10.
+                # We assign a synthetic base score proportional to keyword overlap to fix this.
+                synthetic_base = min(0.65, overlap)
+                node_data[nid]["vector_score"] = synthetic_base
+                scores[nid] = synthetic_base + boost
 
         # Step 3: SGMem Chunk Rollup to Parent
         rolled_up_scores = {}
