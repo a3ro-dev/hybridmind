@@ -27,7 +27,7 @@ class EmbeddingEngine:
     Falls back to mock embeddings if library not available.
     Auto-detects GPU for faster inference.
     """
-    
+
     def __init__(
         self,
         model_name: str = "all-MiniLM-L6-v2",
@@ -36,7 +36,7 @@ class EmbeddingEngine:
     ):
         """
         Initialize embedding engine.
-        
+
         Args:
             model_name: Name of the sentence-transformer model
             device: Device to run model on ('cpu', 'cuda', 'auto'). If None, auto-detects GPU.
@@ -46,7 +46,7 @@ class EmbeddingEngine:
         self._model = None
         self._cache_folder = cache_folder
         self._dimension: Optional[int] = None
-        
+
         # Auto-detect GPU if device not specified
         if device is None or device == "auto":
             try:
@@ -61,7 +61,7 @@ class EmbeddingEngine:
                 self._device = "cpu"
         else:
             self._device = device
-        
+
         # Default dimensions for known models
         self._known_dimensions = {
             "all-MiniLM-L6-v2": 384,
@@ -70,7 +70,7 @@ class EmbeddingEngine:
             "paraphrase-MiniLM-L6-v2": 384,
             "paraphrase-mpnet-base-v2": 768,
         }
-    
+
     @property
     def model(self) -> Optional["SentenceTransformer"]:
         """Lazy load the model."""
@@ -88,25 +88,25 @@ class EmbeddingEngine:
                 logger.error(f"Failed to load model: {e}")
                 self._model = None
         return self._model
-    
+
     @property
     def dimension(self) -> int:
         """Get embedding dimension."""
         if self._dimension is not None:
             return self._dimension
-        
+
         # Try to get from loaded model
         if self.model is not None:
             return self._dimension
-        
+
         # Fall back to known dimensions
         return self._known_dimensions.get(self.model_name, 384)
-    
+
     @property
     def is_available(self) -> bool:
         """Check if embedding model is available."""
         return self.model is not None
-    
+
     def embed(self, text: str, normalize: bool = True) -> np.ndarray:
         """
         Generate embedding for a single text with a timeout.
@@ -114,9 +114,9 @@ class EmbeddingEngine:
         import concurrent.futures
         from config import settings
         from fastapi import HTTPException
-        
+
         timeout = getattr(settings, "embedding_timeout_seconds", 30)
-        
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(self._do_embed, text, normalize)
             try:
@@ -139,11 +139,11 @@ class EmbeddingEngine:
         else:
             # Mock embedding for testing without model
             return self._mock_embed(text, normalize)
-            
+
     def embed_with_graph_context(
-        self, 
-        text: str, 
-        neighbor_embeddings: List[np.ndarray], 
+        self,
+        text: str,
+        neighbor_embeddings: List[np.ndarray],
         alpha: float = 0.7
     ) -> np.ndarray:
         """
@@ -155,7 +155,7 @@ class EmbeddingEngine:
             if norm > 0:
                 return own_embedding / norm
             return own_embedding
-            
+
         neighbor_mean = np.mean(neighbor_embeddings, axis=0)
         final = alpha * own_embedding + (1.0 - alpha) * neighbor_mean
 
@@ -178,7 +178,7 @@ class EmbeddingEngine:
         )
 
         return final_normed
-    
+
     def embed_batch(
         self,
         texts: List[str],
@@ -188,19 +188,19 @@ class EmbeddingEngine:
     ) -> np.ndarray:
         """
         Generate embeddings for multiple texts.
-        
+
         Args:
             texts: List of input texts
             normalize: Whether to L2-normalize embeddings
             batch_size: Processing batch size
             show_progress: Show progress bar
-            
+
         Returns:
             Array of embedding vectors (num_texts x dimension)
         """
         if not texts:
             return np.array([]).reshape(0, self.dimension)
-        
+
         if self.model is not None:
             embeddings = self.model.encode(
                 texts,
@@ -213,34 +213,34 @@ class EmbeddingEngine:
         else:
             # Mock embeddings for testing
             return np.vstack([self._mock_embed(t, normalize) for t in texts])
-    
+
     def _mock_embed(self, text: str, normalize: bool = True) -> np.ndarray:
         """
         Generate mock embedding based on text hash.
         Provides deterministic embeddings for testing.
-        
+
         Args:
             text: Input text
             normalize: Whether to normalize
-            
+
         Returns:
             Mock embedding vector
         """
         # Use hash for deterministic results
         import hashlib
         text_hash = hashlib.md5(text.encode()).hexdigest()
-        
+
         # Generate pseudo-random vector from hash
         np.random.seed(int(text_hash[:8], 16) % (2**32))
         embedding = np.random.randn(self.dimension).astype(np.float32)
-        
+
         if normalize:
             norm = np.linalg.norm(embedding)
             if norm > 0:
                 embedding = embedding / norm
-        
+
         return embedding
-    
+
     def compute_similarity(
         self,
         embedding1: np.ndarray,
@@ -248,23 +248,23 @@ class EmbeddingEngine:
     ) -> float:
         """
         Compute cosine similarity between two embeddings.
-        
+
         Args:
             embedding1: First embedding
             embedding2: Second embedding
-            
+
         Returns:
             Cosine similarity score (-1 to 1)
         """
         # Normalize if needed
         norm1 = np.linalg.norm(embedding1)
         norm2 = np.linalg.norm(embedding2)
-        
+
         if norm1 == 0 or norm2 == 0:
             return 0.0
-        
+
         return float(np.dot(embedding1, embedding2) / (norm1 * norm2))
-    
+
     def compute_similarity_batch(
         self,
         query_embedding: np.ndarray,
@@ -272,11 +272,11 @@ class EmbeddingEngine:
     ) -> np.ndarray:
         """
         Compute cosine similarity between query and multiple embeddings.
-        
+
         Args:
             query_embedding: Query vector (dimension,)
             embeddings: Matrix of embeddings (n x dimension)
-            
+
         Returns:
             Array of similarity scores (n,)
         """
@@ -286,15 +286,15 @@ class EmbeddingEngine:
             query_normalized = query_embedding / query_norm
         else:
             return np.zeros(len(embeddings))
-        
+
         # Normalize embeddings
         norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
         norms = np.where(norms > 0, norms, 1)  # Avoid division by zero
         embeddings_normalized = embeddings / norms
-        
+
         # Compute dot products
         similarities = np.dot(embeddings_normalized, query_normalized)
-        
+
         return similarities
 
 
@@ -307,9 +307,8 @@ def get_embedding_engine(
 ) -> EmbeddingEngine:
     """Get or create embedding engine singleton."""
     global _embedding_engine
-    
+
     if _embedding_engine is None or _embedding_engine.model_name != model_name:
         _embedding_engine = EmbeddingEngine(model_name=model_name)
-    
-    return _embedding_engine
 
+    return _embedding_engine

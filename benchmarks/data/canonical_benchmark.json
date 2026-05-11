@@ -1,0 +1,2648 @@
+{
+  "documents": [
+    {
+      "id": "doc_001",
+      "text": "The concept of distributed consensus algorithms like Raft and Paxos is essential for fault-tolerant systems in cloud computing part 0.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_002",
+      "text": "The concept of distributed consensus algorithms like Raft and Paxos is essential for fault-tolerant systems in cloud computing part 1.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_003",
+      "text": "The concept of distributed consensus algorithms like Raft and Paxos is essential for fault-tolerant systems in cloud computing part 2.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_004",
+      "text": "The concept of distributed consensus algorithms like Raft and Paxos is essential for fault-tolerant systems in cloud computing part 3.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_005",
+      "text": "The concept of distributed consensus algorithms like Raft and Paxos is essential for fault-tolerant systems in cloud computing part 4.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_006",
+      "text": "The concept of distributed consensus algorithms like Raft and Paxos is essential for fault-tolerant systems in cloud computing part 5.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_007",
+      "text": "The concept of distributed consensus algorithms like Raft and Paxos is essential for fault-tolerant systems in cloud computing part 6.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_008",
+      "text": "The concept of distributed consensus algorithms like Raft and Paxos is essential for fault-tolerant systems in cloud computing part 7.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_009",
+      "text": "The concept of distributed consensus algorithms like Raft and Paxos is essential for fault-tolerant systems in cloud computing part 8.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_010",
+      "text": "The concept of distributed consensus algorithms like Raft and Paxos is essential for fault-tolerant systems in cloud computing part 9.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_011",
+      "text": "This document mentions a very specific term: xyzzyplugh0 frobnicator.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_012",
+      "text": "This document mentions a very specific term: xyzzyplugh1 frobnicator.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_013",
+      "text": "This document mentions a very specific term: xyzzyplugh2 frobnicator.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_014",
+      "text": "This document mentions a very specific term: xyzzyplugh3 frobnicator.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_015",
+      "text": "This document mentions a very specific term: xyzzyplugh4 frobnicator.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_016",
+      "text": "This document mentions a very specific term: xyzzyplugh5 frobnicator.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_017",
+      "text": "This document mentions a very specific term: xyzzyplugh6 frobnicator.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_018",
+      "text": "This document mentions a very specific term: xyzzyplugh7 frobnicator.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_019",
+      "text": "This document mentions a very specific term: xyzzyplugh8 frobnicator.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_020",
+      "text": "This document mentions a very specific term: xyzzyplugh9 frobnicator.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_021",
+      "text": "Semantic anchor document about neural network backpropagation theory number 0.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_022",
+      "text": "Here is an arbitrary historical fact: Abraham Lincoln was born in a log cabin 0.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_023",
+      "text": "Semantic anchor document about neural network backpropagation theory number 1.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_024",
+      "text": "Here is an arbitrary historical fact: Abraham Lincoln was born in a log cabin 1.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_025",
+      "text": "Semantic anchor document about neural network backpropagation theory number 2.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_026",
+      "text": "Here is an arbitrary historical fact: Abraham Lincoln was born in a log cabin 2.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_027",
+      "text": "Semantic anchor document about neural network backpropagation theory number 3.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_028",
+      "text": "Here is an arbitrary historical fact: Abraham Lincoln was born in a log cabin 3.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_029",
+      "text": "Semantic anchor document about neural network backpropagation theory number 4.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_030",
+      "text": "Here is an arbitrary historical fact: Abraham Lincoln was born in a log cabin 4.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_031",
+      "text": "Semantic anchor document about neural network backpropagation theory number 5.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_032",
+      "text": "Here is an arbitrary historical fact: Abraham Lincoln was born in a log cabin 5.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_033",
+      "text": "Semantic anchor document about neural network backpropagation theory number 6.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_034",
+      "text": "Here is an arbitrary historical fact: Abraham Lincoln was born in a log cabin 6.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_035",
+      "text": "Semantic anchor document about neural network backpropagation theory number 7.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_036",
+      "text": "Here is an arbitrary historical fact: Abraham Lincoln was born in a log cabin 7.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_037",
+      "text": "Semantic anchor document about neural network backpropagation theory number 8.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_038",
+      "text": "Here is an arbitrary historical fact: Abraham Lincoln was born in a log cabin 8.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_039",
+      "text": "Semantic anchor document about neural network backpropagation theory number 9.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_040",
+      "text": "Here is an arbitrary historical fact: Abraham Lincoln was born in a log cabin 9.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_041",
+      "text": "Anchor regarding climate change policy 0.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_042",
+      "text": "Intermediate link on economics 0.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_043",
+      "text": "The capital of Australia is Canberra 0.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_044",
+      "text": "Anchor regarding climate change policy 1.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_045",
+      "text": "Intermediate link on economics 1.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_046",
+      "text": "The capital of Australia is Canberra 1.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_047",
+      "text": "Anchor regarding climate change policy 2.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_048",
+      "text": "Intermediate link on economics 2.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_049",
+      "text": "The capital of Australia is Canberra 2.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_050",
+      "text": "Anchor regarding climate change policy 3.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_051",
+      "text": "Intermediate link on economics 3.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_052",
+      "text": "The capital of Australia is Canberra 3.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_053",
+      "text": "Anchor regarding climate change policy 4.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_054",
+      "text": "Intermediate link on economics 4.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_055",
+      "text": "The capital of Australia is Canberra 4.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_056",
+      "text": "Anchor regarding climate change policy 5.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_057",
+      "text": "Intermediate link on economics 5.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_058",
+      "text": "The capital of Australia is Canberra 5.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_059",
+      "text": "Anchor regarding climate change policy 6.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_060",
+      "text": "Intermediate link on economics 6.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_061",
+      "text": "The capital of Australia is Canberra 6.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_062",
+      "text": "Anchor regarding climate change policy 7.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_063",
+      "text": "Intermediate link on economics 7.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_064",
+      "text": "The capital of Australia is Canberra 7.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_065",
+      "text": "Anchor regarding climate change policy 8.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_066",
+      "text": "Intermediate link on economics 8.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_067",
+      "text": "The capital of Australia is Canberra 8.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_068",
+      "text": "Anchor regarding climate change policy 9.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_069",
+      "text": "Intermediate link on economics 9.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_070",
+      "text": "The capital of Australia is Canberra 9.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_071",
+      "text": "This document has no edges and talks about solitary confinement 0.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_072",
+      "text": "This document has no edges and talks about solitary confinement 1.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_073",
+      "text": "This document has no edges and talks about solitary confinement 2.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_074",
+      "text": "This document has no edges and talks about solitary confinement 3.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_075",
+      "text": "This document has no edges and talks about solitary confinement 4.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_076",
+      "text": "This document has no edges and talks about solitary confinement 5.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_077",
+      "text": "This document has no edges and talks about solitary confinement 6.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_078",
+      "text": "This document has no edges and talks about solitary confinement 7.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_079",
+      "text": "This document has no edges and talks about solitary confinement 8.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_080",
+      "text": "This document has no edges and talks about solitary confinement 9.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_081",
+      "text": "The apple pie recipe calls for cinnamon and nutmeg 0.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_082",
+      "text": "The apple cake recipe calls for cinnamon and nutmeg 0.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_083",
+      "text": "The apple pie recipe calls for cinnamon and nutmeg 1.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_084",
+      "text": "The apple cake recipe calls for cinnamon and nutmeg 1.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_085",
+      "text": "The apple pie recipe calls for cinnamon and nutmeg 2.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_086",
+      "text": "The apple cake recipe calls for cinnamon and nutmeg 2.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_087",
+      "text": "The apple pie recipe calls for cinnamon and nutmeg 3.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_088",
+      "text": "The apple cake recipe calls for cinnamon and nutmeg 3.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_089",
+      "text": "The apple pie recipe calls for cinnamon and nutmeg 4.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_090",
+      "text": "The apple cake recipe calls for cinnamon and nutmeg 4.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_091",
+      "text": "The apple pie recipe calls for cinnamon and nutmeg 5.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_092",
+      "text": "The apple cake recipe calls for cinnamon and nutmeg 5.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_093",
+      "text": "The apple pie recipe calls for cinnamon and nutmeg 6.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_094",
+      "text": "The apple cake recipe calls for cinnamon and nutmeg 6.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_095",
+      "text": "The apple pie recipe calls for cinnamon and nutmeg 7.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_096",
+      "text": "The apple cake recipe calls for cinnamon and nutmeg 7.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_097",
+      "text": "The apple pie recipe calls for cinnamon and nutmeg 8.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_098",
+      "text": "The apple cake recipe calls for cinnamon and nutmeg 8.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_099",
+      "text": "The apple pie recipe calls for cinnamon and nutmeg 9.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_100",
+      "text": "The apple cake recipe calls for cinnamon and nutmeg 9.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_101",
+      "text": "This is a random noise document 0 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_102",
+      "text": "This is a random noise document 1 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_103",
+      "text": "This is a random noise document 2 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_104",
+      "text": "This is a random noise document 3 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_105",
+      "text": "This is a random noise document 4 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_106",
+      "text": "This is a random noise document 5 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_107",
+      "text": "This is a random noise document 6 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_108",
+      "text": "This is a random noise document 7 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_109",
+      "text": "This is a random noise document 8 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_110",
+      "text": "This is a random noise document 9 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_111",
+      "text": "This is a random noise document 10 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_112",
+      "text": "This is a random noise document 11 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_113",
+      "text": "This is a random noise document 12 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_114",
+      "text": "This is a random noise document 13 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_115",
+      "text": "This is a random noise document 14 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_116",
+      "text": "This is a random noise document 15 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_117",
+      "text": "This is a random noise document 16 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_118",
+      "text": "This is a random noise document 17 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_119",
+      "text": "This is a random noise document 18 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_120",
+      "text": "This is a random noise document 19 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_121",
+      "text": "This is a random noise document 20 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_122",
+      "text": "This is a random noise document 21 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_123",
+      "text": "This is a random noise document 22 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_124",
+      "text": "This is a random noise document 23 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_125",
+      "text": "This is a random noise document 24 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_126",
+      "text": "This is a random noise document 25 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_127",
+      "text": "This is a random noise document 26 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_128",
+      "text": "This is a random noise document 27 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_129",
+      "text": "This is a random noise document 28 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_130",
+      "text": "This is a random noise document 29 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_131",
+      "text": "This is a random noise document 30 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_132",
+      "text": "This is a random noise document 31 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_133",
+      "text": "This is a random noise document 32 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_134",
+      "text": "This is a random noise document 33 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_135",
+      "text": "This is a random noise document 34 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_136",
+      "text": "This is a random noise document 35 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_137",
+      "text": "This is a random noise document 36 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_138",
+      "text": "This is a random noise document 37 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_139",
+      "text": "This is a random noise document 38 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_140",
+      "text": "This is a random noise document 39 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_141",
+      "text": "This is a random noise document 40 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_142",
+      "text": "This is a random noise document 41 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_143",
+      "text": "This is a random noise document 42 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_144",
+      "text": "This is a random noise document 43 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_145",
+      "text": "This is a random noise document 44 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_146",
+      "text": "This is a random noise document 45 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_147",
+      "text": "This is a random noise document 46 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_148",
+      "text": "This is a random noise document 47 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_149",
+      "text": "This is a random noise document 48 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_150",
+      "text": "This is a random noise document 49 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_151",
+      "text": "This is a random noise document 50 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_152",
+      "text": "This is a random noise document 51 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_153",
+      "text": "This is a random noise document 52 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_154",
+      "text": "This is a random noise document 53 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_155",
+      "text": "This is a random noise document 54 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_156",
+      "text": "This is a random noise document 55 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_157",
+      "text": "This is a random noise document 56 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_158",
+      "text": "This is a random noise document 57 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_159",
+      "text": "This is a random noise document 58 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_160",
+      "text": "This is a random noise document 59 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_161",
+      "text": "This is a random noise document 60 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_162",
+      "text": "This is a random noise document 61 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_163",
+      "text": "This is a random noise document 62 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_164",
+      "text": "This is a random noise document 63 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_165",
+      "text": "This is a random noise document 64 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_166",
+      "text": "This is a random noise document 65 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_167",
+      "text": "This is a random noise document 66 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_168",
+      "text": "This is a random noise document 67 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_169",
+      "text": "This is a random noise document 68 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_170",
+      "text": "This is a random noise document 69 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_171",
+      "text": "This is a random noise document 70 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_172",
+      "text": "This is a random noise document 71 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_173",
+      "text": "This is a random noise document 72 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_174",
+      "text": "This is a random noise document 73 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_175",
+      "text": "This is a random noise document 74 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_176",
+      "text": "This is a random noise document 75 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_177",
+      "text": "This is a random noise document 76 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_178",
+      "text": "This is a random noise document 77 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_179",
+      "text": "This is a random noise document 78 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_180",
+      "text": "This is a random noise document 79 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_181",
+      "text": "This is a random noise document 80 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_182",
+      "text": "This is a random noise document 81 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_183",
+      "text": "This is a random noise document 82 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_184",
+      "text": "This is a random noise document 83 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_185",
+      "text": "This is a random noise document 84 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_186",
+      "text": "This is a random noise document 85 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_187",
+      "text": "This is a random noise document 86 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_188",
+      "text": "This is a random noise document 87 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_189",
+      "text": "This is a random noise document 88 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_190",
+      "text": "This is a random noise document 89 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_191",
+      "text": "This is a random noise document 90 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_192",
+      "text": "This is a random noise document 91 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_193",
+      "text": "This is a random noise document 92 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_194",
+      "text": "This is a random noise document 93 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_195",
+      "text": "This is a random noise document 94 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_196",
+      "text": "This is a random noise document 95 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_197",
+      "text": "This is a random noise document 96 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_198",
+      "text": "This is a random noise document 97 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_199",
+      "text": "This is a random noise document 98 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_200",
+      "text": "This is a random noise document 99 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_201",
+      "text": "This is a random noise document 100 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_202",
+      "text": "This is a random noise document 101 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_203",
+      "text": "This is a random noise document 102 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_204",
+      "text": "This is a random noise document 103 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_205",
+      "text": "This is a random noise document 104 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_206",
+      "text": "This is a random noise document 105 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_207",
+      "text": "This is a random noise document 106 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_208",
+      "text": "This is a random noise document 107 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_209",
+      "text": "This is a random noise document 108 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_210",
+      "text": "This is a random noise document 109 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_211",
+      "text": "This is a random noise document 110 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_212",
+      "text": "This is a random noise document 111 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_213",
+      "text": "This is a random noise document 112 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_214",
+      "text": "This is a random noise document 113 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_215",
+      "text": "This is a random noise document 114 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_216",
+      "text": "This is a random noise document 115 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_217",
+      "text": "This is a random noise document 116 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_218",
+      "text": "This is a random noise document 117 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_219",
+      "text": "This is a random noise document 118 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_220",
+      "text": "This is a random noise document 119 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_221",
+      "text": "This is a random noise document 120 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_222",
+      "text": "This is a random noise document 121 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_223",
+      "text": "This is a random noise document 122 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_224",
+      "text": "This is a random noise document 123 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_225",
+      "text": "This is a random noise document 124 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_226",
+      "text": "This is a random noise document 125 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_227",
+      "text": "This is a random noise document 126 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_228",
+      "text": "This is a random noise document 127 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_229",
+      "text": "This is a random noise document 128 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_230",
+      "text": "This is a random noise document 129 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_231",
+      "text": "This is a random noise document 130 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_232",
+      "text": "This is a random noise document 131 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_233",
+      "text": "This is a random noise document 132 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_234",
+      "text": "This is a random noise document 133 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_235",
+      "text": "This is a random noise document 134 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_236",
+      "text": "This is a random noise document 135 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_237",
+      "text": "This is a random noise document 136 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_238",
+      "text": "This is a random noise document 137 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_239",
+      "text": "This is a random noise document 138 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    },
+    {
+      "id": "doc_240",
+      "text": "This is a random noise document 139 designed to distract the vector search engine with overlapping words like network, policy, recipe, and algorithms.",
+      "metadata": {
+        "domain": "general"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "doc_021",
+      "target": "doc_022",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_023",
+      "target": "doc_024",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_025",
+      "target": "doc_026",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_027",
+      "target": "doc_028",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_029",
+      "target": "doc_030",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_031",
+      "target": "doc_032",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_033",
+      "target": "doc_034",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_035",
+      "target": "doc_036",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_037",
+      "target": "doc_038",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_039",
+      "target": "doc_040",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_041",
+      "target": "doc_042",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_042",
+      "target": "doc_043",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_044",
+      "target": "doc_045",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_045",
+      "target": "doc_046",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_047",
+      "target": "doc_048",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_048",
+      "target": "doc_049",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_050",
+      "target": "doc_051",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_051",
+      "target": "doc_052",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_053",
+      "target": "doc_054",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_054",
+      "target": "doc_055",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_056",
+      "target": "doc_057",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_057",
+      "target": "doc_058",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_059",
+      "target": "doc_060",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_060",
+      "target": "doc_061",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_062",
+      "target": "doc_063",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_063",
+      "target": "doc_064",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_065",
+      "target": "doc_066",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_066",
+      "target": "doc_067",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_068",
+      "target": "doc_069",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_069",
+      "target": "doc_070",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_081",
+      "target": "doc_082",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_082",
+      "target": "doc_081",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_083",
+      "target": "doc_084",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_084",
+      "target": "doc_083",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_085",
+      "target": "doc_086",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_086",
+      "target": "doc_085",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_087",
+      "target": "doc_088",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_088",
+      "target": "doc_087",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_089",
+      "target": "doc_090",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_090",
+      "target": "doc_089",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_091",
+      "target": "doc_092",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_092",
+      "target": "doc_091",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_093",
+      "target": "doc_094",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_094",
+      "target": "doc_093",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_095",
+      "target": "doc_096",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_096",
+      "target": "doc_095",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_097",
+      "target": "doc_098",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_098",
+      "target": "doc_097",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_099",
+      "target": "doc_100",
+      "type": "relates_to",
+      "weight": 1.0
+    },
+    {
+      "source": "doc_100",
+      "target": "doc_099",
+      "type": "relates_to",
+      "weight": 1.0
+    }
+  ],
+  "queries": [
+    {
+      "query_id": "sem_001",
+      "query_text": "How do multiple nodes agree on a single state when some might fail 0?",
+      "expected_node_ids": [
+        "doc_001"
+      ],
+      "family": "SEMANTIC",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Semantic paraphrase"
+    },
+    {
+      "query_id": "sem_002",
+      "query_text": "How do multiple nodes agree on a single state when some might fail 1?",
+      "expected_node_ids": [
+        "doc_002"
+      ],
+      "family": "SEMANTIC",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Semantic paraphrase"
+    },
+    {
+      "query_id": "sem_003",
+      "query_text": "How do multiple nodes agree on a single state when some might fail 2?",
+      "expected_node_ids": [
+        "doc_003"
+      ],
+      "family": "SEMANTIC",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Semantic paraphrase"
+    },
+    {
+      "query_id": "sem_004",
+      "query_text": "How do multiple nodes agree on a single state when some might fail 3?",
+      "expected_node_ids": [
+        "doc_004"
+      ],
+      "family": "SEMANTIC",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Semantic paraphrase"
+    },
+    {
+      "query_id": "sem_005",
+      "query_text": "How do multiple nodes agree on a single state when some might fail 4?",
+      "expected_node_ids": [
+        "doc_005"
+      ],
+      "family": "SEMANTIC",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Semantic paraphrase"
+    },
+    {
+      "query_id": "sem_006",
+      "query_text": "How do multiple nodes agree on a single state when some might fail 5?",
+      "expected_node_ids": [
+        "doc_006"
+      ],
+      "family": "SEMANTIC",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Semantic paraphrase"
+    },
+    {
+      "query_id": "sem_007",
+      "query_text": "How do multiple nodes agree on a single state when some might fail 6?",
+      "expected_node_ids": [
+        "doc_007"
+      ],
+      "family": "SEMANTIC",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Semantic paraphrase"
+    },
+    {
+      "query_id": "sem_008",
+      "query_text": "How do multiple nodes agree on a single state when some might fail 7?",
+      "expected_node_ids": [
+        "doc_008"
+      ],
+      "family": "SEMANTIC",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Semantic paraphrase"
+    },
+    {
+      "query_id": "sem_009",
+      "query_text": "How do multiple nodes agree on a single state when some might fail 8?",
+      "expected_node_ids": [
+        "doc_009"
+      ],
+      "family": "SEMANTIC",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Semantic paraphrase"
+    },
+    {
+      "query_id": "sem_010",
+      "query_text": "How do multiple nodes agree on a single state when some might fail 9?",
+      "expected_node_ids": [
+        "doc_010"
+      ],
+      "family": "SEMANTIC",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Semantic paraphrase"
+    },
+    {
+      "query_id": "lex_011",
+      "query_text": "xyzzyplugh0 frobnicator usage",
+      "expected_node_ids": [
+        "doc_011"
+      ],
+      "family": "LEXICAL",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Lexical exact match"
+    },
+    {
+      "query_id": "lex_012",
+      "query_text": "xyzzyplugh1 frobnicator usage",
+      "expected_node_ids": [
+        "doc_012"
+      ],
+      "family": "LEXICAL",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Lexical exact match"
+    },
+    {
+      "query_id": "lex_013",
+      "query_text": "xyzzyplugh2 frobnicator usage",
+      "expected_node_ids": [
+        "doc_013"
+      ],
+      "family": "LEXICAL",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Lexical exact match"
+    },
+    {
+      "query_id": "lex_014",
+      "query_text": "xyzzyplugh3 frobnicator usage",
+      "expected_node_ids": [
+        "doc_014"
+      ],
+      "family": "LEXICAL",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Lexical exact match"
+    },
+    {
+      "query_id": "lex_015",
+      "query_text": "xyzzyplugh4 frobnicator usage",
+      "expected_node_ids": [
+        "doc_015"
+      ],
+      "family": "LEXICAL",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Lexical exact match"
+    },
+    {
+      "query_id": "lex_016",
+      "query_text": "xyzzyplugh5 frobnicator usage",
+      "expected_node_ids": [
+        "doc_016"
+      ],
+      "family": "LEXICAL",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Lexical exact match"
+    },
+    {
+      "query_id": "lex_017",
+      "query_text": "xyzzyplugh6 frobnicator usage",
+      "expected_node_ids": [
+        "doc_017"
+      ],
+      "family": "LEXICAL",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Lexical exact match"
+    },
+    {
+      "query_id": "lex_018",
+      "query_text": "xyzzyplugh7 frobnicator usage",
+      "expected_node_ids": [
+        "doc_018"
+      ],
+      "family": "LEXICAL",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Lexical exact match"
+    },
+    {
+      "query_id": "lex_019",
+      "query_text": "xyzzyplugh8 frobnicator usage",
+      "expected_node_ids": [
+        "doc_019"
+      ],
+      "family": "LEXICAL",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Lexical exact match"
+    },
+    {
+      "query_id": "lex_020",
+      "query_text": "xyzzyplugh9 frobnicator usage",
+      "expected_node_ids": [
+        "doc_020"
+      ],
+      "family": "LEXICAL",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Lexical exact match"
+    },
+    {
+      "query_id": "g1_021",
+      "query_text": "information about neural network backpropagation theory number 0",
+      "expected_node_ids": [
+        "doc_022"
+      ],
+      "family": "GRAPH_SINGLE_HOP",
+      "requires_graph_expansion": true,
+      "hop_count": 1,
+      "notes": "Edge-dependent single-hop"
+    },
+    {
+      "query_id": "g1_022",
+      "query_text": "information about neural network backpropagation theory number 1",
+      "expected_node_ids": [
+        "doc_024"
+      ],
+      "family": "GRAPH_SINGLE_HOP",
+      "requires_graph_expansion": true,
+      "hop_count": 1,
+      "notes": "Edge-dependent single-hop"
+    },
+    {
+      "query_id": "g1_023",
+      "query_text": "information about neural network backpropagation theory number 2",
+      "expected_node_ids": [
+        "doc_026"
+      ],
+      "family": "GRAPH_SINGLE_HOP",
+      "requires_graph_expansion": true,
+      "hop_count": 1,
+      "notes": "Edge-dependent single-hop"
+    },
+    {
+      "query_id": "g1_024",
+      "query_text": "information about neural network backpropagation theory number 3",
+      "expected_node_ids": [
+        "doc_028"
+      ],
+      "family": "GRAPH_SINGLE_HOP",
+      "requires_graph_expansion": true,
+      "hop_count": 1,
+      "notes": "Edge-dependent single-hop"
+    },
+    {
+      "query_id": "g1_025",
+      "query_text": "information about neural network backpropagation theory number 4",
+      "expected_node_ids": [
+        "doc_030"
+      ],
+      "family": "GRAPH_SINGLE_HOP",
+      "requires_graph_expansion": true,
+      "hop_count": 1,
+      "notes": "Edge-dependent single-hop"
+    },
+    {
+      "query_id": "g1_026",
+      "query_text": "information about neural network backpropagation theory number 5",
+      "expected_node_ids": [
+        "doc_032"
+      ],
+      "family": "GRAPH_SINGLE_HOP",
+      "requires_graph_expansion": true,
+      "hop_count": 1,
+      "notes": "Edge-dependent single-hop"
+    },
+    {
+      "query_id": "g1_027",
+      "query_text": "information about neural network backpropagation theory number 6",
+      "expected_node_ids": [
+        "doc_034"
+      ],
+      "family": "GRAPH_SINGLE_HOP",
+      "requires_graph_expansion": true,
+      "hop_count": 1,
+      "notes": "Edge-dependent single-hop"
+    },
+    {
+      "query_id": "g1_028",
+      "query_text": "information about neural network backpropagation theory number 7",
+      "expected_node_ids": [
+        "doc_036"
+      ],
+      "family": "GRAPH_SINGLE_HOP",
+      "requires_graph_expansion": true,
+      "hop_count": 1,
+      "notes": "Edge-dependent single-hop"
+    },
+    {
+      "query_id": "g1_029",
+      "query_text": "information about neural network backpropagation theory number 8",
+      "expected_node_ids": [
+        "doc_038"
+      ],
+      "family": "GRAPH_SINGLE_HOP",
+      "requires_graph_expansion": true,
+      "hop_count": 1,
+      "notes": "Edge-dependent single-hop"
+    },
+    {
+      "query_id": "g1_030",
+      "query_text": "information about neural network backpropagation theory number 9",
+      "expected_node_ids": [
+        "doc_040"
+      ],
+      "family": "GRAPH_SINGLE_HOP",
+      "requires_graph_expansion": true,
+      "hop_count": 1,
+      "notes": "Edge-dependent single-hop"
+    },
+    {
+      "query_id": "g2_031",
+      "query_text": "climate change policy 0",
+      "expected_node_ids": [
+        "doc_043"
+      ],
+      "family": "GRAPH_MULTI_HOP",
+      "requires_graph_expansion": true,
+      "hop_count": 2,
+      "notes": "Edge-dependent multi-hop"
+    },
+    {
+      "query_id": "g2_032",
+      "query_text": "climate change policy 1",
+      "expected_node_ids": [
+        "doc_046"
+      ],
+      "family": "GRAPH_MULTI_HOP",
+      "requires_graph_expansion": true,
+      "hop_count": 2,
+      "notes": "Edge-dependent multi-hop"
+    },
+    {
+      "query_id": "g2_033",
+      "query_text": "climate change policy 2",
+      "expected_node_ids": [
+        "doc_049"
+      ],
+      "family": "GRAPH_MULTI_HOP",
+      "requires_graph_expansion": true,
+      "hop_count": 2,
+      "notes": "Edge-dependent multi-hop"
+    },
+    {
+      "query_id": "g2_034",
+      "query_text": "climate change policy 3",
+      "expected_node_ids": [
+        "doc_052"
+      ],
+      "family": "GRAPH_MULTI_HOP",
+      "requires_graph_expansion": true,
+      "hop_count": 2,
+      "notes": "Edge-dependent multi-hop"
+    },
+    {
+      "query_id": "g2_035",
+      "query_text": "climate change policy 4",
+      "expected_node_ids": [
+        "doc_055"
+      ],
+      "family": "GRAPH_MULTI_HOP",
+      "requires_graph_expansion": true,
+      "hop_count": 2,
+      "notes": "Edge-dependent multi-hop"
+    },
+    {
+      "query_id": "g2_036",
+      "query_text": "climate change policy 5",
+      "expected_node_ids": [
+        "doc_058"
+      ],
+      "family": "GRAPH_MULTI_HOP",
+      "requires_graph_expansion": true,
+      "hop_count": 2,
+      "notes": "Edge-dependent multi-hop"
+    },
+    {
+      "query_id": "g2_037",
+      "query_text": "climate change policy 6",
+      "expected_node_ids": [
+        "doc_061"
+      ],
+      "family": "GRAPH_MULTI_HOP",
+      "requires_graph_expansion": true,
+      "hop_count": 2,
+      "notes": "Edge-dependent multi-hop"
+    },
+    {
+      "query_id": "g2_038",
+      "query_text": "climate change policy 7",
+      "expected_node_ids": [
+        "doc_064"
+      ],
+      "family": "GRAPH_MULTI_HOP",
+      "requires_graph_expansion": true,
+      "hop_count": 2,
+      "notes": "Edge-dependent multi-hop"
+    },
+    {
+      "query_id": "g2_039",
+      "query_text": "climate change policy 8",
+      "expected_node_ids": [
+        "doc_067"
+      ],
+      "family": "GRAPH_MULTI_HOP",
+      "requires_graph_expansion": true,
+      "hop_count": 2,
+      "notes": "Edge-dependent multi-hop"
+    },
+    {
+      "query_id": "g2_040",
+      "query_text": "climate change policy 9",
+      "expected_node_ids": [
+        "doc_070"
+      ],
+      "family": "GRAPH_MULTI_HOP",
+      "requires_graph_expansion": true,
+      "hop_count": 2,
+      "notes": "Edge-dependent multi-hop"
+    },
+    {
+      "query_id": "miss_041",
+      "query_text": "solitary confinement 0",
+      "expected_node_ids": [
+        "doc_071"
+      ],
+      "family": "MISSING_ANCHOR",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Missing anchor fallback"
+    },
+    {
+      "query_id": "miss_042",
+      "query_text": "solitary confinement 1",
+      "expected_node_ids": [
+        "doc_072"
+      ],
+      "family": "MISSING_ANCHOR",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Missing anchor fallback"
+    },
+    {
+      "query_id": "miss_043",
+      "query_text": "solitary confinement 2",
+      "expected_node_ids": [
+        "doc_073"
+      ],
+      "family": "MISSING_ANCHOR",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Missing anchor fallback"
+    },
+    {
+      "query_id": "miss_044",
+      "query_text": "solitary confinement 3",
+      "expected_node_ids": [
+        "doc_074"
+      ],
+      "family": "MISSING_ANCHOR",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Missing anchor fallback"
+    },
+    {
+      "query_id": "miss_045",
+      "query_text": "solitary confinement 4",
+      "expected_node_ids": [
+        "doc_075"
+      ],
+      "family": "MISSING_ANCHOR",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Missing anchor fallback"
+    },
+    {
+      "query_id": "miss_046",
+      "query_text": "solitary confinement 5",
+      "expected_node_ids": [
+        "doc_076"
+      ],
+      "family": "MISSING_ANCHOR",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Missing anchor fallback"
+    },
+    {
+      "query_id": "miss_047",
+      "query_text": "solitary confinement 6",
+      "expected_node_ids": [
+        "doc_077"
+      ],
+      "family": "MISSING_ANCHOR",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Missing anchor fallback"
+    },
+    {
+      "query_id": "miss_048",
+      "query_text": "solitary confinement 7",
+      "expected_node_ids": [
+        "doc_078"
+      ],
+      "family": "MISSING_ANCHOR",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Missing anchor fallback"
+    },
+    {
+      "query_id": "miss_049",
+      "query_text": "solitary confinement 8",
+      "expected_node_ids": [
+        "doc_079"
+      ],
+      "family": "MISSING_ANCHOR",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Missing anchor fallback"
+    },
+    {
+      "query_id": "miss_050",
+      "query_text": "solitary confinement 9",
+      "expected_node_ids": [
+        "doc_080"
+      ],
+      "family": "MISSING_ANCHOR",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Missing anchor fallback"
+    },
+    {
+      "query_id": "over_051",
+      "query_text": "apple pie recipe 0",
+      "expected_node_ids": [
+        "doc_081"
+      ],
+      "family": "OVERSMOOTHING",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Oversmoothing adversarial"
+    },
+    {
+      "query_id": "over_052",
+      "query_text": "apple pie recipe 1",
+      "expected_node_ids": [
+        "doc_083"
+      ],
+      "family": "OVERSMOOTHING",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Oversmoothing adversarial"
+    },
+    {
+      "query_id": "over_053",
+      "query_text": "apple pie recipe 2",
+      "expected_node_ids": [
+        "doc_085"
+      ],
+      "family": "OVERSMOOTHING",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Oversmoothing adversarial"
+    },
+    {
+      "query_id": "over_054",
+      "query_text": "apple pie recipe 3",
+      "expected_node_ids": [
+        "doc_087"
+      ],
+      "family": "OVERSMOOTHING",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Oversmoothing adversarial"
+    },
+    {
+      "query_id": "over_055",
+      "query_text": "apple pie recipe 4",
+      "expected_node_ids": [
+        "doc_089"
+      ],
+      "family": "OVERSMOOTHING",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Oversmoothing adversarial"
+    },
+    {
+      "query_id": "over_056",
+      "query_text": "apple pie recipe 5",
+      "expected_node_ids": [
+        "doc_091"
+      ],
+      "family": "OVERSMOOTHING",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Oversmoothing adversarial"
+    },
+    {
+      "query_id": "over_057",
+      "query_text": "apple pie recipe 6",
+      "expected_node_ids": [
+        "doc_093"
+      ],
+      "family": "OVERSMOOTHING",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Oversmoothing adversarial"
+    },
+    {
+      "query_id": "over_058",
+      "query_text": "apple pie recipe 7",
+      "expected_node_ids": [
+        "doc_095"
+      ],
+      "family": "OVERSMOOTHING",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Oversmoothing adversarial"
+    },
+    {
+      "query_id": "over_059",
+      "query_text": "apple pie recipe 8",
+      "expected_node_ids": [
+        "doc_097"
+      ],
+      "family": "OVERSMOOTHING",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Oversmoothing adversarial"
+    },
+    {
+      "query_id": "over_060",
+      "query_text": "apple pie recipe 9",
+      "expected_node_ids": [
+        "doc_099"
+      ],
+      "family": "OVERSMOOTHING",
+      "requires_graph_expansion": false,
+      "hop_count": 0,
+      "notes": "Oversmoothing adversarial"
+    }
+  ]
+}

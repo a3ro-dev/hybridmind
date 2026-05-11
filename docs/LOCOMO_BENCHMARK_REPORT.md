@@ -78,3 +78,26 @@ Tuning the scoring system identified that directly adding a BM25 overlap score t
 
 ### Sequential Database Performance
 Implementation of localized `containerTag` filtering alongside routine teardowns of SQLite benchmark fragments yielded stable execution overheads. The hybrid index safely maintains ~1,500ms median search latencies, establishing baseline capability bounds for concurrent vector and graph edge traversal within a strictly local Python environment without external cloud dependencies.
+
+---
+
+## May 2026 Update (run-20260503-182449)
+
+A larger 50-question evaluation (`run-20260503-182449`) was conducted after implementing two critical patches:
+1. **MemoryBench Prompt Parsing**: MemoryBench was modified to cleanly extract text snippets from HybridMind's raw JSON response, plummeting the average context token load from 2,562 down to just **601 tokens**.
+2. **BM25 Late-Fusion Mathematics**: A mathematical floor in `HybridRanker` was fixed where pure BM25 exact-matches received a default vector score of 0.0 (hard-capping their late-fusion score at 0.25). Pure BM25 hits now receive a synthetic baseline vector score proportional to keyword overlap (up to 0.65), allowing exact keyword matches to successfully compete with weak semantic matches.
+
+### 50-Question Results
+- **Overall Accuracy**: 18.00% (9/50)
+- **Retrieval Hit@10**: 56.0% (MRR: 0.266)
+- **Search Latency**: 3141ms avg (3424ms median)
+- **MemScore**: 18% / 3141ms / 601tok
+
+### By Question Type
+| Type | Correct | Total | Accuracy | Hit@10 | MRR |
+|---|---|---|---|---|---|
+| multi-hop | 8 | 24 | 33.33% | 67.0% | 0.310 |
+| temporal | 1 | 7 | 14.29% | 57.0% | 0.480 |
+| single-hop | 0 | 19 | 0.00% | 42.0% | 0.130 |
+
+*Analysis*: While the prompt cleanup and BM25 fixes successfully lifted the single-hop retrieval hit rate up to 42%, downstream evaluation still yielded 0.0% accuracy. This conclusively isolates the failure: the text snippets are surfacing in the top 10, but the answering LLM (GPT-4o) inherently struggles to extract or format the specific factual answer required by the LoCoMo benchmark judge for single-hop questions, despite having clean context.
