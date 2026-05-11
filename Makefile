@@ -14,4 +14,6 @@ benchmark:
 report: benchmark
 	python3 benchmarks/generate_report.py
 
-full-eval: report test
+full-eval:
+	$(MAKE) report
+	$(MAKE) test

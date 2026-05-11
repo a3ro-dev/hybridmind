@@ -106,9 +106,15 @@ def run_ablations():
             try:
                 if condition_name == "B: BM25_ONLY":
                     # Special handling for BM25 only to ensure vector is totally 0
-                    res, _, _ = hybrid_ranker.search(
-                        query_text=q['query_text'], top_k=10, vector_weight=1.0, graph_weight=0.0, bm25_boost_weight=1.0
-                    )
+                    # We temporarily patch vector search to return nothing so ONLY bm25 hits are scored
+                    original_search = vector_search.search
+                    vector_search.search = lambda *args, **kwargs: ([], 0.0, 0)
+                    try:
+                        res, _, _ = hybrid_ranker.search(
+                            query_text=q['query_text'], top_k=10, vector_weight=1.0, graph_weight=0.0, bm25_boost_weight=1.0
+                        )
+                    finally:
+                        vector_search.search = original_search
                 else:
                     res, _, _ = hybrid_ranker.search(
                         query_text=q['query_text'],

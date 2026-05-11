@@ -151,7 +151,10 @@ class EmbeddingEngine:
         """
         own_embedding = self._do_embed(text, normalize=False)
         if getattr(self, 'disable_neighborhood_averaging', False):
-            return own_embedding / np.linalg.norm(own_embedding) if np.linalg.norm(own_embedding) > 0 else own_embedding
+            norm = np.linalg.norm(own_embedding)
+            if norm > 0:
+                return own_embedding / norm
+            return own_embedding
         if not neighbor_embeddings:
             norm = np.linalg.norm(own_embedding)
             if norm > 0:

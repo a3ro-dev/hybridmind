@@ -39,7 +39,7 @@ def generate():
 
         f.write("## Results\n")
         f.write("| Condition | Family | Recall@1 | Recall@3 | Recall@5 | Recall@10 | Precision@1 | Precision@3 | MRR |\n")
-        f.write("|---|---|---|---|---|---|---|---|\n")
+        f.write("|---|---|---|---|---|---|---|---|---|\n")
 
         for condition, families in results.items():
             for family, metrics in families.items():
