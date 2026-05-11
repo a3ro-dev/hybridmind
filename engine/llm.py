@@ -1,8 +1,9 @@
 """
 LLM Engine for processing unstructured data.
 
-Uses OSM API with Qwen3.5 397B A17B for intelligent
+Uses HackClub OpenAI-compatible proxy with claude-haiku-latest for intelligent
 extraction of entities, relationships, and metadata from text.
+Called ONLY at ingest time — never at query time.
 """
 
 import json
@@ -28,43 +29,49 @@ class ExtractedData:
 class LLMEngine:
     """
     LLM-powered engine for processing unstructured data.
-    
-    Uses OSM API to access various LLM providers
-    through a unified OpenAI-compatible API.
+
+    Uses HackClub OpenAI-compatible proxy (claude-haiku-latest) for fact
+    extraction at ingest time. Zero LLM calls at query time.
     """
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "qwen3.5-397b-a17b",
-        base_url: str = "https://api.osmapi.com/v1"
+        model: str = "anthropic/claude-haiku-latest",
+        base_url: str = "https://ai.hackclub.com"
     ):
         """
         Initialize the LLM engine.
-        
+
         Args:
-            api_key: OSM API key (defaults to env var)
-            model: Model to use (default: qwen3.5-397b-a17b)
-            base_url: OSM API URL
+            api_key: HackClub API key (defaults to HACKCLUB_API_KEY env var,
+                     fallback to HC_API_KEY, then OPENAI_API_KEY)
+            model: Model to use (default: anthropic/claude-haiku-latest)
+            base_url: HackClub proxy base URL
         """
-        self.api_key = api_key or os.getenv("OSM_API_KEY")
+        self.api_key = (
+            api_key
+            or os.getenv("HACKCLUB_API_KEY")
+            or os.getenv("HC_API_KEY")
+            or os.getenv("OPENAI_API_KEY")
+        )
         if not self.api_key:
             raise ValueError(
-                "API key required. Set OSM_API_KEY env var or pass api_key"
+                "API key required. Set HACKCLUB_API_KEY env var or pass api_key"
             )
-        
+
         self.model = model
         self.client = OpenAI(
             api_key=self.api_key,
             base_url=base_url
         )
-    
+
     def extract_metadata(self, text: str) -> ExtractedData:
         """
         Extract structured metadata from unstructured text.
-        
+
         Args:
             text: Raw unstructured text to process
-            
+
         Returns:
             ExtractedData with entities, topics, relationships, etc.
         """
@@ -99,23 +106,23 @@ Return ONLY valid JSON, no markdown or explanation."""
                     "content": "You are a precise data extraction assistant. Extract structured information from text and return valid JSON only."
                 },
                 {
-                    "role": "user", 
+                    "role": "user",
                     "content": prompt
                 }
             ],
             temperature=0.1,
             max_tokens=2000
         )
-        
+
         content = response.choices[0].message.content.strip()
-        
+
         # Clean up response (remove markdown if present)
         if content.startswith("```"):
             content = content.split("```")[1]
             if content.startswith("json"):
                 content = content[4:]
         content = content.strip()
-        
+
         try:
             data = json.loads(content)
             return ExtractedData(
@@ -138,14 +145,14 @@ Return ONLY valid JSON, no markdown or explanation."""
                 sentiment="neutral",
                 language="en"
             )
-    
+
     def process_unstructured(self, text: str) -> dict:
         """
         Process unstructured text and return nodes and edges for the knowledge graph.
-        
+
         Args:
             text: Raw unstructured text (can be very large)
-            
+
         Returns:
             Dict with 'nodes' and 'edges' ready for import
         """
@@ -204,9 +211,9 @@ Return ONLY valid JSON."""
             temperature=0.1,
             max_tokens=4000
         )
-        
+
         content = response.choices[0].message.content.strip()
-        
+
         # Clean up response
         if content.startswith("```"):
             lines = content.split("\n")
@@ -214,7 +221,7 @@ Return ONLY valid JSON."""
             if content.startswith("json"):
                 content = content[4:]
         content = content.strip()
-        
+
         try:
             return json.loads(content)
         except json.JSONDecodeError as e:
@@ -223,7 +230,7 @@ Return ONLY valid JSON."""
                 "edges": [],
                 "summary": "Failed to parse - raw text stored"
             }
-    
+
     def smart_chunk(self, text: str, max_chunk_size: int = 1500) -> list[dict]:
         """
         Intelligently chunk text based on semantic boundaries.
@@ -263,23 +270,23 @@ Return ONLY valid JSON."""
             temperature=0.1,
             max_tokens=4000
         )
-        
+
         content = response.choices[0].message.content.strip()
-        
+
         if content.startswith("```"):
             lines = content.split("\n")
             content = "\n".join(lines[1:-1] if lines[-1] == "```" else lines[1:])
             if content.startswith("json"):
                 content = content[4:]
         content = content.strip()
-        
+
         try:
             return json.loads(content)
         except json.JSONDecodeError:
             paragraphs = text.split("\n\n")
-            return [{"text": p.strip(), "topic": "", "entities": []} 
+            return [{"text": p.strip(), "topic": "", "entities": []}
                     for p in paragraphs if len(p.strip()) > 50]
-    
+
     def chat(self, message: str, context: Optional[str] = None) -> str:
         """Simple chat interface for ad-hoc queries."""
         messages = [
@@ -288,7 +295,7 @@ Return ONLY valid JSON."""
                 "content": "You are a helpful assistant for a knowledge database system."
             }
         ]
-        
+
         if context:
             messages.append({
                 "role": "user",
@@ -299,14 +306,14 @@ Return ONLY valid JSON."""
                 "role": "user",
                 "content": message
             })
-        
+
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
             temperature=0.7,
             max_tokens=1000
         )
-        
+
         return response.choices[0].message.content
 
 

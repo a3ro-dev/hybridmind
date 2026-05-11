@@ -1,188 +1,170 @@
 """
 Embedding pipeline for HybridMind.
-Generates vector embeddings using sentence-transformers.
+Generates vector embeddings using qwen/qwen3-embedding-8b via HackClub
+OpenAI-compatible API (d=4096).
+
+Falls back to mock embeddings if API is unavailable.
 """
 
 import logging
+import os
 from typing import List, Optional, Union
 import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# Try to import sentence-transformers
+# Try to import openai for API-based embeddings
 try:
-    from sentence_transformers import SentenceTransformer
-    TRANSFORMERS_AVAILABLE = True
+    from openai import OpenAI
+    OPENAI_AVAILABLE = True
 except ImportError:
-    TRANSFORMERS_AVAILABLE = False
+    OPENAI_AVAILABLE = False
     logger.warning(
-        "sentence-transformers not available. "
-        "Using mock embeddings. Install with: pip install sentence-transformers"
+        "openai package not available. "
+        "Using mock embeddings. Install with: pip install openai"
     )
+
+# Default embedding model and dimension
+_DEFAULT_MODEL = "qwen/qwen3-embedding-8b"
+_DEFAULT_DIMENSION = 4096
+_DEFAULT_BASE_URL = "https://ai.hackclub.com"
 
 
 class EmbeddingEngine:
     """
-    Embedding generation using sentence-transformers.
-    Falls back to mock embeddings if library not available.
-    Auto-detects GPU for faster inference.
+    Embedding generation using qwen3-embedding-8b via HackClub OpenAI-compatible API.
+    Returns 4096-dimensional vectors.
+    Falls back to mock embeddings if API is unavailable.
     """
 
     def __init__(
         self,
-        model_name: str = "all-MiniLM-L6-v2",
-        device: Optional[str] = None,
-        cache_folder: Optional[str] = None
+        model_name: str = _DEFAULT_MODEL,
+        device: Optional[str] = None,  # kept for API compatibility; ignored
+        cache_folder: Optional[str] = None  # kept for API compatibility; ignored
     ):
         """
         Initialize embedding engine.
 
         Args:
-            model_name: Name of the sentence-transformer model
-            device: Device to run model on ('cpu', 'cuda', 'auto'). If None, auto-detects GPU.
-            cache_folder: Folder to cache model files
+            model_name: Embedding model name (default: qwen/qwen3-embedding-8b)
+            device: Ignored (kept for backward compat)
+            cache_folder: Ignored (kept for backward compat)
         """
         self.model_name = model_name
-        self._model = None
-        self._cache_folder = cache_folder
-        self._dimension: Optional[int] = None
+        self._dimension: int = _DEFAULT_DIMENSION
 
-        # Auto-detect GPU if device not specified
-        if device is None or device == "auto":
+        # Resolve API credentials
+        api_key = (
+            os.getenv("HACKCLUB_API_KEY")
+            or os.getenv("HC_API_KEY")
+            or os.getenv("OPENAI_API_KEY")
+        )
+        base_url = os.getenv("OPENAI_BASE_URL") or _DEFAULT_BASE_URL
+
+        self._client: Optional["OpenAI"] = None
+        if OPENAI_AVAILABLE and api_key:
             try:
-                import torch
-                if torch.cuda.is_available():
-                    self._device = "cuda"
-                    logger.info(f"GPU detected: {torch.cuda.get_device_name(0)} - using CUDA")
-                else:
-                    self._device = "cpu"
-                    logger.info("No GPU detected - using CPU")
-            except ImportError:
-                self._device = "cpu"
-        else:
-            self._device = device
-
-        # Default dimensions for known models
-        self._known_dimensions = {
-            "all-MiniLM-L6-v2": 384,
-            "all-MiniLM-L12-v2": 384,
-            "all-mpnet-base-v2": 768,
-            "paraphrase-MiniLM-L6-v2": 384,
-            "paraphrase-mpnet-base-v2": 768,
-        }
-
-    @property
-    def model(self) -> Optional["SentenceTransformer"]:
-        """Lazy load the model."""
-        if self._model is None and TRANSFORMERS_AVAILABLE:
-            try:
-                logger.info(f"Loading embedding model: {self.model_name}")
-                self._model = SentenceTransformer(
-                    self.model_name,
-                    device=self._device,
-                    cache_folder=self._cache_folder
+                self._client = OpenAI(api_key=api_key, base_url=base_url)
+                logger.info(
+                    f"EmbeddingEngine initialized: model={model_name}, "
+                    f"base_url={base_url}, dimension={self._dimension}"
                 )
-                self._dimension = self._model.get_sentence_embedding_dimension()
-                logger.info(f"Model loaded. Dimension: {self._dimension}")
             except Exception as e:
-                logger.error(f"Failed to load model: {e}")
-                self._model = None
-        return self._model
+                logger.error(f"Failed to create OpenAI client: {e}")
+                self._client = None
+        else:
+            if not OPENAI_AVAILABLE:
+                logger.warning("openai package not installed — using mock embeddings")
+            else:
+                logger.warning("No API key found — using mock embeddings")
 
     @property
     def dimension(self) -> int:
-        """Get embedding dimension."""
-        if self._dimension is not None:
-            return self._dimension
-
-        # Try to get from loaded model
-        if self.model is not None:
-            return self._dimension
-
-        # Fall back to known dimensions
-        return self._known_dimensions.get(self.model_name, 384)
+        """Get embedding dimension (always 4096 for qwen3-embedding-8b)."""
+        return self._dimension
 
     @property
     def is_available(self) -> bool:
-        """Check if embedding model is available."""
-        return self.model is not None
+        """Check if embedding client is available."""
+        return self._client is not None
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _call_api(self, texts: List[str]) -> List[np.ndarray]:
+        """Call the embedding API for a list of texts."""
+        if self._client is None:
+            return [self._mock_embed(t) for t in texts]
+
+        try:
+            response = self._client.embeddings.create(
+                model=self.model_name,
+                input=texts
+            )
+            # Sort by index to preserve order (API may reorder)
+            sorted_data = sorted(response.data, key=lambda x: x.index)
+            return [np.array(item.embedding, dtype=np.float32) for item in sorted_data]
+        except Exception as e:
+            logger.error(f"Embedding API call failed: {e}. Falling back to mock.")
+            return [self._mock_embed(t) for t in texts]
+
+    def _normalize(self, vec: np.ndarray) -> np.ndarray:
+        """L2-normalize a vector in-place."""
+        norm = float(np.linalg.norm(vec))
+        if norm > 0:
+            return (vec / norm).astype(np.float32)
+        return vec
+
+    def _mock_embed(self, text: str) -> np.ndarray:
+        """
+        Generate a deterministic mock embedding from text hash.
+        Provides stable embeddings for testing without an API key.
+        """
+        import hashlib
+        text_hash = hashlib.md5(text.encode()).hexdigest()
+        np.random.seed(int(text_hash[:8], 16) % (2**32))
+        embedding = np.random.randn(self._dimension).astype(np.float32)
+        return self._normalize(embedding)
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
 
     def embed(self, text: str, normalize: bool = True) -> np.ndarray:
         """
-        Generate embedding for a single text with a timeout.
+        Generate embedding for a single text.
+
+        Args:
+            text: Input text
+            normalize: Whether to L2-normalize (default True)
+
+        Returns:
+            Embedding vector of shape (4096,)
         """
         import concurrent.futures
         from config import settings
-        from fastapi import HTTPException
-
-        timeout = getattr(settings, "embedding_timeout_seconds", 30)
+        timeout = getattr(settings, "embedding_timeout_seconds", 60)
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(self._do_embed, text, normalize)
             try:
                 return future.result(timeout=timeout)
             except concurrent.futures.TimeoutError:
-                raise HTTPException(status_code=503, detail="Embedding model unavailable")
+                try:
+                    from fastapi import HTTPException
+                    raise HTTPException(status_code=503, detail="Embedding model unavailable")
+                except ImportError:
+                    raise TimeoutError("Embedding API timed out")
 
     def _do_embed(self, text: str, normalize: bool = True) -> np.ndarray:
-        """
-        Actual embedding generation logic.
-        """
-        if self.model is not None:
-            embedding = self.model.encode(
-                text,
-                normalize_embeddings=normalize,
-                convert_to_numpy=True,
-                show_progress_bar=False
-            )
-            return embedding.astype(np.float32)
-        else:
-            # Mock embedding for testing without model
-            return self._mock_embed(text, normalize)
-
-    def embed_with_graph_context(
-        self,
-        text: str,
-        neighbor_embeddings: List[np.ndarray],
-        alpha: float = 0.7
-    ) -> np.ndarray:
-        """
-        Generate a graph-conditioned embedding using CRS logic: alpha * V + beta * G.
-        """
-        own_embedding = self._do_embed(text, normalize=False)
-        if getattr(self, 'disable_neighborhood_averaging', False):
-            norm = np.linalg.norm(own_embedding)
-            if norm > 0:
-                return own_embedding / norm
-            return own_embedding
-        if not neighbor_embeddings:
-            norm = np.linalg.norm(own_embedding)
-            if norm > 0:
-                return own_embedding / norm
-            return own_embedding
-
-        neighbor_mean = np.mean(neighbor_embeddings, axis=0)
-        final = alpha * own_embedding + (1.0 - alpha) * neighbor_mean
-
-        norm = np.linalg.norm(final)
-        if norm > 0:
-            final_normed = (final / norm).astype(np.float32)
-        else:
-            final_normed = final.astype(np.float32)
-
-        # Debug: report conditioning effect
-        own_norm_val = np.linalg.norm(own_embedding)
-        if own_norm_val > 0:
-            own_normed = own_embedding / own_norm_val
-            cosine_diff = 1.0 - float(np.dot(own_normed, final_normed))
-        else:
-            cosine_diff = 0.0
-        logger.debug(
-            f"Graph conditioning: {len(neighbor_embeddings)} neighbors, "
-            f"alpha={alpha}, cosine_diff={cosine_diff:.4f}"
-        )
-
-        return final_normed
+        """Actual embedding logic (no timeout wrapper)."""
+        vectors = self._call_api([text])
+        vec = vectors[0]
+        if normalize:
+            vec = self._normalize(vec)
+        return vec
 
     def embed_batch(
         self,
@@ -197,77 +179,64 @@ class EmbeddingEngine:
         Args:
             texts: List of input texts
             normalize: Whether to L2-normalize embeddings
-            batch_size: Processing batch size
-            show_progress: Show progress bar
+            batch_size: API batch size
+            show_progress: Show progress bar (currently ignored)
 
         Returns:
-            Array of embedding vectors (num_texts x dimension)
+            Array of embedding vectors (num_texts × 4096)
         """
         if not texts:
-            return np.array([]).reshape(0, self.dimension)
+            return np.array([]).reshape(0, self._dimension)
 
-        if self.model is not None:
-            embeddings = self.model.encode(
-                texts,
-                normalize_embeddings=normalize,
-                convert_to_numpy=True,
-                batch_size=batch_size,
-                show_progress_bar=show_progress
-            )
-            return embeddings.astype(np.float32)
-        else:
-            # Mock embeddings for testing
-            return np.vstack([self._mock_embed(t, normalize) for t in texts])
+        all_vectors: List[np.ndarray] = []
 
-    def _mock_embed(self, text: str, normalize: bool = True) -> np.ndarray:
+        # Process in batches to respect API limits
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i: i + batch_size]
+            vecs = self._call_api(batch)
+            if normalize:
+                vecs = [self._normalize(v) for v in vecs]
+            all_vectors.extend(vecs)
+
+        return np.vstack(all_vectors).astype(np.float32)
+
+    def embed_with_graph_context(
+        self,
+        text: str,
+        neighbor_embeddings: List[np.ndarray],
+        alpha: float = 0.7
+    ) -> np.ndarray:
         """
-        Generate mock embedding based on text hash.
-        Provides deterministic embeddings for testing.
-
-        Args:
-            text: Input text
-            normalize: Whether to normalize
-
-        Returns:
-            Mock embedding vector
+        Generate a graph-conditioned embedding: alpha*V + (1-alpha)*G_mean.
         """
-        # Use hash for deterministic results
-        import hashlib
-        text_hash = hashlib.md5(text.encode()).hexdigest()
+        own_embedding = self._do_embed(text, normalize=False)
+        if getattr(self, "disable_neighborhood_averaging", False) or not neighbor_embeddings:
+            return self._normalize(own_embedding)
 
-        # Generate pseudo-random vector from hash
-        np.random.seed(int(text_hash[:8], 16) % (2**32))
-        embedding = np.random.randn(self.dimension).astype(np.float32)
+        neighbor_mean = np.mean(neighbor_embeddings, axis=0)
+        final = alpha * own_embedding + (1.0 - alpha) * neighbor_mean
 
-        if normalize:
-            norm = np.linalg.norm(embedding)
-            if norm > 0:
-                embedding = embedding / norm
+        final_normed = self._normalize(final)
 
-        return embedding
+        # Debug: report conditioning effect
+        own_normed = self._normalize(own_embedding.copy())
+        cosine_diff = 1.0 - float(np.dot(own_normed, final_normed))
+        logger.debug(
+            f"Graph conditioning: {len(neighbor_embeddings)} neighbors, "
+            f"alpha={alpha}, cosine_diff={cosine_diff:.4f}"
+        )
+        return final_normed
 
     def compute_similarity(
         self,
         embedding1: np.ndarray,
         embedding2: np.ndarray
     ) -> float:
-        """
-        Compute cosine similarity between two embeddings.
-
-        Args:
-            embedding1: First embedding
-            embedding2: Second embedding
-
-        Returns:
-            Cosine similarity score (-1 to 1)
-        """
-        # Normalize if needed
+        """Compute cosine similarity between two embeddings."""
         norm1 = np.linalg.norm(embedding1)
         norm2 = np.linalg.norm(embedding2)
-
         if norm1 == 0 or norm2 == 0:
             return 0.0
-
         return float(np.dot(embedding1, embedding2) / (norm1 * norm2))
 
     def compute_similarity_batch(
@@ -275,32 +244,24 @@ class EmbeddingEngine:
         query_embedding: np.ndarray,
         embeddings: np.ndarray
     ) -> np.ndarray:
-        """
-        Compute cosine similarity between query and multiple embeddings.
-
-        Args:
-            query_embedding: Query vector (dimension,)
-            embeddings: Matrix of embeddings (n x dimension)
-
-        Returns:
-            Array of similarity scores (n,)
-        """
-        # Normalize query
+        """Compute cosine similarity between query and multiple embeddings."""
         query_norm = np.linalg.norm(query_embedding)
         if query_norm > 0:
             query_normalized = query_embedding / query_norm
         else:
             return np.zeros(len(embeddings))
 
-        # Normalize embeddings
         norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
-        norms = np.where(norms > 0, norms, 1)  # Avoid division by zero
+        norms = np.where(norms > 0, norms, 1)
         embeddings_normalized = embeddings / norms
 
-        # Compute dot products
-        similarities = np.dot(embeddings_normalized, query_normalized)
+        return np.dot(embeddings_normalized, query_normalized)
 
-        return similarities
+    # Legacy compatibility: expose a .model attribute that some callers check
+    @property
+    def model(self):
+        """Legacy compatibility — returns self if client is available."""
+        return self if self._client is not None else None
 
 
 # Singleton instance for shared use
@@ -308,7 +269,7 @@ _embedding_engine: Optional[EmbeddingEngine] = None
 
 
 def get_embedding_engine(
-    model_name: str = "all-MiniLM-L6-v2"
+    model_name: str = _DEFAULT_MODEL
 ) -> EmbeddingEngine:
     """Get or create embedding engine singleton."""
     global _embedding_engine

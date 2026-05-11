@@ -59,11 +59,15 @@ class VectorIndex:
         # Soft delete tracking
         self.deleted_ids: Set[str] = set()
         
+        # Raw vector cache for compaction (HNSW does not support reconstruct())
+        self._raw_vectors: Dict[int, np.ndarray] = {}
+        
         # Initialize index
         if FAISS_AVAILABLE:
-            self.index = faiss.IndexFlatIP(dimension)
+            self.index = faiss.IndexHNSWFlat(dimension, 32)
+            self.index.hnsw.efSearch = 64
             self._use_faiss = True
-            logger.info(f"FAISS vector index initialized: dimension={dimension}")
+            logger.info(f"FAISS HNSW vector index initialized: dimension={dimension}")
         else:
             # Fallback to NumPy-based search
             self._vectors: List[np.ndarray] = []
@@ -121,6 +125,8 @@ class VectorIndex:
         
         if self._use_faiss:
             self.index.add(normalized.reshape(1, -1))
+            # Cache raw vector for compaction (HNSW doesn't support reconstruct)
+            self._raw_vectors[idx] = normalized.copy()
         else:
             self._vectors.append(normalized)
         
@@ -160,6 +166,9 @@ class VectorIndex:
         if self._use_faiss:
             vectors_array = np.vstack(vectors).astype(np.float32)
             self.index.add(vectors_array)
+            # Cache raw vectors for compaction
+            for i, v in enumerate(vectors):
+                self._raw_vectors[start_idx + i] = v.copy()
         else:
             self._vectors.extend(vectors)
         
@@ -216,9 +225,11 @@ class VectorIndex:
         for idx, node_id in sorted(self.id_map.items()):
             if node_id not in self.deleted_ids:
                 if self._use_faiss:
-                    # Reconstruct vector from FAISS index
-                    vec = np.zeros(self.dimension, dtype=np.float32)
-                    self.index.reconstruct(idx, vec)
+                    # Use raw vector cache — HNSW does not support reconstruct()
+                    vec = self._raw_vectors.get(idx)
+                    if vec is None:
+                        logger.warning(f"Missing cached vector for idx={idx}, skipping")
+                        continue
                 else:
                     vec = self._vectors[idx]
                 remaining.append(vec)
@@ -238,7 +249,9 @@ class VectorIndex:
         """Rebuild index with new vectors."""
         # Clear current index
         if self._use_faiss:
-            self.index = faiss.IndexFlatIP(self.dimension)
+            self.index = faiss.IndexHNSWFlat(self.dimension, 32)
+            self.index.hnsw.efSearch = 64
+            self._raw_vectors = {}
         else:
             self._vectors = []
         
@@ -250,6 +263,8 @@ class VectorIndex:
             if self._use_faiss:
                 vectors_array = np.vstack(vectors).astype(np.float32)
                 self.index.add(vectors_array)
+                for i, v in enumerate(vectors):
+                    self._raw_vectors[i] = v.copy()
             else:
                 self._vectors = vectors
             
@@ -343,9 +358,11 @@ class VectorIndex:
         idx = self.reverse_map[node_id]
         
         if self._use_faiss:
-            vec = np.zeros(self.dimension, dtype=np.float32)
-            self.index.reconstruct(idx, vec)
-            return vec
+            # Use raw vector cache — HNSW does not support reconstruct()
+            vec = self._raw_vectors.get(idx)
+            if vec is not None:
+                return vec.copy()
+            return None
         else:
             return self._vectors[idx].copy()
     
@@ -368,6 +385,7 @@ class VectorIndex:
             "deleted_ids": self.deleted_ids,
             "use_faiss": self._use_faiss,
             "deletion_threshold": self.deletion_threshold,
+            "raw_vectors": self._raw_vectors,
         }
         
         if self._use_faiss:
@@ -397,6 +415,7 @@ class VectorIndex:
         self.reverse_map = data["reverse_map"]
         self.deleted_ids = data.get("deleted_ids", set())
         self.deletion_threshold = data.get("deletion_threshold", 0.2)
+        self._raw_vectors = data.get("raw_vectors", {})
         
         if data.get("use_faiss", False) and FAISS_AVAILABLE:
             faiss_path = load_path.with_suffix('.faiss')
@@ -421,7 +440,9 @@ class VectorIndex:
         """
         # BUG-2 fix: explicitly reset all state before rebuilding
         if self._use_faiss:
-            self.index = faiss.IndexFlatIP(self.dimension)
+            self.index = faiss.IndexHNSWFlat(self.dimension, 32)
+            self.index.hnsw.efSearch = 64
+            self._raw_vectors = {}
         else:
             self._vectors = []
         self.id_map = {}
@@ -445,6 +466,8 @@ class VectorIndex:
             if self._use_faiss:
                 vectors_array = np.vstack(vectors).astype(np.float32)
                 self.index.add(vectors_array)
+                for i, v in enumerate(vectors):
+                    self._raw_vectors[i] = v.copy()
             else:
                 self._vectors = vectors
 
@@ -457,7 +480,9 @@ class VectorIndex:
     def clear(self):
         """Clear all vectors from index."""
         if self._use_faiss:
-            self.index = faiss.IndexFlatIP(self.dimension)
+            self.index = faiss.IndexHNSWFlat(self.dimension, 32)
+            self.index.hnsw.efSearch = 64
+            self._raw_vectors = {}
         else:
             self._vectors = []
         self.id_map = {}

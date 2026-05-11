@@ -36,8 +36,8 @@ class Settings(BaseSettings):
     graph_index_path: str = "data/hybridmind.mind/graph.nx"
     
     # Embedding
-    embedding_model: str = "all-MiniLM-L6-v2"
-    embedding_dimension: int = 384
+    embedding_model: str = "qwen/qwen3-embedding-8b"
+    embedding_dimension: int = 4096
     use_graph_conditioned_embeddings: bool = True
     embedding_timeout_seconds: int = 30
     

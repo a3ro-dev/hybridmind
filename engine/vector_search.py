@@ -60,7 +60,8 @@ class VectorSearchEngine:
         query_embedding = self.embedding_engine.embed(query_text)
         
         # Search vector index (get extra candidates for filtering + dedup headroom)
-        search_k = 100000 if filter_metadata else top_k * 3
+        # Cap at min(top_k * 20, 2000) to avoid full-index scans on filtered searches
+        search_k = min(top_k * 20, 2000) if filter_metadata else top_k * 3
         candidates = self.vector_index.search(
             query_embedding,
             top_k=search_k,

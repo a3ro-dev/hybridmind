@@ -14,7 +14,7 @@ import logging
 import time
 import psutil
 from contextlib import asynccontextmanager
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -634,6 +634,127 @@ async def clear_database():
         return {"status": "success", "message": "Database cleared"}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+# ==================== Ingest Helpers ====================
+
+class SessionTurn(BaseModel):
+    """A single conversation turn for fact extraction."""
+    speaker: str = ""
+    text: str
+    date: str = ""
+
+
+class SessionFactsRequest(BaseModel):
+    """Request body for /ingest/session-facts."""
+    session_id: str
+    turns: List[SessionTurn]
+    container_tag: Optional[str] = None
+
+
+class SessionFactsResponse(BaseModel):
+    """Response from /ingest/session-facts."""
+    session_id: str
+    facts_extracted: int
+    node_ids: List[str]
+
+
+@app.post("/ingest/session-facts", response_model=SessionFactsResponse, tags=["Ingest"])
+async def ingest_session_facts(request: SessionFactsRequest):
+    """
+    Extract facts from a conversation session using Claude-Haiku and store them
+    as 'extracted_fact' nodes in HybridMind.
+
+    Called ONCE per LoCoMo session at ingest time. Never at query time.
+
+    Args:
+        request.session_id: Unique session identifier
+        request.turns: List of {speaker, text, date} dicts
+        request.container_tag: Optional container/run tag for the nodes
+
+    Returns:
+        List of created node IDs for the extracted facts.
+    """
+    import uuid as _uuid
+    import numpy as _np
+    from engine.fact_extractor import extract_facts_from_session
+    from engine.cache import invalidate_cache
+
+    # Convert pydantic models to plain dicts for the extractor
+    turns_dicts = [
+        {"speaker": t.speaker, "text": t.text, "date": t.date}
+        for t in request.turns
+    ]
+
+    # Run LLM-based fact extraction (ingest-time only)
+    try:
+        facts = extract_facts_from_session(turns_dicts)
+    except Exception as e:
+        logger.error(f"Fact extraction failed for session {request.session_id}: {e}")
+        facts = []
+
+    if not facts:
+        return SessionFactsResponse(
+            session_id=request.session_id,
+            facts_extracted=0,
+            node_ids=[]
+        )
+
+    db_manager = get_db_manager()
+    node_ids: List[str] = []
+
+    for fact in facts:
+        fact_text = fact.get("fact", "").strip()
+        if not fact_text:
+            continue
+
+        node_id = str(_uuid.uuid4())
+        metadata = {
+            "type": "extracted_fact",
+            "session_id": request.session_id,
+            "entities": fact.get("entities", []),
+            "date": fact.get("date", ""),
+        }
+        if request.container_tag:
+            metadata["container_tag"] = request.container_tag
+
+        # Generate embedding
+        try:
+            embedding = db_manager.embedding_engine.embed(fact_text)
+        except Exception as e:
+            logger.warning(f"Embedding failed for fact node: {e}")
+            embedding = _np.zeros(db_manager.vector_index.dimension, dtype=_np.float32)
+
+        # Store in SQLite
+        db_manager.sqlite_store.create_node(
+            node_id=node_id,
+            text=fact_text,
+            metadata=metadata,
+            embedding=embedding,
+            raw_embedding=embedding,
+        )
+
+        # Add to vector index
+        db_manager.vector_index.add(node_id, embedding)
+
+        # Add to graph index
+        db_manager.graph_index.add_node(node_id)
+
+        node_ids.append(node_id)
+
+    invalidate_cache()
+
+    logger.info(
+        f"session-facts: session={request.session_id}, "
+        f"turns={len(turns_dicts)}, facts={len(node_ids)} nodes created"
+    )
+
+    return SessionFactsResponse(
+        session_id=request.session_id,
+        facts_extracted=len(node_ids),
+        node_ids=node_ids,
+    )
+
 
 
 if __name__ == "__main__":
