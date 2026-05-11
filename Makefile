@@ -11,7 +11,7 @@ test-slow:
 benchmark:
 	python3 benchmarks/ablation_runner.py
 
-report:
+report: benchmark
 	python3 benchmarks/generate_report.py
 
-full-eval: benchmark report test
+full-eval: report test

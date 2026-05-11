@@ -150,6 +150,8 @@ class EmbeddingEngine:
         Generate a graph-conditioned embedding using CRS logic: alpha * V + beta * G.
         """
         own_embedding = self._do_embed(text, normalize=False)
+        if getattr(self, 'disable_neighborhood_averaging', False):
+            return own_embedding / np.linalg.norm(own_embedding) if np.linalg.norm(own_embedding) > 0 else own_embedding
         if not neighbor_embeddings:
             norm = np.linalg.norm(own_embedding)
             if norm > 0:

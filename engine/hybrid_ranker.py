@@ -180,8 +180,9 @@ class HybridRanker:
                     neighbors, _, _ = self.graph_engine.traverse(start_id=ref, depth=max_depth)
                     for n in neighbors:
                         expanded_candidates.add(n["node_id"])
-                except Exception:
-                    pass
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).warning(f"Graph traversal failed for {ref}: {e}")
 
         # Add the expanded candidates to our node_data and rolled_up_scores if missing
         expanded_candidates_list = list(expanded_candidates)

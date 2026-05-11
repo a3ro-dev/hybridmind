@@ -78,11 +78,11 @@
       "recall@1": 0.0,
       "recall@3": 0.0,
       "recall@5": 0.0,
-      "recall@10": 0.1,
+      "recall@10": 0.0,
       "precision@1": 0.0,
       "precision@3": 0.0,
-      "mrr": 0.016666666666666666,
-      "hit_count": 1,
+      "mrr": 0.0,
+      "hit_count": 0,
       "total": 10,
       "crash_count": 0
     },
@@ -135,14 +135,14 @@
       "crash_count": 0
     },
     "OVERSMOOTHING": {
-      "recall@1": 0.0,
-      "recall@3": 0.0,
-      "recall@5": 0.0,
-      "recall@10": 0.0,
-      "precision@1": 0.0,
-      "precision@3": 0.0,
-      "mrr": 0.0,
-      "hit_count": 0,
+      "recall@1": 0.1,
+      "recall@3": 0.1,
+      "recall@5": 0.1,
+      "recall@10": 0.1,
+      "precision@1": 0.1,
+      "precision@3": 0.03333333333333333,
+      "mrr": 0.1,
+      "hit_count": 1,
       "total": 10,
       "crash_count": 0
     }

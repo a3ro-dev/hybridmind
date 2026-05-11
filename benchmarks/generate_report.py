@@ -38,12 +38,12 @@ def generate():
         f.write("The benchmark is purely deterministic, utilizing a hardcoded dataset of 240 documents and 50 edges to isolate six retrieval strategies. Metrics are computed against human-defined ground-truth node IDs for six query families (semantic paraphrase, lexical exact match, single-hop graph, multi-hop graph, missing anchor fallback, and oversmoothing adversarial). The ablation runner directly instantiates engine classes, circumventing the HTTP layer, to rigorously toggle specific configuration variables for each test condition.\n\n")
 
         f.write("## Results\n")
-        f.write("| Condition | Family | Recall@1 | Recall@3 | Recall@5 | Precision@1 | Precision@3 | MRR |\n")
+        f.write("| Condition | Family | Recall@1 | Recall@3 | Recall@5 | Recall@10 | Precision@1 | Precision@3 | MRR |\n")
         f.write("|---|---|---|---|---|---|---|---|\n")
 
         for condition, families in results.items():
             for family, metrics in families.items():
-                f.write(f"| {condition} | {family} | {metrics['recall@1']:.3f} | {metrics['recall@3']:.3f} | {metrics['recall@5']:.3f} | {metrics['precision@1']:.3f} | {metrics['precision@3']:.3f} | {metrics['mrr']:.3f} |\n")
+                f.write(f"| {condition} | {family} | {metrics['recall@1']:.3f} | {metrics['recall@3']:.3f} | {metrics['recall@5']:.3f} | {metrics['recall@10']:.3f} | {metrics['precision@1']:.3f} | {metrics['precision@3']:.3f} | {metrics['mrr']:.3f} |\n")
 
         f.write("\n## Component Contribution Analysis\n")
         f.write("The table below shows the performance delta (in Recall@3) of each component compared to the VECTOR_ONLY baseline:\n\n")
