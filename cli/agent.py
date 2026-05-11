@@ -27,7 +27,7 @@ if os.path.isfile(env_path):
 
 def build_system_prompt(session_mems: List[Dict[str, Any]], cross_mems: List[Dict[str, Any]]) -> str:
     parts = ["You are a helpful assistant with persistent memory.\n"]
-    
+
     if session_mems:
         parts.append("RECALLED MEMORIES (from this session):")
         for m in session_mems:
@@ -35,7 +35,7 @@ def build_system_prompt(session_mems: List[Dict[str, Any]], cross_mems: List[Dic
             text = (m.get("text") or "")[:200].replace("\n", " ")
             parts.append(f"  [{score:.2f}] {text}")
         parts.append("")
-        
+
     if cross_mems:
         parts.append("RECALLED MEMORIES (from past sessions):")
         for m in cross_mems:
@@ -43,7 +43,7 @@ def build_system_prompt(session_mems: List[Dict[str, Any]], cross_mems: List[Dic
             text = (m.get("text") or "")[:200].replace("\n", " ")
             parts.append(f"  [{score:.2f}] {text}")
         parts.append("")
-        
+
     if session_mems or cross_mems:
         parts.append("Use these memories naturally when relevant. Do not announce that you are using memory. Just use it.")
         return "\n".join(parts)
@@ -237,7 +237,7 @@ def main():
                 messages=curr_messages,
                 stream=True,
             )
-            
+
             assistant_response = ""
             for chunk in stream:
                 delta = chunk.choices[0].delta.content or ""

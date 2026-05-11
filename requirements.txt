@@ -52,3 +52,4 @@ pytest-asyncio>=0.21.1
 httpx>=0.25.1
 
 # No benchmarks needed.
+hypothesis

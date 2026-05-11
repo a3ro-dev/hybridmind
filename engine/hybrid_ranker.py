@@ -27,7 +27,8 @@ class HybridRanker:
         self,
         vector_engine: VectorSearchEngine,
         graph_engine: GraphSearchEngine,
-        bm25_index: Optional[Any] = None
+        bm25_index: Optional[Any] = None,
+        disable_graph_expansion: bool = False
     ):
         """
         Initialize hybrid ranker.
@@ -40,6 +41,7 @@ class HybridRanker:
         self.vector_engine = vector_engine
         self.graph_engine = graph_engine
         self.bm25_index = bm25_index
+        self.disable_graph_expansion = disable_graph_expansion
 
     def search(
         self,
@@ -52,7 +54,8 @@ class HybridRanker:
         min_score: float = 0.0,
         filter_metadata: Optional[Dict[str, Any]] = None,
         deduplicate: bool = True,
-        search_mode: str = "hybrid"
+        search_mode: str = "hybrid",
+        bm25_boost_weight: float = 0.25
     ) -> Tuple[List[Dict[str, Any]], float, int]:
         start_time = time.perf_counter()
 
@@ -107,7 +110,7 @@ class HybridRanker:
         for res in vector_results:
             nid = res["node_id"]
             node_data[nid] = res
-            boost = bm25_overlap(query_text, res["text"]) * 0.25
+            boost = bm25_overlap(query_text, res["text"]) * bm25_boost_weight
             scores[nid] = res.get("vector_score", 0.0) + boost
 
         # Give bm25 results their bm25 overlap boost if they didn't have a vector score
@@ -116,13 +119,13 @@ class HybridRanker:
             if nid not in node_data:
                 node_data[nid] = res
                 overlap = bm25_overlap(query_text, res["text"])
-                boost = overlap * 0.25
-        
+                boost = overlap * bm25_boost_weight
+
                 # FIX: BM25-only hits lack a vector_score, meaning their max score is 0.25.
-                # Since weak semantic vector hits average 0.4-0.6, BM25-only exact matches 
+                # Since weak semantic vector hits average 0.4-0.6, BM25-only exact matches
                 # were mathematically incapable of ever reaching the top 10.
                 # We assign a synthetic base score proportional to keyword overlap to fix this.
-                synthetic_base = min(0.65, overlap)
+                synthetic_base = min(0.65, overlap) * (1.0 if bm25_boost_weight > 0 else 0.0)
                 node_data[nid]["vector_score"] = synthetic_base
                 scores[nid] = synthetic_base + boost
 
@@ -162,22 +165,24 @@ class HybridRanker:
         # Optional graph-aware candidate expansion path:
         # Before we compute graph scores, add graph neighbors of anchor nodes to candidate pool
         # This allows graph structure to affect recall
-        if anchor_nodes:
+        if anchor_nodes and not self.disable_graph_expansion:
             reference_nodes = anchor_nodes
         else:
             reference_nodes = candidate_ids[:3]
 
         # Expand candidates
         expanded_candidates = set(candidate_ids)
-        for ref in reference_nodes:
+        if not self.disable_graph_expansion:
+            for ref in reference_nodes:
             # Traversal
-            try:
-                # get nodes from graph within max_depth
-                neighbors, _, _ = self.graph_engine.traverse(start_id=ref, depth=max_depth)
-                for n in neighbors:
-                    expanded_candidates.add(n["node_id"])
-            except Exception:
-                pass
+                try:
+                    # get nodes from graph within max_depth
+                    neighbors, _, _ = self.graph_engine.traverse(start_id=ref, depth=max_depth)
+                    for n in neighbors:
+                        expanded_candidates.add(n["node_id"])
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).warning(f"Graph traversal failed for {ref}: {e}")
 
         # Add the expanded candidates to our node_data and rolled_up_scores if missing
         expanded_candidates_list = list(expanded_candidates)
@@ -279,7 +284,7 @@ class HybridRanker:
         graph_time = 0.0
         graph_candidates = 0
 
-        if anchor_nodes:
+        if anchor_nodes and not self.disable_graph_expansion:
             for anchor in anchor_nodes:
                 results, time_ms, candidates = self.graph_engine.traverse(
                     start_id=anchor,
