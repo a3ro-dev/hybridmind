@@ -1,132 +1,90 @@
 """
 Embedding pipeline for HybridMind.
-Generates vector embeddings using qwen/qwen3-embedding-8b via HackClub
-OpenAI-compatible API (d=4096).
-
-Falls back to mock embeddings if API is unavailable.
+Generates vector embeddings using sentence-transformers locally.
+384-dimensional MiniLM-L6-v2 embeddings for reliable, fast, offline operation.
 """
 
 import logging
 import os
+import time
 from typing import List, Optional, Union
 import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# Try to import openai for API-based embeddings
-try:
-    from openai import OpenAI
-    OPENAI_AVAILABLE = True
-except ImportError:
-    OPENAI_AVAILABLE = False
-    logger.warning(
-        "openai package not available. "
-        "Using mock embeddings. Install with: pip install openai"
-    )
-
-# Default embedding model and dimension
-_DEFAULT_MODEL = "qwen/qwen3-embedding-8b"
-_DEFAULT_DIMENSION = 4096
-_DEFAULT_BASE_URL = "https://ai.hackclub.com"
+# Default embedding model and dimension (sentence-transformers)
+_DEFAULT_MODEL = "all-MiniLM-L6-v2"
+_DEFAULT_DIMENSION = 384
 
 
 class EmbeddingEngine:
     """
-    Embedding generation using qwen3-embedding-8b via HackClub OpenAI-compatible API.
-    Returns 4096-dimensional vectors.
-    Falls back to mock embeddings if API is unavailable.
+    Embedding generation using local sentence-transformers.
+    Returns 384-dimensional vectors.
+    No API dependencies — works fully offline.
     """
 
     def __init__(
         self,
         model_name: str = _DEFAULT_MODEL,
-        device: Optional[str] = None,  # kept for API compatibility; ignored
-        cache_folder: Optional[str] = None  # kept for API compatibility; ignored
+        device: Optional[str] = None,
+        cache_folder: Optional[str] = None
     ):
         """
-        Initialize embedding engine.
+        Initialize embedding engine with local sentence-transformers.
 
         Args:
-            model_name: Embedding model name (default: qwen/qwen3-embedding-8b)
-            device: Ignored (kept for backward compat)
-            cache_folder: Ignored (kept for backward compat)
+            model_name: Sentence-transformers model name
+            device: Device for inference ('cpu', 'cuda', None for auto)
+            cache_folder: Cache folder for model downloads
         """
         self.model_name = model_name
-        self._dimension: int = _DEFAULT_DIMENSION
+        self._model = None
+        self._device = device
+        self._cache_folder = cache_folder
 
-        # Resolve API credentials
-        api_key = (
-            os.getenv("HACKCLUB_API_KEY")
-            or os.getenv("HC_API_KEY")
-            or os.getenv("OPENAI_API_KEY")
+    def _ensure_model(self):
+        """Lazy-load the sentence-transformers model."""
+        if self._model is not None:
+            return
+        from sentence_transformers import SentenceTransformer
+        kwargs = {}
+        if self._device:
+            kwargs["device"] = self._device
+        logger.info(f"Loading local embedding model: {self.model_name}...")
+        t0 = time.perf_counter()
+        self._model = SentenceTransformer(self.model_name, **kwargs)
+        elapsed = (time.perf_counter() - t0) * 1000
+        dim = self._model.get_sentence_embedding_dimension()
+        logger.info(
+            f"Local embedding model loaded: {self.model_name} "
+            f"(dim={dim}, device={self._model.device}, {elapsed:.0f}ms)"
         )
-        base_url = os.getenv("OPENAI_BASE_URL") or _DEFAULT_BASE_URL
-
-        self._client: Optional["OpenAI"] = None
-        if OPENAI_AVAILABLE and api_key:
-            try:
-                self._client = OpenAI(api_key=api_key, base_url=base_url)
-                logger.info(
-                    f"EmbeddingEngine initialized: model={model_name}, "
-                    f"base_url={base_url}, dimension={self._dimension}"
-                )
-            except Exception as e:
-                logger.error(f"Failed to create OpenAI client: {e}")
-                self._client = None
-        else:
-            if not OPENAI_AVAILABLE:
-                logger.warning("openai package not installed — using mock embeddings")
-            else:
-                logger.warning("No API key found — using mock embeddings")
 
     @property
     def dimension(self) -> int:
-        """Get embedding dimension (always 4096 for qwen3-embedding-8b)."""
-        return self._dimension
+        """Get embedding dimension (384 for all-MiniLM-L6-v2)."""
+        if self._model is not None:
+            return self._model.get_sentence_embedding_dimension()
+        return _DEFAULT_DIMENSION
 
     @property
     def is_available(self) -> bool:
-        """Check if embedding client is available."""
-        return self._client is not None
+        """Always available (fully local)."""
+        self._ensure_model()
+        return self._model is not None
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _call_api(self, texts: List[str]) -> List[np.ndarray]:
-        """Call the embedding API for a list of texts."""
-        if self._client is None:
-            return [self._mock_embed(t) for t in texts]
-
-        try:
-            response = self._client.embeddings.create(
-                model=self.model_name,
-                input=texts
-            )
-            # Sort by index to preserve order (API may reorder)
-            sorted_data = sorted(response.data, key=lambda x: x.index)
-            return [np.array(item.embedding, dtype=np.float32) for item in sorted_data]
-        except Exception as e:
-            logger.error(f"Embedding API call failed: {e}. Falling back to mock.")
-            return [self._mock_embed(t) for t in texts]
-
     def _normalize(self, vec: np.ndarray) -> np.ndarray:
         """L2-normalize a vector in-place."""
+        vec = np.asarray(vec, dtype=np.float32)
         norm = float(np.linalg.norm(vec))
         if norm > 0:
             return (vec / norm).astype(np.float32)
         return vec
-
-    def _mock_embed(self, text: str) -> np.ndarray:
-        """
-        Generate a deterministic mock embedding from text hash.
-        Provides stable embeddings for testing without an API key.
-        """
-        import hashlib
-        text_hash = hashlib.md5(text.encode()).hexdigest()
-        np.random.seed(int(text_hash[:8], 16) % (2**32))
-        embedding = np.random.randn(self._dimension).astype(np.float32)
-        return self._normalize(embedding)
 
     # ------------------------------------------------------------------
     # Public API
@@ -141,36 +99,19 @@ class EmbeddingEngine:
             normalize: Whether to L2-normalize (default True)
 
         Returns:
-            Embedding vector of shape (4096,)
+            Embedding vector of shape (384,)
         """
-        import concurrent.futures
-        from config import settings
-        timeout = getattr(settings, "embedding_timeout_seconds", 60)
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(self._do_embed, text, normalize)
-            try:
-                return future.result(timeout=timeout)
-            except concurrent.futures.TimeoutError:
-                try:
-                    from fastapi import HTTPException
-                    raise HTTPException(status_code=503, detail="Embedding model unavailable")
-                except ImportError:
-                    raise TimeoutError("Embedding API timed out")
-
-    def _do_embed(self, text: str, normalize: bool = True) -> np.ndarray:
-        """Actual embedding logic (no timeout wrapper)."""
-        vectors = self._call_api([text])
-        vec = vectors[0]
+        self._ensure_model()
+        vec = self._model.encode(text, normalize_embeddings=False)
         if normalize:
             vec = self._normalize(vec)
-        return vec
+        return vec.astype(np.float32)
 
     def embed_batch(
         self,
         texts: List[str],
         normalize: bool = True,
-        batch_size: int = 32,
+        batch_size: int = 64,
         show_progress: bool = False
     ) -> np.ndarray:
         """
@@ -179,26 +120,27 @@ class EmbeddingEngine:
         Args:
             texts: List of input texts
             normalize: Whether to L2-normalize embeddings
-            batch_size: API batch size
-            show_progress: Show progress bar (currently ignored)
+            batch_size: Batch size for encoding (default 64)
+            show_progress: Show progress bar
 
         Returns:
-            Array of embedding vectors (num_texts × 4096)
+            Array of embedding vectors (num_texts × 384)
         """
         if not texts:
-            return np.array([]).reshape(0, self._dimension)
+            return np.array([]).reshape(0, self.dimension)
 
-        all_vectors: List[np.ndarray] = []
-
-        # Process in batches to respect API limits
-        for i in range(0, len(texts), batch_size):
-            batch = texts[i: i + batch_size]
-            vecs = self._call_api(batch)
-            if normalize:
-                vecs = [self._normalize(v) for v in vecs]
-            all_vectors.extend(vecs)
-
-        return np.vstack(all_vectors).astype(np.float32)
+        self._ensure_model()
+        embeddings = self._model.encode(
+            texts,
+            batch_size=batch_size,
+            show_progress_bar=show_progress,
+            normalize_embeddings=False,
+        )
+        if normalize:
+            norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+            norms = np.where(norms > 0, norms, 1)
+            embeddings = embeddings / norms
+        return embeddings.astype(np.float32)
 
     def embed_with_graph_context(
         self,
@@ -209,7 +151,7 @@ class EmbeddingEngine:
         """
         Generate a graph-conditioned embedding: alpha*V + (1-alpha)*G_mean.
         """
-        own_embedding = self._do_embed(text, normalize=False)
+        own_embedding = self.embed(text, normalize=False)
         if getattr(self, "disable_neighborhood_averaging", False) or not neighbor_embeddings:
             return self._normalize(own_embedding)
 
@@ -260,8 +202,9 @@ class EmbeddingEngine:
     # Legacy compatibility: expose a .model attribute that some callers check
     @property
     def model(self):
-        """Legacy compatibility — returns self if client is available."""
-        return self if self._client is not None else None
+        """Legacy compatibility — returns self."""
+        self._ensure_model()
+        return self
 
 
 # Singleton instance for shared use

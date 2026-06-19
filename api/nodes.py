@@ -2,6 +2,7 @@
 Node CRUD API endpoints for HybridMind.
 """
 
+import re
 import uuid
 from datetime import datetime
 from typing import List, Optional
@@ -27,6 +28,23 @@ from storage.bm25_index import BM25Index
 from storage.graph_index import GraphIndex
 from engine.embedding import EmbeddingEngine
 from engine.cache import invalidate_cache
+
+# ── Text cleaning for embedding quality ──────────────────────────────────────
+
+_METADATA_PREFIX_RE = re.compile(
+    r'^(\[DATE:[^\]]*\]\s*)?(\[SPEAKER:[^\]]*\]\s*)?'
+)
+
+
+def _strip_metadata_prefixes(text: str) -> str:
+    """
+    Strip noisy [DATE: ...] and [SPEAKER: ...] prefixes before embedding.
+    The raw text (with prefixes) is preserved in storage for BM25 and display;
+    only the embedding vector is computed from the cleaned text for better
+    semantic signal.
+    """
+    return _METADATA_PREFIX_RE.sub('', text, count=1).strip()
+
 
 router = APIRouter(prefix="/nodes", tags=["Nodes"])
 
@@ -55,11 +73,14 @@ async def create_node(
     # Generate or use provided embedding
     import numpy as np
     from config import settings
+    # Strip noisy metadata prefixes before embedding for cleaner semantic signal
+    embed_text = _strip_metadata_prefixes(node.text)
+
     if node.embedding:
         raw_embedding = np.array(node.embedding, dtype=np.float32)
         embedding = raw_embedding
     else:
-        raw_embedding = embedding_engine.embed(node.text)
+        raw_embedding = embedding_engine.embed(embed_text)
         embedding = raw_embedding
         
         if getattr(settings, "use_graph_conditioned_embeddings", False):
@@ -111,14 +132,14 @@ async def create_node(
             graph_index.add_edge(s_edge_id, prev_node["id"], node_id, "same_session", 0.5)
     
     # Chunking / SGMem Approach (Priority 3)
-    import re
     sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', node.text) if len(s.strip()) > 5]
     if not sentences:
         sentences = [node.text]
         
     for i, sentence in enumerate(sentences):
         child_id = f"{node_id}_{i}"
-        child_embedding = embedding_engine.embed(sentence)
+        # Also clean sentence chunks for embedding
+        child_embedding = embedding_engine.embed(_strip_metadata_prefixes(sentence))
         
         child_metadata = (node.metadata or {}).copy()
         child_metadata.update({"parent_id": node_id, "is_sentence_chunk": True})

@@ -202,6 +202,8 @@ async def hybrid_search(
             metadata=r["metadata"],
             vector_score=r["vector_score"],
             graph_score=r["graph_score"],
+            graph_gate=r.get("graph_gate"),
+            effective_graph_score=r.get("effective_graph_score"),
             combined_score=r["combined_score"],
             reasoning=r["reasoning"]
         )

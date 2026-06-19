@@ -12,9 +12,13 @@ Production-ready with:
 
 import logging
 import time
+import os
 import psutil
 from contextlib import asynccontextmanager
 from typing import List, Optional
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -193,7 +197,18 @@ async def lifespan(app: FastAPI):
     print(f"- Graph nodes: {stats['graph_node_count']}")
     print(f"- Snapshot manifest: v{version} @ {timestamp}")
     print(f"- Checksum verification: {integrity_status}")
-    print(f"- Graph-conditioned embeddings: {'ENABLED' if graph_embeddings_enabled else 'DISABLED'}\n")
+    print(f"- Graph-conditioned embeddings: {'ENABLED' if graph_embeddings_enabled else 'DISABLED'}")
+    
+    import os
+    hc_key = os.getenv("HC_API_KEY")
+    openai_key = os.getenv("OPENAI_API_KEY")
+    if hc_key:
+        print(f"- Fact Extractor LLM: LOADED (Key starts with {hc_key[:8]}...)")
+    elif openai_key:
+        print(f"- Fact Extractor LLM: LOADED (Key starts with {openai_key[:8]}...)")
+    else:
+        print(f"- Fact Extractor LLM: FAILED (No API Key found)")
+    print("\n")
     
     yield
     
@@ -677,6 +692,7 @@ async def ingest_session_facts(request: SessionFactsRequest):
     """
     import uuid as _uuid
     import numpy as _np
+    import asyncio
     from engine.fact_extractor import extract_facts_from_session
     from engine.cache import invalidate_cache
 
@@ -687,8 +703,9 @@ async def ingest_session_facts(request: SessionFactsRequest):
     ]
 
     # Run LLM-based fact extraction (ingest-time only)
+    # Using to_thread because extract_facts_from_session uses synchronous httpx
     try:
-        facts = extract_facts_from_session(turns_dicts)
+        facts = await asyncio.to_thread(extract_facts_from_session, turns_dicts)
     except Exception as e:
         logger.error(f"Fact extraction failed for session {request.session_id}: {e}")
         facts = []
@@ -702,12 +719,24 @@ async def ingest_session_facts(request: SessionFactsRequest):
 
     db_manager = get_db_manager()
     node_ids: List[str] = []
+    
+    valid_facts = [f for f in facts if f.get("fact", "").strip()]
+    if not valid_facts:
+        return SessionFactsResponse(
+            session_id=request.session_id,
+            facts_extracted=0,
+            node_ids=[]
+        )
+        
+    fact_texts = [f["fact"].strip() for f in valid_facts]
+    
+    try:
+        embeddings = db_manager.embedding_engine.embed_batch(fact_texts)
+    except Exception as e:
+        logger.warning(f"Batch embedding failed for fact nodes: {e}")
+        embeddings = _np.zeros((len(fact_texts), db_manager.vector_index.dimension), dtype=_np.float32)
 
-    for fact in facts:
-        fact_text = fact.get("fact", "").strip()
-        if not fact_text:
-            continue
-
+    for fact, fact_text, embedding in zip(valid_facts, fact_texts, embeddings):
         node_id = str(_uuid.uuid4())
         metadata = {
             "type": "extracted_fact",
@@ -717,13 +746,6 @@ async def ingest_session_facts(request: SessionFactsRequest):
         }
         if request.container_tag:
             metadata["container_tag"] = request.container_tag
-
-        # Generate embedding
-        try:
-            embedding = db_manager.embedding_engine.embed(fact_text)
-        except Exception as e:
-            logger.warning(f"Embedding failed for fact node: {e}")
-            embedding = _np.zeros(db_manager.vector_index.dimension, dtype=_np.float32)
 
         # Store in SQLite
         db_manager.sqlite_store.create_node(

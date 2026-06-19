@@ -36,6 +36,8 @@ class SearchResult(BaseModel):
     metadata: Dict[str, Any]
     vector_score: Optional[float] = None
     graph_score: Optional[float] = None
+    graph_gate: Optional[float] = None
+    effective_graph_score: Optional[float] = None
     combined_score: Optional[float] = None
     depth: Optional[int] = None
     path: Optional[List[str]] = None

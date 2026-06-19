@@ -55,7 +55,7 @@ class HybridRanker:
         filter_metadata: Optional[Dict[str, Any]] = None,
         deduplicate: bool = True,
         search_mode: str = "hybrid",
-        bm25_boost_weight: float = 0.25
+        bm25_boost_weight: float = 0.45
     ) -> Tuple[List[Dict[str, Any]], float, int]:
         start_time = time.perf_counter()
 
@@ -104,14 +104,17 @@ class HybridRanker:
             return overlap / len(q_terms)
 
         scores = {}
+        raw_vector_scores = {}  # Track raw cosine similarity (pre-BM25 boost) for relevance gating
         node_data = {}
 
         # Give vector results their base cosine score + bm25 overlap boost
         for res in vector_results:
             nid = res["node_id"]
             node_data[nid] = res
+            raw_v = res.get("vector_score", 0.0)
+            raw_vector_scores[nid] = raw_v
             boost = bm25_overlap(query_text, res["text"]) * bm25_boost_weight
-            scores[nid] = res.get("vector_score", 0.0) + boost
+            scores[nid] = raw_v + boost
 
         # Give bm25 results their bm25 overlap boost if they didn't have a vector score
         for res in bm25_results:
@@ -127,17 +130,21 @@ class HybridRanker:
                 # We assign a synthetic base score proportional to keyword overlap to fix this.
                 synthetic_base = min(0.65, overlap) * (1.0 if bm25_boost_weight > 0 else 0.0)
                 node_data[nid]["vector_score"] = synthetic_base
+                raw_vector_scores[nid] = overlap  # Use keyword overlap as raw score proxy for BM25-only hits
                 scores[nid] = synthetic_base + boost
 
         # Step 3: SGMem Chunk Rollup to Parent
         rolled_up_scores = {}
+        rolled_up_raw_scores = {}  # Raw vector scores after rollup (for relevance gating)
         rolled_up_nodes = {}
 
         for nid, score in scores.items():
+            raw_v = raw_vector_scores.get(nid, 0.0)
             meta = node_data[nid].get("metadata", {})
             if meta.get("is_sentence_chunk") and meta.get("parent_id"):
                 parent_id = meta["parent_id"]
                 rolled_up_scores[parent_id] = max(rolled_up_scores.get(parent_id, 0.0), score)
+                rolled_up_raw_scores[parent_id] = max(rolled_up_raw_scores.get(parent_id, 0.0), raw_v)
                 if parent_id not in rolled_up_nodes:
                     p_node = self.vector_engine.sqlite_store.get_node(parent_id)
                     if p_node:
@@ -150,6 +157,7 @@ class HybridRanker:
                         rolled_up_nodes[parent_id] = p_data
             else:
                 rolled_up_scores[nid] = score
+                rolled_up_raw_scores[nid] = raw_v
                 rolled_up_nodes[nid] = node_data[nid]
 
         # We cap normalized score to 1.0 just in case
@@ -161,6 +169,22 @@ class HybridRanker:
 
         if not candidate_ids:
             return [], round((time.perf_counter() - start_time) * 1000, 2), 0
+
+        # Deduplicate candidate_ids by text: keep only the highest-scoring node_id for each unique text.
+        # This prevents the same text (from different containers) from flooding the candidate pool.
+        if deduplicate:
+            seen_texts: set = set()
+            deduped_ids = []
+            for nid in candidate_ids:
+                nd = rolled_up_nodes.get(nid)
+                if nd is None:
+                    continue
+                tk = nd.get("text", "").strip()
+                if tk in seen_texts:
+                    continue
+                seen_texts.add(tk)
+                deduped_ids.append(nid)
+            candidate_ids = deduped_ids
 
         # Optional graph-aware candidate expansion path:
         # Before we compute graph scores, add graph neighbors of anchor nodes to candidate pool
@@ -200,6 +224,7 @@ class HybridRanker:
                     }
                     rolled_up_nodes[nid] = p_data
                     rolled_up_scores[nid] = 0.0
+                    rolled_up_raw_scores[nid] = 0.0
 
         # Update candidate_ids to include expanded pool
         candidate_ids = [nid for nid in expanded_candidates_list if nid in rolled_up_nodes]
@@ -213,14 +238,27 @@ class HybridRanker:
 
         # Step 5: Late Fusion Scoring
         # Score(q,n) = α·V(q,n) + β·G(A,n)
+        #
+        # Relevance-gated graph scoring (Iteration 2):
+        # Graph proximity should amplify already-relevant nodes, not prop up irrelevant ones.
+        # We gate on the RAW vector score (pre-BM25 boost) — this reflects genuine semantic
+        # similarity rather than keyword overlap which can artificially inflate scores.
+        # If raw_v_score < RELEVANCE_THRESHOLD, scale graph contribution linearly down to zero.
+        RELEVANCE_THRESHOLD = 0.30
 
         hybrid_results = []
         for nid in candidate_ids:
-            # Use the normalized RRF score (which includes vector+BM25) as V
+            # Use the boosted V score (vector + BM25) for ranking, but raw score for gating
             v_score = rolled_up_scores[nid]
             g_score = graph_scores.get(nid, 0.0)
+            raw_v = rolled_up_raw_scores.get(nid, 0.0)
 
-            combined_score = (vector_weight * v_score) + (graph_weight * g_score)
+            # Relevance gate: scale graph score by how semantically relevant the node is
+            # Full graph score if raw_v >= threshold, linearly ramped down otherwise
+            gate = min(1.0, raw_v / RELEVANCE_THRESHOLD)
+            effective_g_score = g_score * gate
+
+            combined_score = (vector_weight * v_score) + (graph_weight * effective_g_score)
 
             hybrid_results.append({
                 "node_id": nid,
@@ -228,15 +266,19 @@ class HybridRanker:
                 "metadata": rolled_up_nodes[nid]["metadata"],
                 "vector_score": v_score,
                 "graph_score": g_score,
+                "graph_gate": round(gate, 4),
+                "effective_graph_score": round(effective_g_score, 4),
                 "combined_score": combined_score,
-                "reasoning": f"Score = {vector_weight}*{v_score:.4f} + {graph_weight}*{g_score:.4f}"
+                "reasoning": f"Score = {vector_weight}*{v_score:.4f} + {graph_weight}*{effective_g_score:.4f} (gate={gate:.2f})"
             })
 
         if deduplicate:
             seen_texts: Set[str] = set()
             deduped = []
-            # We sort by combined score first so we keep the highest scoring version of duplicate texts
-            hybrid_results.sort(key=lambda x: -x["combined_score"])
+            # Sort by vector_score (not combined_score) so we prefer the version of duplicate text
+            # that is most relevant to the query, rather than the one with an artifactually high
+            # graph boost from being over-connected in the session graph.
+            hybrid_results.sort(key=lambda x: -x["vector_score"])
             for result in hybrid_results:
                 text_key = result["text"].strip()
                 if text_key not in seen_texts:
@@ -341,3 +383,5 @@ class HybridRanker:
                 "hybrid_combines_best": len(hybrid_ids & (vector_ids | graph_ids))
             }
         }
+ 
+"" 

@@ -169,12 +169,15 @@ async def bulk_create_nodes(
             elapsed_ms=round((time.perf_counter() - start_time) * 1000, 2)
         )
     
-    # Generate embeddings in batch
+    # Generate embeddings in batch (strip metadata prefixes for cleaner semantic signal)
     embeddings = None
     if request.generate_embeddings:
-        texts = [n["text"] for n in nodes_to_create]
+        import re as _re
+        _prefix_re = _re.compile(r'^(\[DATE:[^\]]*\]\s*)?(\[SPEAKER:[^\]]*\]\s*)?')
+        texts = [_prefix_re.sub('', n["text"], count=1).strip() for n in nodes_to_create]
         try:
-            embeddings = embedding_engine.embed_batch(texts, show_progress=False)
+            import asyncio
+            embeddings = await asyncio.to_thread(embedding_engine.embed_batch, texts, True, 32, False)
         except Exception as e:
             errors.append(f"Embedding generation failed: {str(e)}")
             embeddings = None
@@ -441,7 +444,8 @@ async def process_unstructured_data(
     embeddings = None
     if texts:
         try:
-            embeddings = embedding_engine.embed_batch(texts, show_progress=False)
+            import asyncio
+            embeddings = await asyncio.to_thread(embedding_engine.embed_batch, texts, True, 32, False)
         except Exception as e:
             errors.append(f"Embedding generation failed: {str(e)}")
     
