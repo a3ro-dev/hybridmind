@@ -184,6 +184,7 @@ async def bulk_create_nodes(
     
     # Create nodes in database
     vector_batch = []
+    successful_node_ids = set()
     
     for i, node_data in enumerate(nodes_to_create):
         try:
@@ -199,6 +200,7 @@ async def bulk_create_nodes(
             
             # Add to graph index
             graph_index.add_node(node_data["id"])
+            successful_node_ids.add(node_data["id"])
             
             # Prepare vector batch
             if embedding is not None:
@@ -209,6 +211,37 @@ async def bulk_create_nodes(
         except Exception as e:
             errors.append(f"Failed to create node {node_data['id']}: {str(e)}")
             failed += 1
+
+    # Create structural edges for sessions
+    sessions = {}
+    for node_data in nodes_to_create:
+        nid = node_data["id"]
+        if nid not in successful_node_ids:
+            continue
+        meta = node_data["metadata"] or {}
+        sess_id = meta.get("sessionId") or meta.get("session_id")
+        if sess_id:
+            if sess_id not in sessions:
+                sessions[sess_id] = []
+            sessions[sess_id].append(nid)
+            
+    # For each session, connect consecutive nodes
+    for sess_id, node_ids_in_sess in sessions.items():
+        for j in range(len(node_ids_in_sess) - 1):
+            src_id = node_ids_in_sess[j]
+            tgt_id = node_ids_in_sess[j + 1]
+            try:
+                # next_turn edge
+                t_edge_id = f"edge_{uuid.uuid4().hex[:12]}"
+                sqlite_store.create_edge(t_edge_id, src_id, tgt_id, "next_turn", 1.0)
+                graph_index.add_edge(t_edge_id, src_id, tgt_id, "next_turn", 1.0)
+                
+                # same_session edge
+                s_edge_id = f"edge_{uuid.uuid4().hex[:12]}"
+                sqlite_store.create_edge(s_edge_id, src_id, tgt_id, "same_session", 0.5)
+                graph_index.add_edge(s_edge_id, src_id, tgt_id, "same_session", 0.5)
+            except Exception as e:
+                logger.warning(f"Failed to create edge in bulk ingest: {e}")
     
     # Batch add to vector index
     if vector_batch:

@@ -17,6 +17,7 @@ from engine.embedding import EmbeddingEngine
 from engine.vector_search import VectorSearchEngine
 from engine.graph_search import GraphSearchEngine
 from engine.hybrid_ranker import HybridRanker
+from engine.reranker import get_reranker
 
 logger = logging.getLogger(__name__)
 
@@ -84,13 +85,22 @@ class DatabaseManager:
             sqlite_store=self.sqlite_store
         )
         
+        # Initialize reranker (pre-warmed so the cross-encoder model loads at startup)
+        reranker = get_reranker()
+        try:
+            reranker.warmup()
+        except Exception as e:
+            logger.warning(f"Reranker warmup failed (continuing without reranking): {e}")
+            reranker = None
+
         # Initialize hybrid ranker
         self.hybrid_ranker = HybridRanker(
             vector_engine=self.vector_engine,
             graph_engine=self.graph_engine,
-            bm25_index=self.bm25_index
+            bm25_index=self.bm25_index,
+            reranker=reranker,
         )
-        
+
         # Rebuild indexes from SQLite on startup
         self._rebuild_indexes()
         
@@ -113,7 +123,7 @@ class DatabaseManager:
                 logger.info(f"Graph index rebuilt with {len(edges)} edges")
             
             # Add orphan nodes to graph
-            nodes = self.sqlite_store.list_nodes(limit=10000)
+            nodes = self.sqlite_store.list_nodes(limit=1000000)
             bm25_batch = []
             for node in nodes:
                 if not self.graph_index.has_node(node["id"]):
