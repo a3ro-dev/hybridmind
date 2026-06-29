@@ -8,7 +8,7 @@ HybridMind is a local-native hybrid vector + graph database designed for AI agen
 ```text
 +-------------------------------------------------------------------------+
 |                               API Layer                                 |
-|            (FastAPI / Pydantic v2 / Per-IP Rate Limiting)               |
+|            (FastAPI / Pydantic v2 / Request Timing Middleware)          |
 +-------------------------------------------------------------------------+
                                     |
                                     v
@@ -33,27 +33,32 @@ HybridMind is a local-native hybrid vector + graph database designed for AI agen
                                     v
 +-------------------------------------------------------------------------+
 |                            Persistence                                  |
-|     (.mind directory: manifest.json / store.db / vectors / graph)       |
+|     (.mind directory: manifest.json / store.db / vectors / vectors.map / graph.nx)  |
 +-------------------------------------------------------------------------+
 ```
 
 ## Component Deep Dives
 
 ### Embedding Engine
-- **Model**: `all-MiniLM-L6-v2` (384 dimensions).
+- **Model**: `all-mpnet-base-v2` (768 dimensions). Configurable via `HYBRIDMIND_EMBEDDING_MODEL`.
 - **Neighborhood Averaging**: At node ingest, the embedding is conditioned on its semantic neighborhood—a practical, non-training variant of GraphSAGE-style aggregation:
   `final_embedding = normalize(0.7 * own_embedding + 0.3 * mean_neighbor_embeddings)`
 - **Configuration**: α=0.7 is the default weight, ensuring the node's original content dominates while receiving a 30% contextual pull from its semantic peers.
 - **Thread Safety**: The model is serialized under the Python Global Interpreter Lock (GIL). High-concurrency throughput is limited to single-threaded execution (approx. 200ms per embedding).
 
 ### Late Fusion Scoring
-The system utilizes a weighted linear score fusion to combine semantic and structural signals:
-`Score = 0.6 * V + 0.4 * G`
+The system utilizes a weighted linear score fusion to combine semantic, lexical, and structural signals:
 
-- **Vector Score (V)**: Cosine similarity between query and node embeddings. Range: 0.0 to 1.0.
-- **Graph Score (G)**: Proximity based on 1/(1+d), where d is shortest path length from internal or explicit anchor nodes.
-- **Default Weights**: α=0.6, β=0.4 (Semantic Primacy Principle). Semantic matching provides the base relevance; relationships refine the final ranking.
-- **Wait Table (distance → score)**:
+```text
+Score = vector_weight × V_effective + graph_weight × G_effective
+```
+
+Where the default weights are `vector_weight=0.5`, `graph_weight=0.15`, with a `bm25_boost_weight=0.35` applied inside the vector score. Note: these weights do **not** sum to 1.0; the BM25 boost is additive within the vector component.
+
+- **Vector Score (V)**: Cosine similarity between query and node embeddings, plus a BM25 keyword overlap boost (`bm25_overlap × 0.35`). Range: 0.0 to ~1.35.
+- **Graph Score (G)**: Proximity based on 1/(1+d), where d is shortest path length from internal or explicit anchor nodes. Gated by BM25 keyword overlap relevance.
+- **Default Weights**: `vector_weight=0.5`, `graph_weight=0.15`, `bm25_boost_weight=0.35` (tuned for LoCoMo-style factoid queries).
+- **Distance → Score Table**:
   - 0 (self/anchor): 1.0
   - 1 (direct neighbor): 0.5
   - 2 (2-hop): 0.33
@@ -69,9 +74,9 @@ The system utilizes a weighted linear score fusion to combine semantic and struc
 - **Concurrency**: SQLite handles multiple readers during active writes without blocking.
 
 #### FAISS Vector Index
-- **Index Type**: `IndexFlatIP` (Exact Nearest Neighbor using Inner Product).
-- **Mapping**: FAISS maintains integer indices mapped back to Node UUIDs via an internal `id_map`.
-- **Memory**: O(n·d) brute force search; fits in L2/L3 cache up to ~10,000 nodes for peak performance.
+- **Index Type**: `IndexHNSWFlat` (Approximate Nearest Neighbor using HNSW with Inner Product metric, `efSearch=64`, `M=32`).
+- **Mapping**: FAISS integer indices are mapped to Node UUIDs via a separate `vectors.map` file persisted alongside the index.
+- **Memory**: O(n·d) storage; HNSW search is O(log n) at query time.
 
 #### Okapi BM25 Index
 - **Engine**: Pure Python implementation with `nltk` PorterStemmer.
@@ -89,7 +94,9 @@ The database persists as a directory with the `.mind` extension:
 - `manifest.json`: SHA256 checksums and a monotonic version counter for crash recovery.
 - `store.db`: SQLite database.
 - `vectors.faiss`: Serialized FAISS index.
+- `vectors.map`: FAISS integer-index to Node UUID mapping.
 - `graph.nx`: Pickled NetworkX graph.
+- `bm25.pkl`: Pickled BM25 index with NLTK stemmer state.
 
 **Atomic Snapshot Protocol**:
 1. Create temporary directory.
@@ -101,31 +108,37 @@ The database persists as a directory with the `.mind` extension:
 
 ### API Layer
 Built on FastAPI for performance and Pydantic v2 for strict type safety.
-- **Rate Limiting**: Per-IP token bucket limiter.
+- **Request Timing**: Middleware adds `X-Process-Time-Ms` header to every response.
+- **CORS**: Permissive CORS for local development.
 - **Soft Filtering**: Queries respect the `deleted_at` field, ensuring "forgotten" nodes are invisible before physical compaction.
 - **Validation**: Strict edge type enforcement based on the research edge taxonomy.
 
 ### SDK
 The Python SDK (`HybridMemory`) provides high-level abstractions:
-- `recall()`: Hybrid retrieval.
+- `store()` / `store_batch()` / `store_with_auto_edges()`: Node creation with optional auto-linking.
+- `recall()` / `recall_stream()`: Hybrid or vector retrieval, with optional streaming.
+- `relate()`: Explicit edge creation.
 - `trace()`: Semantic-to-graph traversal (finds anchor via vector search, then traverses graph).
-- `compact()`: Forces a physical rebuild of FAISS and hard-deletion from SQLite.
+- `forget()` / `compact()`: Soft-delete and physical rebuild.
+- `session.create/recall/archive/list()`: Scoped memory sessions.
+- `tools.get_schema()`: OpenAI function-calling compatible tool schemas.
 
 ## Data Flow: Hybrid Search Request
 1. **Validation**: Pydantic validates the request parameters and weights.
 2. **Embedding**: The query text is vectorized by `EmbeddingEngine`.
 3. **Candidate Selection**: FAISS performs a k-NN search to identify 3x the requested `top_k` results.
-4. **Anchor Identification**: If no `anchor_nodes` are provided, the top 3 vector results are used as anchors.
-5. **Relational Proximity**: NetworkX calculates shortest path distances from anchors to all candidates.
-6. **Fusion**: Candidate scores are calculated using the late fusion weights.
-7. **Refinement**: Results are re-ranked by their fused score and truncated to `top_k`.
+4. **BM25 Scoring**: BM25 index scores candidates by keyword overlap; high-overlap candidates receive a vector score boost.
+5. **Anchor Identification**: If no `anchor_nodes` are provided, the top 3 vector results are used as anchors.
+6. **Relational Proximity**: NetworkX calculates shortest path distances from anchors to all candidates. Graph scores are gated by BM25 keyword relevance.
+7. **Fusion**: Candidate scores are calculated using the weighted fusion (`vector_weight × V + graph_weight × G`).
+8. **Refinement**: Results are re-ranked by their fused score and truncated to `top_k`.
 
 ## Design Decisions and Trade-offs
-- **Exact Vector Search**: Chose `IndexFlatIP` over IVF or HNSW for 100% recall quality. Acceptable up to ~10k nodes based on current L3 cache sizes.
+- **HNSW Vector Search**: Chose `IndexHNSWFlat` over exact `IndexFlatIP` for sub-logarithmic query latency at the cost of approximate recall. Acceptable trade-off for the ~10k node scale target.
 - **Local-First Architecture**: Chose SQLite/NetworkX (local) over Neo4j (remote) to minimize network latency within agent reasoning loops.
 - **Neighborhood Averaging**: Conditioning embeddings at ingest rather than just query-time provides semantic coherence even when graph edges are sparse.
 
 ## Scalability Ceiling
-- **Memory**: FAISS (n × 384 × 4 bytes) + NetworkX overhead. Estimated ~18MB for 10k nodes.
-- **Latency**: O(n·d) grows linearly. The practical ceiling for sub-50ms p95 is estimated at **8,000-10,000 nodes** on modern hardware.
+- **Memory**: FAISS HNSW (n × 768 × 4 bytes + HNSW graph overhead) + NetworkX overhead. Estimated ~30MB for 10k nodes.
+- **Latency**: HNSW search is O(log n). The practical ceiling for sub-50ms p95 is estimated at **8,000-10,000 nodes** on modern hardware.
 - **GIL**: Python embedding model serializes concurrent requests. Throughput beyond 10 rps requires external embedding services.

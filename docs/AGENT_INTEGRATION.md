@@ -395,3 +395,17 @@ def run_research_agent(question: str) -> str:
 - Run `compact()` periodically if many nodes are soft-deleted.
 - Prefer session-scoped recall for agent loops to reduce context contamination.
 - Keep contradiction edges explicit (`contradicts`) to avoid silent conflicts in final outputs.
+
+### Weight Defaults Note
+
+The SDK's `recall()` method defaults to `vector_weight=0.6, graph_weight=0.4`, matching the API's `HybridSearchRequest` model defaults. The `HybridRanker` engine internally uses `vector_weight=0.5, graph_weight=0.15` (with `bm25_boost_weight=0.35`). When calling `recall()` without explicit weights, the SDK values (0.6/0.4) are sent in the request body and override the engine defaults. The server also applies a BM25 keyword overlap boost (`bm25_boost_weight=0.35`) and a relevance gate on graph scores — see [ALGORITHM.md](ALGORITHM.md) for the full scoring formula.
+
+### Context Manager Support
+
+The SDK supports `with` statements for automatic cleanup:
+
+```python
+with HybridMemory(base_url="http://127.0.0.1:8000") as memory:
+    memory.store("example")
+# HTTP client is closed automatically
+```

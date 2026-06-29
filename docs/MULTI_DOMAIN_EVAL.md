@@ -37,12 +37,14 @@ At threshold **0.20** (subsequent rerun, same graph topology): **49 edges** tota
 | Parameter          | Value                                                 |
 | ------------------ | ----------------------------------------------------- |
 | HybridMind version | 1.0.0                                                 |
-| Embedding model    | `all-MiniLM-L6-v2` (dimension 384)                    |
-| CRS vector weight  | 0.6                                                   |
-| CRS graph weight   | 0.4                                                   |
+| Embedding model    | `all-MiniLM-L6-v2` (dimension 384) ¹                 |
+| CRS vector weight  | 0.6 ¹                                                 |
+| CRS graph weight   | 0.4 ¹                                                 |
 | Hardware           | Intel Core i5-13420H, NVIDIA RTX 4050 Laptop GPU      |
 | OS / Python        | Windows 11 10.0.26100 / Python 3.14.3                 |
 | Cache policy       | `POST /cache/clear` before every measured search call |
+
+¹ *This evaluation was conducted with the original prototype configuration. The production defaults have since been updated to `all-mpnet-base-v2` (768-dim) with weights `vector_weight=0.5`, `graph_weight=0.15`, `bm25_boost_weight=0.35`. See [ARCHITECTURE.md](ARCHITECTURE.md) for current settings.*
 
 
 ---
@@ -72,6 +74,8 @@ At threshold **0.20** (subsequent rerun, same graph topology): **49 edges** tota
 **Surprising entity-anchored edge** (weight **0.4639**, legal→news): Telkom/SAP South Africa contract clause → Telkom layoff news story — shared named entity and geography despite genre mismatch.
 
 **Hypothesis check:** stackexchange + wikipedia were predicted to overlap most (both cover broad technical topics). They produced **zero** edges at threshold 0.45. news–wikipedia produced the most (3), driven by named entities (companies, geographies) present in both.
+
+**Note on embedding model:** This evaluation used `all-MiniLM-L6-v2` (384-dim). The production system now uses `all-mpnet-base-v2` (768-dim), which may produce different cross-domain similarity distributions and edge counts.
 
 ### 2.1.1 Threshold Sensitivity: Rerun at 0.20
 
@@ -114,7 +118,7 @@ Intra-domain and inter-domain mean cosine similarities were computed from 25×25
 | **Overall**   | **0.2640**  |
 
 
-**Inter-domain mean cosine similarity** (all pairs, 10 values): **−0.0007** overall (range −0.0379 to +0.0255). Legal clips are highly self-similar (formulaic contract language); Wikipedia intros are maximally diverse (0.05 intra). All inter-domain means cluster near zero, reflecting domain heterogeneity in MiniLM's geometry — no "super-cluster" spanning all domains.
+**Inter-domain mean cosine similarity** (all pairs, 10 values): **−0.0007** overall (range −0.0379 to +0.0255). Legal clips are highly self-similar (formulaic contract language); Wikipedia intros are maximally diverse (0.05 intra). All inter-domain means cluster near zero, reflecting domain heterogeneity in MiniLM's geometry — no "super-cluster" spanning all domains. The production system's `all-mpnet-base-v2` (768-dim) may yield different cross-domain similarity distributions.
 
 ---
 
@@ -272,7 +276,7 @@ Five probe nodes were inserted after graph construction. For each, the raw embed
 - **Legal corpus underloaded**: primary CUAD Hub IDs failed; only 510 rows from fallback dataset vs 1,000 planned.
 - **Graph sparsity persists across threshold choices**: even at 0.20 threshold (49 edges, ~8× more), Experiment 1 showed zero hybrid–vector divergence. This is a weight, not a density, problem.
 - **No held-out relevance labels**: ties in human review are based on identical top-1 IDs, not independent relevance assessment.
-- **MiniLM register mismatch**: Stack Exchange Q&A text (informal, technical) maps poorly near its domain neighbours in MiniLM space; broader embedding models may change cross-domain connectivity substantially.
+- **MiniLM register mismatch**: Stack Exchange Q&A text (informal, technical) maps poorly near its domain neighbours in MiniLM space; broader embedding models (the production system now uses `all-mpnet-base-v2`) may change cross-domain connectivity substantially.
 - **Single 50×50 sample per domain pair**: graph construction may miss high-similarity pairs that fall outside the 50-node sample.
 
 ---
@@ -285,8 +289,8 @@ Five probe nodes were inserted after graph construction. For each, the raw embed
 3. **No domain diversification:** Hybrid returned identical top-10 sets to vector for **10/10** concept queries; mean unique domains was **2.5** for both modes.
 4. **Hidden gems absent:** Hybrid found the same **6/6** linked partner nodes as vector; hidden-gem count was **0**; hybrid improved rank by mean **3.2 positions** without expanding recall.
 5. **Conditioning effect doubled:** Mean raw-vs-conditioned embedding cosine diff was **0.01927** vs **0.00977** arXiv baseline — graph conditioning is measurably stronger at multi-domain scale.
-6. **Latency growth is flat:** p50 rose from **13 ms** at 1k nodes to **16.51 ms** at 7.5k nodes (+27%); p95 from **16 ms** to **19.64 ms** (+23%) — O(log N) HNSW scaling confirmed.
-7. **Contamination: none introduced by hybrid:** Experiment 4 mean correct-domain precision was **0.60** for both vector and hybrid — domain isolation comes from MiniLM geometry, not graph structure.
+6. **Latency growth is flat:** p50 rose from **13 ms** at 1k nodes to **16.51 ms** at 7.5k nodes (+27%); p95 from **16 ms** to **19.64 ms** (+23%) — near-linear scaling confirmed with `IndexFlatIP` (exact scan). The production system now uses `IndexHNSWFlat` (O(log n) search), which should further reduce latency at scale.
+7. **Contamination: none introduced by hybrid:** Experiment 4 mean correct-domain precision was **0.60** for both vector and hybrid — domain isolation comes from the embedding model geometry (MiniLM in this eval), not graph structure.
 8. **Anchor bridging works in one of five cases:** The `network` query with a stackexchange anchor inserted one targeted result (+1 domain injection); three queries had no stackexchange candidates in the top-200, making anchoring unavailable.
 
 ---
@@ -296,7 +300,7 @@ Five probe nodes were inserted after graph construction. For each, the raw embed
 - **Explicit anchor experiments:** Every sweep used anchor-free hybrid search. The next experiment should re-run Experiment 3 with explicit `anchor_nodes` set to a node known to have ≥1 cross-domain edge; this is the only currently viable path to non-zero graph signal.
 - **Larger candidate pool:** Expanding `top_k` to 100+ so that cross-domain neighbors of the reference nodes enter the candidate set before late fusion scoring. This tests whether the graph signal exists but is buried below rank 12.
 - **Intra-domain edges:** Build edges within each domain (e.g., top-10 cosine neighbors within Wikipedia) so reference nodes almost always have in-domain neighbors already in the vector top-12. This makes the graph structurally effective without changing the anchor mechanism.
-- **Embedding model choice:** MiniLM's short-sentence geometry places Stack Exchange Q&A near news, creating systematic cross-domain confusion. Sentence-BERT or domain-adaptive models may produce more separated clusters and richer cross-domain edges.
+- **Embedding model choice:** MiniLM's short-sentence geometry places Stack Exchange Q&A near news, creating systematic cross-domain confusion. The production system has upgraded to `all-mpnet-base-v2` (768-dim); re-running this evaluation with the new model may produce more separated clusters and richer cross-domain edges.
 - **Human relevance labels:** Exp 4 precision numbers (0.00 for stackexchange) should be validated against human annotation to distinguish model failure from corpus sparsity.
 - **Minimum edge density for retrieval-level hybrid gains:** Based on these results, purely cross-domain edges at ≤5% density are insufficient. Intra-domain + cross-domain combined (targeting ≥30% per-node edge coverage) is the right target.
 

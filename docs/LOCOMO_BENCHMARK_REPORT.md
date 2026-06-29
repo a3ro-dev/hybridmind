@@ -1,10 +1,12 @@
 # HybridMind × LoCoMo Benchmark Report
 
-> **Run ID**: `run-20260403-182118`
+> **Run ID**: `run-20260403-182118` ¹
 > **Date**: 2026-04-03
 > **Answering Models**: `qwen/qwen3.5-397b` (Run 1) and `openai/gpt-5-mini` (Run 2)
 > **Judge Model**: `openai`
 > **Questions Evaluated**: 25 (Sample of 5 per category from LoCoMo locomo10)
+
+¹ *Run IDs reference historical benchmark executions. The current `memorybench/data/runs/` directory may not contain these specific runs if they were executed on a different machine or cleaned up. Latest available completed run at time of writing: `sota-improved-v7` (judge: gemini-2.5-flash, answering: gpt-4o). System configuration at time of these runs used the prototype defaults (`all-MiniLM-L6-v2`, 384-dim, α=0.6/β=0.4). Production defaults have since been updated.*
 
 ---
 
@@ -81,7 +83,7 @@ Implementation of localized `containerTag` filtering alongside routine teardowns
 
 ---
 
-## May 2026 Update (run-20260503-182449)
+## May 2026 Update (run-20260503-182449) ¹
 
 A larger 50-question evaluation (`run-20260503-182449`) was conducted after implementing two critical patches:
 1. **MemoryBench Prompt Parsing**: MemoryBench was modified to cleanly extract text snippets from HybridMind's raw JSON response, plummeting the average context token load from 2,562 down to just **601 tokens**.
@@ -101,3 +103,5 @@ A larger 50-question evaluation (`run-20260503-182449`) was conducted after impl
 | single-hop | 0 | 19 | 0.00% | 42.0% | 0.130 |
 
 *Analysis*: While the prompt cleanup and BM25 fixes successfully lifted the single-hop retrieval hit rate up to 42%, downstream evaluation still yielded 0.0% accuracy. This conclusively isolates the failure: the text snippets are surfacing in the top 10, but the answering LLM (GPT-4o) inherently struggles to extract or format the specific factual answer required by the LoCoMo benchmark judge for single-hop questions, despite having clean context.
+
+¹ *See footnote in report header regarding run provenance and system configuration.*
