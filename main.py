@@ -10,12 +10,14 @@ Production-ready with:
 - Comprehensive health endpoints
 """
 
+import asyncio
+import hashlib
 import logging
 import time
 import os
 import psutil
 from contextlib import asynccontextmanager
-from typing import List, Optional
+from typing import Dict, List, Optional
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -646,6 +648,7 @@ async def clear_database():
             conn.commit()
         db_manager.vector_index.clear()
         db_manager.graph_index.clear()
+        clear_fact_cache()
         return {"status": "success", "message": "Database cleared"}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
@@ -674,6 +677,81 @@ class SessionFactsResponse(BaseModel):
     node_ids: List[str]
 
 
+# ---- Per-session fact-extraction cache (single-flight) -------------------------
+# The memorybench harness re-ingests the SAME conversation sessions once per
+# question, so without memoization each session's (slow, ~10-20s) gpt-4o fact
+# extraction runs ~25x per conversation — overloading the HC proxy until the
+# socket drops mid-run. We memoize the extracted facts list (NOT node ids, since
+# nodes must still be created per container_tag) keyed by the session content
+# hash, with single-flight so concurrent ingests of the same session share one
+# LLM call.
+_fact_cache: Dict[str, list] = {}
+_fact_cache_locks: Dict[str, asyncio.Lock] = {}
+_fact_cache_meta_lock = asyncio.Lock()
+
+
+def _fact_cache_key(turns_dicts: List[dict]) -> str:
+    """Stable hash of the conversation turns (speaker/text/date)."""
+    h = hashlib.sha256()
+    for t in turns_dicts:
+        h.update(
+            (
+                str(t.get("speaker", "")) + "\x1f"
+                + str(t.get("text", "")) + "\x1f"
+                + str(t.get("date", "")) + "\x1e"
+            ).encode("utf-8")
+        )
+    return h.hexdigest()
+
+
+async def _get_or_extract_facts(session_id: str, turns_dicts: List[dict]) -> list:
+    """Return extracted facts for these turns, computing at most once globally.
+
+    Successful (non-empty) extractions are cached; empty results (extraction
+    failure or genuinely factless session) are NOT cached so a later question
+    can retry rather than permanently inheriting a transient failure.
+    """
+    from engine.fact_extractor import extract_facts_from_session
+
+    key = _fact_cache_key(turns_dicts)
+
+    # Fast path: already computed.
+    cached = _fact_cache.get(key)
+    if cached is not None:
+        logger.info(f"fact cache HIT for session {session_id} ({len(cached)} facts)")
+        return cached
+
+    # Acquire (or create) a per-key lock so only one coroutine extracts.
+    async with _fact_cache_meta_lock:
+        cached = _fact_cache.get(key)
+        if cached is not None:
+            return cached
+        lock = _fact_cache_locks.get(key)
+        if lock is None:
+            lock = asyncio.Lock()
+            _fact_cache_locks[key] = lock
+
+    async with lock:
+        # Re-check: a prior holder of this lock may have populated the cache.
+        cached = _fact_cache.get(key)
+        if cached is not None:
+            return cached
+        try:
+            facts = await asyncio.to_thread(extract_facts_from_session, turns_dicts)
+        except Exception as e:
+            logger.error(f"Fact extraction failed for session {session_id}: {e}")
+            facts = []
+        if facts:
+            _fact_cache[key] = facts
+        return facts
+
+
+def clear_fact_cache() -> None:
+    """Drop all memoized fact extractions (called on /admin/clear)."""
+    _fact_cache.clear()
+    _fact_cache_locks.clear()
+
+
 @app.post("/ingest/session-facts", response_model=SessionFactsResponse, tags=["Ingest"])
 async def ingest_session_facts(request: SessionFactsRequest):
     """
@@ -692,8 +770,6 @@ async def ingest_session_facts(request: SessionFactsRequest):
     """
     import uuid as _uuid
     import numpy as _np
-    import asyncio
-    from engine.fact_extractor import extract_facts_from_session
     from engine.cache import invalidate_cache
 
     # Convert pydantic models to plain dicts for the extractor
@@ -702,13 +778,10 @@ async def ingest_session_facts(request: SessionFactsRequest):
         for t in request.turns
     ]
 
-    # Run LLM-based fact extraction (ingest-time only)
-    # Using to_thread because extract_facts_from_session uses synchronous httpx
-    try:
-        facts = await asyncio.to_thread(extract_facts_from_session, turns_dicts)
-    except Exception as e:
-        logger.error(f"Fact extraction failed for session {request.session_id}: {e}")
-        facts = []
+    # Run LLM-based fact extraction (ingest-time only), memoized per unique
+    # session content with single-flight so the same session is never extracted
+    # more than once regardless of how many questions re-ingest it.
+    facts = await _get_or_extract_facts(request.session_id, turns_dicts)
 
     if not facts:
         return SessionFactsResponse(
@@ -736,6 +809,22 @@ async def ingest_session_facts(request: SessionFactsRequest):
         logger.warning(f"Batch embedding failed for fact nodes: {e}")
         embeddings = _np.zeros((len(fact_texts), db_manager.vector_index.dimension), dtype=_np.float32)
 
+    # Find all raw turn nodes for this session
+    session_turns = []
+    try:
+        cursor = db_manager.sqlite_store.conn.cursor()
+        cursor.execute(
+            """
+            SELECT id FROM nodes 
+            WHERE json_extract(metadata, '$.sessionId') = ? 
+               OR json_extract(metadata, '$.session_id') = ?
+            """,
+            (request.session_id, request.session_id)
+        )
+        session_turns = [row[0] for row in cursor.fetchall()]
+    except Exception as e:
+        logger.warning(f"Failed to query session turns for edges: {e}")
+
     for fact, fact_text, embedding in zip(valid_facts, fact_texts, embeddings):
         node_id = str(_uuid.uuid4())
         metadata = {
@@ -746,6 +835,7 @@ async def ingest_session_facts(request: SessionFactsRequest):
         }
         if request.container_tag:
             metadata["container_tag"] = request.container_tag
+            metadata["containerTag"] = request.container_tag
 
         # Store in SQLite
         db_manager.sqlite_store.create_node(
@@ -761,6 +851,27 @@ async def ingest_session_facts(request: SessionFactsRequest):
 
         # Add to graph index
         db_manager.graph_index.add_node(node_id)
+
+        # Add belongs_to edges from fact to turn nodes in same session
+        for turn_id in session_turns:
+            try:
+                edge_id = str(_uuid.uuid4())
+                db_manager.sqlite_store.create_edge(
+                    edge_id=edge_id,
+                    source_id=node_id,
+                    target_id=turn_id,
+                    edge_type="belongs_to",
+                    weight=1.0
+                )
+                db_manager.graph_index.add_edge(
+                    edge_id=edge_id,
+                    source_id=node_id,
+                    target_id=turn_id,
+                    edge_type="belongs_to",
+                    weight=1.0
+                )
+            except Exception as e:
+                logger.warning(f"Failed to create edge from fact {node_id} to turn {turn_id}: {e}")
 
         node_ids.append(node_id)
 
