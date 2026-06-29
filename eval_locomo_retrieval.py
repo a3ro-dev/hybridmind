@@ -2,7 +2,19 @@
 Quick retrieval-only LoCoMo evaluation.
 Calls the live HybridMind /search/hybrid endpoint for a sample of questions
 and computes Hit@k / MRR using answer-text overlap as relevance signal.
+
+Usage (single config):
+  python eval_locomo_retrieval.py [--vector-weight 0.5] [--graph-weight 0.15] ...
+
+Usage (grid sweep — vary vector_weight × bm25_boost × rerank_pool):
+  python eval_locomo_retrieval.py --sweep
+
+Optional filters:
+  --category single-hop|multi-hop|temporal|world-knowledge|adversarial
+  --n 5        samples per category (default 5)
 """
+import argparse
+import itertools
 import json
 import sys
 import time
@@ -13,192 +25,303 @@ from statistics import mean
 
 BASE_URL = "http://127.0.0.1:8000"
 LOCOMO_PATH = Path("memorybench/data/benchmarks/locomo/locomo10.json")
-SAMPLES_PER_CATEGORY = 5
 
 CATEGORY_MAP = {1: "single-hop", 2: "temporal", 3: "multi-hop", 4: "world-knowledge", 5: "adversarial"}
 
-def load_questions():
-    """Load up to 5 questions per category from LoCoMo dataset."""
+
+def parse_args():
+    p = argparse.ArgumentParser(description="LoCoMo retrieval eval")
+    p.add_argument("--vector-weight",    type=float, default=0.5)
+    p.add_argument("--graph-weight",     type=float, default=0.15)
+    p.add_argument("--bm25-boost",       type=float, default=0.35)
+    p.add_argument("--overlap-threshold",type=float, default=0.15)
+    p.add_argument("--rerank-pool",      type=int,   default=25)
+    p.add_argument("--top-k",            type=int,   default=15)
+    p.add_argument("--category",         type=str,   default=None,
+                   help="Filter to one category: single-hop, multi-hop, temporal, world-knowledge, adversarial")
+    p.add_argument("--n",                type=int,   default=5,
+                   help="Samples per category (default 5)")
+    p.add_argument("--sweep",            action="store_true",
+                   help="Grid-search over key params and print ranked table")
+    return p.parse_args()
+
+
+def load_questions(samples_per_category: int = 5, category_filter: str | None = None):
     data = json.loads(LOCOMO_PATH.read_text())
     questions = []
-    counts = {}
+    counts: dict = {}
     for conv in data:
         for qa in conv.get("qa", []):
             cat = CATEGORY_MAP.get(qa.get("category", 0), "unknown")
-            if counts.get(cat, 0) >= SAMPLES_PER_CATEGORY:
+            if category_filter and cat != category_filter:
+                continue
+            if counts.get(cat, 0) >= samples_per_category:
                 continue
             counts[cat] = counts.get(cat, 0) + 1
+            ans = qa.get("answer") or qa.get("adversarial_answer", "")
             questions.append({
                 "question": qa["question"],
-                "answer": str(qa["answer"]).strip(),
+                "answer": str(ans).strip(),
                 "category": cat,
                 "evidence": qa.get("evidence", []),
             })
     return questions
 
+
 def answer_tokens(answer: str) -> set:
-    """Tokenize answer into meaningful search tokens."""
     tokens = set(re.findall(r"[A-Za-z0-9']+", answer.lower()))
-    # Remove very common stop words
     stopwords = {"the", "a", "an", "in", "on", "at", "to", "for", "of", "is", "was", "it", "and", "or", "but"}
     return tokens - stopwords
 
+
 def is_relevant(retrieved_text: str, answer: str) -> bool:
-    """Check if retrieved text contains the answer (or key tokens).
-    
-    Three-tier check:
-    1. Exact answer substring match (e.g., "7 May 2023" in text)
-    2. All significant answer tokens appear in text
-    3. Partial token overlap for longer answers
-    """
     text_lower = retrieved_text.lower()
     answer_lower = answer.lower()
-    
-    # Tier 1: Direct substring match
     if answer_lower in text_lower:
         return True
-    
-    # Tier 2: All significant tokens present
     answer_toks = answer_tokens(answer)
     if not answer_toks:
         return False
     text_toks = set(re.findall(r"[A-Za-z0-9']+", text_lower))
-    
-    # For short answers (1-3 tokens), require all tokens
     if len(answer_toks) <= 3:
         return answer_toks.issubset(text_toks)
-    
-    # For longer answers, require 70%+ token overlap
     overlap = len(answer_toks & text_toks)
     return overlap / len(answer_toks) >= 0.7
 
-def evaluate():
-    questions = load_questions()
-    
-    if not questions:
-        print("ERROR: No questions loaded from LoCoMo data")
-        sys.exit(1)
-    
-    print(f"Loaded {len(questions)} questions for evaluation:")
-    cats = {}
-    for q in questions:
-        cats[q["category"]] = cats.get(q["category"], 0) + 1
-    for cat, count in sorted(cats.items()):
-        print(f"  {cat}: {count}")
-    print()
-    
-    client = httpx.Client(base_url=BASE_URL, timeout=30.0)
-    
-    all_hits_1 = []
-    all_hits_5 = []
-    all_hits_10 = []
-    all_mrr = []
-    all_prec_5 = []
-    all_prec_10 = []
-    
-    results_by_category = {}
-    
+
+def run_eval(
+    questions: list,
+    client: httpx.Client,
+    *,
+    vector_weight: float = 0.5,
+    graph_weight: float = 0.15,
+    bm25_boost: float = 0.35,
+    overlap_threshold: float = 0.15,
+    rerank_pool: int = 25,
+    top_k: int = 15,
+    verbose: bool = True,
+) -> dict:
+    all_hits_1, all_hits_5, all_hits_10, all_mrr, all_prec_5, all_prec_10 = [], [], [], [], [], []
+    results_by_category: dict = {}
+
     for i, q in enumerate(questions):
         question = q["question"]
         answer = q["answer"]
         category = q["category"]
-        
-        print(f"[{i+1}/{len(questions)}] [{category}] {question[:80]}...")
-        print(f"  Answer: {answer[:80]}...")
-        
+
+        if verbose:
+            print(f"[{i+1}/{len(questions)}] [{category}] {question[:80]}...")
+            print(f"  Answer: {answer[:80]}...")
+
         try:
             resp = client.post("/search/hybrid", json={
                 "query_text": question,
-                "top_k": 15,
+                "top_k": top_k,
                 "min_score": 0.0,
+                "vector_weight": vector_weight,
+                "graph_weight": graph_weight,
+                "bm25_boost_weight": bm25_boost,
+                "overlap_threshold": overlap_threshold,
+                "rerank_pool": rerank_pool,
             })
             if resp.status_code != 200:
-                print(f"  ERROR: HTTP {resp.status_code}")
+                if verbose:
+                    print(f"  ERROR: HTTP {resp.status_code}")
                 continue
-                
             data = resp.json()
-            results = data.get("results", [])
+            res_list = data.get("results", [])
         except Exception as e:
-            print(f"  ERROR: {e}")
+            if verbose:
+                print(f"  ERROR: {e}")
             continue
-        
-        # Evaluate at k=1,5,10
+
         for k, hits_list, prec_list in [
             (1, all_hits_1, None),
             (5, all_hits_5, all_prec_5),
             (10, all_hits_10, all_prec_10),
         ]:
-            top_k = results[:k]
-            relevant = [r for r in top_k if is_relevant(r.get("text", ""), answer)]
+            top_k_res = res_list[:k]
+            relevant = [r for r in top_k_res if is_relevant(r.get("text", ""), answer)]
             hit = 1.0 if relevant else 0.0
             hits_list.append(hit)
-            
             if prec_list is not None:
                 prec_list.append(len(relevant) / k)
-        
-        # MRR
+
         mrr = 0.0
-        for rank, r in enumerate(results[:10], 1):
+        for rank, r in enumerate(res_list[:10], 1):
             if is_relevant(r.get("text", ""), answer):
                 mrr = 1.0 / rank
                 break
         all_mrr.append(mrr)
-        
-        print(f"  Hit@1={all_hits_1[-1]:.0%} Hit@5={all_hits_5[-1]:.0%} Hit@10={all_hits_10[-1]:.0%} MRR={mrr:.3f}")
-        
-        # Show top 3 results for debugging
-        for rank, r in enumerate(results[:3], 1):
-            text = r.get("text", "")[:120]
-            vs = r.get("vector_score", 0)
-            gs = r.get("graph_score", 0)
-            gg = r.get("graph_gate", 1.0)
-            egs = r.get("effective_graph_score", gs)
-            cs = r.get("combined_score", 0)
-            rel = "✓" if is_relevant(text, answer) else "✗"
-            print(f"    #{rank} {rel} v={vs:.3f} g={gs:.3f} gate={gg:.3f} efg={egs:.3f} c={cs:.3f} {text[:100]}")
-        
-        # Per-category tracking
+
+        if verbose:
+            print(f"  Hit@1={all_hits_1[-1]:.0%} Hit@5={all_hits_5[-1]:.0%} Hit@10={all_hits_10[-1]:.0%} MRR={mrr:.3f}")
+            for rank, r in enumerate(res_list[:3], 1):
+                text = r.get("text", "")[:120]
+                vs = r.get("vector_score", 0)
+                gs = r.get("graph_score", 0)
+                gg = r.get("graph_gate", 1.0)
+                egs = r.get("effective_graph_score", gs)
+                cs = r.get("combined_score", 0)
+                rel = "[OK]" if is_relevant(text, answer) else "[NO]"
+                print(f"    #{rank} {rel} v={vs:.3f} g={gs:.3f} gate={gg:.3f} efg={egs:.3f} c={cs:.3f} {text[:100]}")
+
         if category not in results_by_category:
             results_by_category[category] = {"hits": [], "mrrs": []}
         results_by_category[category]["hits"].append(all_hits_5[-1])
         results_by_category[category]["mrrs"].append(mrr)
-        
-        time.sleep(0.1)  # Rate limiting
-    
-    client.close()
-    
-    # Compute aggregate metrics
+
+        time.sleep(0.05)
+
+    if not all_hits_1:
+        return {}
+
     n = len(all_hits_1)
-    print("\n" + "=" * 70)
-    print("  RETRIEVAL EVALUATION RESULTS")
-    print("=" * 70)
-    print(f"  Questions evaluated: {n}")
-    print(f"  Hit@1:  {mean(all_hits_1):.4f}  ({sum(all_hits_1)}/{n})")
-    print(f"  Hit@5:  {mean(all_hits_5):.4f}  ({sum(all_hits_5)}/{n})")
-    print(f"  Hit@10: {mean(all_hits_10):.4f}  ({sum(all_hits_10)}/{n})")
-    print(f"  Precision@5:  {mean(all_prec_5):.4f}")
-    print(f"  Precision@10: {mean(all_prec_10):.4f}")
-    print(f"  MRR:    {mean(all_mrr):.4f}")
-    print()
-    
-    print("  --- By Category ---")
-    for cat in sorted(results_by_category.keys()):
-        c = results_by_category[cat]
-        print(f"  {cat}: Hit@5={mean(c['hits']):.4f} MRR={mean(c['mrrs']):.4f} (n={len(c['hits'])})")
-    
-    print()
-    # Quick summary line for iteration tracking
-    print(f"  SUMMARY: Hit@1={mean(all_hits_1):.3f} Hit@5={mean(all_hits_5):.3f} Hit@10={mean(all_hits_10):.3f} Prec@5={mean(all_prec_5):.3f} Prec@10={mean(all_prec_10):.3f} MRR={mean(all_mrr):.3f}")
-    
-    return {
-        "hit_at_1": mean(all_hits_1),
-        "hit_at_5": mean(all_hits_5),
-        "hit_at_10": mean(all_hits_10),
+    summary = {
+        "hit_at_1":       mean(all_hits_1),
+        "hit_at_5":       mean(all_hits_5),
+        "hit_at_10":      mean(all_hits_10),
         "precision_at_5": mean(all_prec_5),
-        "precision_at_10": mean(all_prec_10),
-        "mrr": mean(all_mrr),
-        "n": n,
+        "precision_at_10":mean(all_prec_10),
+        "mrr":            mean(all_mrr),
+        "n":              n,
+        "by_category":    {cat: {"hit5": mean(v["hits"]), "mrr": mean(v["mrrs"])}
+                           for cat, v in results_by_category.items()},
     }
+    return summary
+
+
+def print_summary(summary: dict, label: str = ""):
+    n = summary.get("n", 0)
+    if label:
+        print(f"\n{'='*70}")
+        print(f"  {label}")
+    print(f"{'='*70}")
+    print(f"  Questions evaluated: {n}")
+    print(f"  Hit@1:  {summary['hit_at_1']:.4f}  ({round(summary['hit_at_1']*n)}/{n})")
+    print(f"  Hit@5:  {summary['hit_at_5']:.4f}  ({round(summary['hit_at_5']*n)}/{n})")
+    print(f"  Hit@10: {summary['hit_at_10']:.4f}  ({round(summary['hit_at_10']*n)}/{n})")
+    print(f"  Prec@5:  {summary['precision_at_5']:.4f}")
+    print(f"  Prec@10: {summary['precision_at_10']:.4f}")
+    print(f"  MRR:    {summary['mrr']:.4f}")
+    print()
+    print("  --- By Category ---")
+    for cat in sorted(summary["by_category"].keys()):
+        c = summary["by_category"][cat]
+        print(f"  {cat}: Hit@5={c['hit5']:.4f} MRR={c['mrr']:.4f}")
+    print()
+    print(f"  SUMMARY: Hit@1={summary['hit_at_1']:.3f} Hit@5={summary['hit_at_5']:.3f} "
+          f"Hit@10={summary['hit_at_10']:.3f} Prec@5={summary['precision_at_5']:.3f} "
+          f"Prec@10={summary['precision_at_10']:.3f} MRR={summary['mrr']:.4f}")
+
+
+def sweep(questions: list, client: httpx.Client):
+    """Coarse grid search over the highest-impact dimensions."""
+    grid = {
+        "vector_weight":     [0.4, 0.5, 0.6, 0.7],
+        "bm25_boost":        [0.25, 0.35, 0.5],
+        "rerank_pool":       [10, 25, 40],   # 10 <= top_k disables reranker
+        "graph_weight":      [0.0, 0.1, 0.2],
+        "overlap_threshold": [0.10, 0.15, 0.25],
+    }
+    # Fixed dims during sweep
+    top_k = 15
+
+    keys = list(grid.keys())
+    combos = list(itertools.product(*[grid[k] for k in keys]))
+    total = len(combos)
+    print(f"Sweep: {total} configurations × {len(questions)} questions ...\n")
+
+    results = []
+    for idx, combo in enumerate(combos, 1):
+        cfg = dict(zip(keys, combo))
+        label = " ".join(f"{k}={v}" for k, v in cfg.items())
+        print(f"[{idx:3d}/{total}] {label}", end="  ", flush=True)
+        s = run_eval(
+            questions, client,
+            vector_weight=cfg["vector_weight"],
+            graph_weight=cfg["graph_weight"],
+            bm25_boost=cfg["bm25_boost"],
+            overlap_threshold=cfg["overlap_threshold"],
+            rerank_pool=cfg["rerank_pool"],
+            top_k=top_k,
+            verbose=False,
+        )
+        if not s:
+            print("SKIP")
+            continue
+        h1, h5, mrr = s["hit_at_1"], s["hit_at_5"], s["mrr"]
+        print(f"Hit@1={h1:.3f} Hit@5={h5:.3f} MRR={mrr:.4f}")
+        results.append({"cfg": cfg, **s})
+
+    if not results:
+        print("No results.")
+        return
+
+    # Rank by Hit@5 (primary) then MRR (tiebreak)
+    results.sort(key=lambda r: (-r["hit_at_5"], -r["mrr"]))
+
+    print(f"\n{'='*90}")
+    print("  TOP-10 CONFIGURATIONS (ranked by Hit@5 then MRR)")
+    print(f"{'='*90}")
+    print(f"  {'#':>3}  {'Hit@1':>6} {'Hit@5':>6} {'Hit@10':>7} {'MRR':>7}  Config")
+    print(f"  {'-'*85}")
+    for i, r in enumerate(results[:10], 1):
+        cfg_str = " ".join(f"{k}={v}" for k, v in r["cfg"].items())
+        print(f"  {i:>3}  {r['hit_at_1']:>6.3f} {r['hit_at_5']:>6.3f} {r['hit_at_10']:>7.3f} "
+              f"{r['mrr']:>7.4f}  {cfg_str}")
+
+    best = results[0]
+    print(f"\n  BEST CONFIG:")
+    for k, v in best["cfg"].items():
+        print(f"    {k} = {v}")
+    print(f"\n  Metrics: Hit@1={best['hit_at_1']:.3f} Hit@5={best['hit_at_5']:.3f} "
+          f"Hit@10={best['hit_at_10']:.3f} MRR={best['mrr']:.4f}")
+    print()
+    print("  To lock these into config.py, update the defaults in Settings and")
+    print("  set HYBRIDMIND_DEFAULT_VECTOR_WEIGHT etc. in your .env file.")
+
+
+def main():
+    args = parse_args()
+
+    if not LOCOMO_PATH.exists():
+        print(f"ERROR: {LOCOMO_PATH} not found")
+        sys.exit(1)
+
+    questions = load_questions(samples_per_category=args.n, category_filter=args.category)
+    if not questions:
+        print("ERROR: No questions loaded from LoCoMo data")
+        sys.exit(1)
+
+    print(f"Loaded {len(questions)} questions:")
+    cats: dict = {}
+    for q in questions:
+        cats[q["category"]] = cats.get(q["category"], 0) + 1
+    for cat, count in sorted(cats.items()):
+        print(f"  {cat}: {count}")
+    print()
+
+    client = httpx.Client(base_url=BASE_URL, timeout=60.0)
+    try:
+        if args.sweep:
+            sweep(questions, client)
+        else:
+            summary = run_eval(
+                questions, client,
+                vector_weight=args.vector_weight,
+                graph_weight=args.graph_weight,
+                bm25_boost=args.bm25_boost,
+                overlap_threshold=args.overlap_threshold,
+                rerank_pool=args.rerank_pool,
+                top_k=args.top_k,
+                verbose=True,
+            )
+            if summary:
+                print_summary(summary, label="RETRIEVAL EVALUATION RESULTS")
+    finally:
+        client.close()
+
 
 if __name__ == "__main__":
-    evaluate()
+    main()

@@ -173,12 +173,14 @@ async def hybrid_search(
         "max_depth": request.max_depth,
         "min_score": request.min_score,
         "filter_metadata": request.filter_metadata,
-        "deduplicate": request.deduplicate
+        "deduplicate": request.deduplicate,
+        "rerank_pool": request.rerank_pool,
+        "bm25_boost_weight": request.bm25_boost_weight,
+        "overlap_threshold": request.overlap_threshold,
     }
 
     cached = cache.get("hybrid", cache_params)
     if cached:
-        # Return cached result with cache indicator
         cached_response = SearchResponse(**cached)
         return cached_response
 
@@ -192,7 +194,10 @@ async def hybrid_search(
         max_depth=request.max_depth,
         min_score=request.min_score,
         filter_metadata=request.filter_metadata,
-        deduplicate=request.deduplicate
+        deduplicate=request.deduplicate,
+        rerank_pool=request.rerank_pool,
+        bm25_boost_weight=request.bm25_boost_weight,
+        overlap_threshold=request.overlap_threshold,
     )
 
     search_results = [
@@ -205,6 +210,7 @@ async def hybrid_search(
             graph_gate=r.get("graph_gate"),
             effective_graph_score=r.get("effective_graph_score"),
             combined_score=r["combined_score"],
+            rerank_score=r.get("rerank_score"),
             reasoning=r["reasoning"]
         )
         for r in results

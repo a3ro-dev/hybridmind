@@ -28,34 +28,30 @@ class HybridRanker:
         vector_engine: VectorSearchEngine,
         graph_engine: GraphSearchEngine,
         bm25_index: Optional[Any] = None,
-        disable_graph_expansion: bool = False
+        disable_graph_expansion: bool = False,
+        reranker: Optional[Any] = None,
     ):
-        """
-        Initialize hybrid ranker.
-
-        Args:
-            vector_engine: Vector search engine
-            graph_engine: Graph search engine
-            bm25_index: Optional BM25 index for exact matching
-        """
         self.vector_engine = vector_engine
         self.graph_engine = graph_engine
         self.bm25_index = bm25_index
         self.disable_graph_expansion = disable_graph_expansion
+        self.reranker = reranker
 
     def search(
         self,
         query_text: str,
         top_k: int = 10,
-        vector_weight: float = 0.6,
-        graph_weight: float = 0.4,
+        vector_weight: float = 0.5,
+        graph_weight: float = 0.15,
         anchor_nodes: Optional[List[str]] = None,
         max_depth: int = 2,
         min_score: float = 0.0,
         filter_metadata: Optional[Dict[str, Any]] = None,
         deduplicate: bool = True,
         search_mode: str = "hybrid",
-        bm25_boost_weight: float = 0.45
+        bm25_boost_weight: float = 0.35,
+        rerank_pool: int = 25,
+        overlap_threshold: float = 0.15,
     ) -> Tuple[List[Dict[str, Any]], float, int]:
         start_time = time.perf_counter()
 
@@ -77,7 +73,9 @@ class HybridRanker:
 
         bm25_results = []
         if self.bm25_index:
-            bm25_hits = self.bm25_index.search(query_text, top_k=50000 if filter_metadata else candidate_k)
+            # Always request many BM25 hits — the BM25 scorer already iterates all 50K documents,
+            # so the top_k parameter only affects the final sort-and-slice, not computation cost.
+            bm25_hits = self.bm25_index.search(query_text, top_k=5000)
             for n_id, score in bm25_hits:
                 node = self.vector_engine.sqlite_store.get_node(n_id)
                 if node:
@@ -89,7 +87,7 @@ class HybridRanker:
                         "metadata": node["metadata"],
                         "bm25_score": score
                     })
-                    if len(bm25_results) >= candidate_k:
+                    if len(bm25_results) >= candidate_k * 3:
                         break
 
         # Step 2: Combine vector and BM25 into a baseline V score.
@@ -128,7 +126,9 @@ class HybridRanker:
                 # Since weak semantic vector hits average 0.4-0.6, BM25-only exact matches
                 # were mathematically incapable of ever reaching the top 10.
                 # We assign a synthetic base score proportional to keyword overlap to fix this.
-                synthetic_base = min(0.65, overlap) * (1.0 if bm25_boost_weight > 0 else 0.0)
+                # Use raw overlap (no hard cap) so BM25-only hits with strong keyword overlap
+                # can compete with vector results.
+                synthetic_base = min(overlap * 1.5, 1.0) if overlap > 0 else 0.0
                 node_data[nid]["vector_score"] = synthetic_base
                 raw_vector_scores[nid] = overlap  # Use keyword overlap as raw score proxy for BM25-only hits
                 scores[nid] = synthetic_base + boost
@@ -239,23 +239,27 @@ class HybridRanker:
         # Step 5: Late Fusion Scoring
         # Score(q,n) = α·V(q,n) + β·G(A,n)
         #
-        # Relevance-gated graph scoring (Iteration 2):
+        # Relevance-gated graph scoring:
         # Graph proximity should amplify already-relevant nodes, not prop up irrelevant ones.
-        # We gate on the RAW vector score (pre-BM25 boost) — this reflects genuine semantic
-        # similarity rather than keyword overlap which can artificially inflate scores.
-        # If raw_v_score < RELEVANCE_THRESHOLD, scale graph contribution linearly down to zero.
-        RELEVANCE_THRESHOLD = 0.30
-
+        # We gate on BM25 keyword overlap fraction rather than raw cosine similarity, because
+        # the embedding model assigns uniformly high scores to all conversation-style text,
+        # making raw_v useless for discrimination. BM25 overlap is far more selective for
+        # factoid queries — a node about "pets" will have 0 overlap with a query about "identity".
         hybrid_results = []
         for nid in candidate_ids:
-            # Use the boosted V score (vector + BM25) for ranking, but raw score for gating
             v_score = rolled_up_scores[nid]
             g_score = graph_scores.get(nid, 0.0)
-            raw_v = rolled_up_raw_scores.get(nid, 0.0)
 
-            # Relevance gate: scale graph score by how semantically relevant the node is
-            # Full graph score if raw_v >= threshold, linearly ramped down otherwise
-            gate = min(1.0, raw_v / RELEVANCE_THRESHOLD)
+            # Compute BM25 overlap fraction for gating (more selective than raw cosine)
+            overlap = bm25_overlap(query_text, rolled_up_nodes[nid]["text"])
+
+            # Relevance gate: scale graph score by keyword overlap
+            # Full graph score if overlap >= threshold, linearly ramped down otherwise
+            # If the node is structurally reachable (g_score > 0.0), it inherits its relevance from anchor nodes, so set gate = 1.0.
+            if g_score > 0.0:
+                gate = 1.0
+            else:
+                gate = min(1.0, overlap / overlap_threshold) if overlap_threshold > 0.0 else 1.0
             effective_g_score = g_score * gate
 
             combined_score = (vector_weight * v_score) + (graph_weight * effective_g_score)
@@ -287,8 +291,15 @@ class HybridRanker:
             hybrid_results = deduped
 
         hybrid_results.sort(key=lambda x: -x["combined_score"])
+        hybrid_results = [r for r in hybrid_results if r["combined_score"] >= min_score]
 
-        hybrid_results = [r for r in hybrid_results if r["combined_score"] >= min_score][:top_k]
+        # Reranking: take a larger pool, rerank with a stronger model, then slice top_k.
+        if self.reranker and rerank_pool > top_k and len(hybrid_results) > top_k:
+            pool = hybrid_results[:rerank_pool]
+            pool = self.reranker.rerank(query_text, pool, top_k=top_k)
+            hybrid_results = pool
+        else:
+            hybrid_results = hybrid_results[:top_k]
 
         query_time_ms = (time.perf_counter() - start_time) * 1000
         return hybrid_results, round(query_time_ms, 2), len(candidate_ids)
@@ -383,5 +394,3 @@ class HybridRanker:
                 "hybrid_combines_best": len(hybrid_ids & (vector_ids | graph_ids))
             }
         }
- 
-"" 

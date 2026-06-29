@@ -28,6 +28,9 @@ class HybridSearchRequest(BaseModel):
     min_score: float = Field(default=0.0, ge=0.0, le=1.0)
     filter_metadata: Optional[Dict[str, Any]] = None
     deduplicate: bool = Field(default=True, description="Deduplicate results with identical text")
+    rerank_pool: int = Field(default=25, ge=1, le=100, description="Candidate pool size fed to the reranker before slicing top_k; set <= top_k to disable reranking")
+    bm25_boost_weight: float = Field(default=0.35, ge=0.0, le=2.0, description="BM25 keyword overlap boost applied on top of vector score")
+    overlap_threshold: float = Field(default=0.15, ge=0.0, le=1.0, description="BM25 overlap fraction below which graph score is ramped down")
 
 
 class SearchResult(BaseModel):
@@ -39,6 +42,7 @@ class SearchResult(BaseModel):
     graph_gate: Optional[float] = None
     effective_graph_score: Optional[float] = None
     combined_score: Optional[float] = None
+    rerank_score: Optional[float] = None
     depth: Optional[int] = None
     path: Optional[List[str]] = None
     reasoning: Optional[str] = None
