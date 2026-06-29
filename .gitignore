@@ -39,6 +39,10 @@ data/*.mind/
 data/hybridmind.tmp_snapshot/
 *.tmp_snapshot/
 
+# SQLite database (regenerated from .mind or API)
+data/hybridmind.db
+data/*.db
+
 # Snapshots & backups (can be large; regenerate with POST /snapshot)
 data/backups/
 
@@ -58,8 +62,10 @@ stress_test_sections_3_7.py
 .cache/
 models/
 
-# ── IDE ──────────────────────────────────────────────────────────
+# ── IDE & agent config ───────────────────────────────────────────
 .vscode/
+.cursor/
+.commandcode/
 .idea/
 *.swp
 *.swo
