@@ -134,22 +134,31 @@ class VectorSearchEngine:
         - Comparison: {"year": {"$gte": 2020}}
         """
         for key, value in filter_criteria.items():
-            if key not in metadata:
-                return False
-            
-            meta_value = metadata[key]
-            
-            # Handle comparison operators
-            if isinstance(value, dict):
-                if not self._apply_comparison(meta_value, value):
+            # Support both camelCase and snake_case / legacy for containerTag
+            if key in ("containerTag", "container_tag", "container"):
+                meta_value = (
+                    metadata.get("containerTag")
+                    or metadata.get("container_tag")
+                    or metadata.get("container")
+                )
+                if meta_value != value:
                     return False
-            # Handle list containment
-            elif isinstance(meta_value, list):
-                if value not in meta_value:
+            else:
+                if key not in metadata:
                     return False
-            # Exact match
-            elif meta_value != value:
-                return False
+                meta_value = metadata[key]
+                
+                # Handle comparison operators
+                if isinstance(value, dict):
+                    if not self._apply_comparison(meta_value, value):
+                        return False
+                # Handle list containment
+                elif isinstance(meta_value, list):
+                    if value not in meta_value:
+                        return False
+                # Exact match
+                elif meta_value != value:
+                    return False
         
         return True
     

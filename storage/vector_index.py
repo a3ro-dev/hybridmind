@@ -64,7 +64,7 @@ class VectorIndex:
         
         # Initialize index
         if FAISS_AVAILABLE:
-            self.index = faiss.IndexHNSWFlat(dimension, 32)
+            self.index = faiss.IndexHNSWFlat(dimension, 32, faiss.METRIC_INNER_PRODUCT)
             self.index.hnsw.efSearch = 64
             self._use_faiss = True
             logger.info(f"FAISS HNSW vector index initialized: dimension={dimension}")
@@ -249,7 +249,7 @@ class VectorIndex:
         """Rebuild index with new vectors."""
         # Clear current index
         if self._use_faiss:
-            self.index = faiss.IndexHNSWFlat(self.dimension, 32)
+            self.index = faiss.IndexHNSWFlat(self.dimension, 32, faiss.METRIC_INNER_PRODUCT)
             self.index.hnsw.efSearch = 64
             self._raw_vectors = {}
         else:
@@ -440,7 +440,7 @@ class VectorIndex:
         """
         # BUG-2 fix: explicitly reset all state before rebuilding
         if self._use_faiss:
-            self.index = faiss.IndexHNSWFlat(self.dimension, 32)
+            self.index = faiss.IndexHNSWFlat(self.dimension, 32, faiss.METRIC_INNER_PRODUCT)
             self.index.hnsw.efSearch = 64
             self._raw_vectors = {}
         else:
@@ -480,7 +480,7 @@ class VectorIndex:
     def clear(self):
         """Clear all vectors from index."""
         if self._use_faiss:
-            self.index = faiss.IndexHNSWFlat(self.dimension, 32)
+            self.index = faiss.IndexHNSWFlat(self.dimension, 32, faiss.METRIC_INNER_PRODUCT)
             self.index.hnsw.efSearch = 64
             self._raw_vectors = {}
         else:

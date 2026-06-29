@@ -35,16 +35,16 @@ class Settings(BaseSettings):
     vector_index_path: str = "data/hybridmind.mind/vectors"
     graph_index_path: str = "data/hybridmind.mind/graph.nx"
     
-    # Embedding (local sentence-transformers, 384-dim)
-    embedding_model: str = "all-MiniLM-L6-v2"
-    embedding_dimension: int = 384
+    # Embedding (local sentence-transformers, 768-dim)
+    embedding_model: str = "all-mpnet-base-v2"
+    embedding_dimension: int = 768
     use_graph_conditioned_embeddings: bool = True
     embedding_timeout_seconds: int = 30
     
-    # Search Defaults
+    # Search Defaults (tuned for LoCoMo-style factoid queries)
     default_top_k: int = 10
-    default_vector_weight: float = 0.6
-    default_graph_weight: float = 0.4
+    default_vector_weight: float = 0.5
+    default_graph_weight: float = 0.15
     max_traversal_depth: int = 5
     
     # Performance

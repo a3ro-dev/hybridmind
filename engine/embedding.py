@@ -1,7 +1,7 @@
 """
 Embedding pipeline for HybridMind.
 Generates vector embeddings using sentence-transformers locally.
-384-dimensional MiniLM-L6-v2 embeddings for reliable, fast, offline operation.
+768-dimensional all-mpnet-base-v2 embeddings for high-quality semantic matching.
 """
 
 import logging
@@ -13,14 +13,14 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 # Default embedding model and dimension (sentence-transformers)
-_DEFAULT_MODEL = "all-MiniLM-L6-v2"
-_DEFAULT_DIMENSION = 384
+_DEFAULT_MODEL = "all-mpnet-base-v2"
+_DEFAULT_DIMENSION = 768
 
 
 class EmbeddingEngine:
     """
     Embedding generation using local sentence-transformers.
-    Returns 384-dimensional vectors.
+    Returns 768-dimensional all-mpnet-base-v2 embeddings.
     No API dependencies — works fully offline.
     """
 
