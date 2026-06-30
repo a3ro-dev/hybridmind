@@ -103,6 +103,29 @@ def extract_facts_from_session(turns: list[dict]) -> list[dict]:
     if not conversation.strip():
         return []
 
+    _FACT_JSON_SCHEMA = {
+        "name": "facts",
+        "schema": {
+            "type": "object",
+            "properties": {
+                "facts": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "fact": {"type": "string"},
+                            "entities": {"type": "array", "items": {"type": "string"}},
+                            "date": {"type": "string"},
+                        },
+                        "required": ["fact", "entities", "date"],
+                    },
+                }
+            },
+            "required": ["facts"],
+        },
+        "strict": True,
+    }
+
     payload = {
         "model": _MODEL,
         "messages": [
@@ -111,6 +134,7 @@ def extract_facts_from_session(turns: list[dict]) -> list[dict]:
         ],
         "max_tokens": 4096,
         "temperature": 0.0,
+        "response_format": {"type": "json_schema", "json_schema": _FACT_JSON_SCHEMA},
     }
     headers = {
         "Authorization": f"Bearer {_HC_API_KEY}",
@@ -177,21 +201,29 @@ def extract_facts_from_session(turns: list[dict]) -> list[dict]:
     try:
         logger.debug(f"fact_extractor: raw response ({len(content)} chars): {content[:500]}")
 
-        # Extract JSON array robustly
-        start = content.find("[")
-        end = content.rfind("]") + 1
-        if start < 0 or end <= start:
-            logger.warning(f"fact_extractor: no JSON array found in response. Content: {content[:300]}")
-            return []
+        # Parse: try json_schema envelope first, then raw array fallback
+        parsed = json.loads(content)
+        if isinstance(parsed, dict) and "facts" in parsed:
+            raw_facts = parsed["facts"]
+        elif isinstance(parsed, list):
+            raw_facts = parsed
+        else:
+            # Try extracting a JSON array from free-text response
+            start = content.find("[")
+            end = content.rfind("]") + 1
+            if start >= 0 and end > start:
+                raw_facts = json.loads(content[start:end])
+            else:
+                logger.warning(f"fact_extractor: unparseable response: {content[:300]}")
+                return []
 
-        facts = json.loads(content[start:end])
-        if not isinstance(facts, list):
-            logger.warning(f"fact_extractor: response is not a list: {type(facts)}")
+        if not isinstance(raw_facts, list):
+            logger.warning(f"fact_extractor: facts is not a list: {type(raw_facts)}")
             return []
 
         # Validate and clean
         cleaned = []
-        for item in facts:
+        for item in raw_facts:
             if not isinstance(item, dict):
                 continue
             fact_text = str(item.get("fact", "")).strip()
@@ -202,6 +234,54 @@ def extract_facts_from_session(turns: list[dict]) -> list[dict]:
                 "entities": item.get("entities", []) if isinstance(item.get("entities"), list) else [],
                 "date": str(item.get("date", "")).strip(),
             })
+
+        # Retry if we got 0 facts — rephrase to elicit at least a few
+        if not cleaned and turns:
+            logger.info("fact_extractor: 0 facts extracted, retrying with rephrased prompt")
+            retry_payload = {
+                "model": _MODEL,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": (
+                            "You extract facts from conversations. "
+                            "Return a JSON array of at least 3 short facts. "
+                            'Format: [{"fact":"...","entities":[],"date":""}]. '
+                            "Return ONLY the JSON array."
+                        ),
+                    },
+                    {"role": "user", "content": conversation[:8000]},
+                ],
+                "max_tokens": 2048,
+                "temperature": 0.0,
+            }
+            retry_content = None
+            try:
+                resp = client.post(
+                    f"{_BASE_URL}/chat/completions",
+                    headers=headers,
+                    json=retry_payload,
+                )
+                resp.raise_for_status()
+                retry_content = resp.json()["choices"][0]["message"]["content"]
+            except Exception as retry_err:
+                logger.warning(f"fact_extractor retry failed: {retry_err}")
+
+            if retry_content:
+                try:
+                    start = retry_content.find("[")
+                    end = retry_content.rfind("]") + 1
+                    if start >= 0 and end > start:
+                        retry_facts = json.loads(retry_content[start:end])
+                        for item in (retry_facts if isinstance(retry_facts, list) else []):
+                            if isinstance(item, dict) and str(item.get("fact", "")).strip():
+                                cleaned.append({
+                                    "fact": str(item["fact"]).strip(),
+                                    "entities": item.get("entities", []) if isinstance(item.get("entities"), list) else [],
+                                    "date": str(item.get("date", "")).strip(),
+                                })
+                except Exception:
+                    pass
 
         logger.info(f"fact_extractor: extracted {len(cleaned)} facts from {len(turns)} turns")
         return cleaned

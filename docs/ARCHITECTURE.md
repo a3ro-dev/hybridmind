@@ -1,7 +1,7 @@
 # HybridMind Architecture
 
 ## Overview
-HybridMind is a local-native hybrid vector + graph database designed for AI agent memory. It unifies semantic similarity and relational context into a clean, self-contained implementation combining FAISS, NetworkX, and SQLite into a single `.mind` file format.
+HybridMind is a local-native hybrid vector + graph database designed for AI agent memory. It unifies semantic similarity, lexical matching, relational context, and learned re-ranking into a clean, self-contained implementation combining FAISS, NetworkX, SQLite, and optional ColBERT/GNN modules.
 
 ## System Architecture
 
@@ -15,88 +15,121 @@ HybridMind is a local-native hybrid vector + graph database designed for AI agen
 +-------------------------------------------------------------------------+
 |                              Engine Layer                               |
 |  +------------------+  +------------------+  +------------------------+ |
-|  | Embedding Engine |  |  Query Engines   |  |   Hybrid Ranker        | |
-|  | (transformers)   |  | (Vector / Graph /|  |  (Late Fusion +        | |
-|  |                  |  |  BM25)           |  |    Late Fusion)        | |
+|  | Embedding Engine |  |  Query Engines   |  |   Hybrid Ranker       | |
+|  | (bge-m3 /        |  | (Vector / Graph /|  |  (RRF Fusion +        | |
+|  |  all-mpnet)      |  |  BM25 / ColBERT) |  |   Cross-Encoder       | |
+|  +------------------+  +------------------+  |   Reranker)           | |
+|                                               +------------------------+ |
+|  +------------------+  +------------------+  +------------------------+ |
+|  | Edge Inference   |  | Fact Extractor   |  |  Device Resolution    | |
+|  | (cosine + entity)|  | (structured JSON |  |  (auto: cuda>mps>cpu) | |
+|  |                  |  |  + retry)        |  |                       | |
 |  +------------------+  +------------------+  +------------------------+ |
 +-------------------------------------------------------------------------+
                                     |
                                     v
 +-------------------------------------------------------------------------+
 |                             Storage Layer                               |
-|  +-----------------+  +----------------------+  +--------------------+  |
-|  |  SQLite Store   |  |   Vector / BM25      |  |     Graph Index    |  |
-|  | (WAL Enabled)   |  |  (FAISS / NLTK)      |  |     (NetworkX)     |  |
-|  +-----------------+  +----------------------+  +--------------------+  |
+|  +-----------------+  +--------------------+  +--------------------+    |
+|  |  SQLite Store   |  |  Vector / BM25     |  |    Graph Index     |    |
+|  | (WAL Enabled)   |  | (FAISS / NLTK)     |  |   (NetworkX)      |    |
+|  +-----------------+  +--------------------+  +--------------------+    |
+|  +-----------------+  +--------------------+                           |
+|  | ColBERT Store   |  |  GNN Reranker      |   (opt-in, off by default)|
+|  |  (.npz files)   |  |  (GraphSAGE/HGT)   |                           |
+|  +-----------------+  +--------------------+                           |
 +-------------------------------------------------------------------------+
                                     |
                                     v
 +-------------------------------------------------------------------------+
 |                            Persistence                                  |
-|     (.mind directory: manifest.json / store.db / vectors / vectors.map / graph.nx)  |
+|  (.mind directory: manifest.json / store.db / vectors / graph.nx /     |
+|   bm25.pkl / colbert/*.npz)                                            |
 +-------------------------------------------------------------------------+
 ```
 
 ## Component Deep Dives
 
 ### Embedding Engine
-- **Model**: `all-mpnet-base-v2` (768 dimensions). Configurable via `HYBRIDMIND_EMBEDDING_MODEL`.
-- **Neighborhood Averaging**: At node ingest, the embedding is conditioned on its semantic neighborhood—a practical, non-training variant of GraphSAGE-style aggregation:
+- **Default model**: `BAAI/bge-m3` (1024-dim). Falls back to `all-mpnet-base-v2` (768-dim) via `HYBRIDMIND_EMBEDDING_MODEL`.
+- **FlagEmbedding native**: When `FlagEmbedding>=1.2.10` is installed, bge-m3 provides dense (1024) + sparse (lexical weights) + ColBERT (per-token) vectors natively. Without FlagEmbedding, SentenceTransformer backend provides dense-only.
+- **Neighborhood Averaging** (`HYBRIDMIND_USE_GRAPH_CONDITIONED_EMBEDDINGS`): At node ingest, the embedding is conditioned on its semantic neighborhood:
   `final_embedding = normalize(0.7 * own_embedding + 0.3 * mean_neighbor_embeddings)`
-- **Configuration**: α=0.7 is the default weight, ensuring the node's original content dominates while receiving a 30% contextual pull from its semantic peers.
-- **Thread Safety**: The model is serialized under the Python Global Interpreter Lock (GIL). High-concurrency throughput is limited to single-threaded execution (approx. 200ms per embedding).
+  Off by default since Phase 2 to prioritize clean semantic baselines. Use the contrastive fine-tuning script (`scripts/train_contrastive.py`) for a trained alternative.
+- **Thread Safety**: The model is serialized under the Python GIL. High-concurrency throughput is limited to single-threaded execution.
+
+### Device Resolution
+All model loads (embedding, reranker, ColBERT, GNN) call `engine/device.py:resolve_device()`:
+- `auto` → cuda > mps > cpu
+- `cuda` → force CUDA, raises RuntimeError if unavailable
+- `cpu` → force CPU
+- `/health` endpoint includes `gpu` object with status, device name, CUDA version.
 
 ### Late Fusion Scoring
-The system utilizes a weighted linear score fusion to combine semantic, lexical, and structural signals:
 
-```text
-Score = vector_weight × V_effective + graph_weight × G_effective
-```
+**Default: RRF (Reciprocal Rank Fusion, k=60)**. Per-signal rank lists (dense, graph) are fused with rank-based weighting. `vector_weight`/`graph_weight` params multiply the per-signal RRF contribution, making search-request tuning effective in both `rrf` and `linear` modes.
 
-Where the default weights are `vector_weight=0.5`, `graph_weight=0.15`, with a `bm25_boost_weight=0.35` applied inside the vector score. Note: these weights do **not** sum to 1.0; the BM25 boost is additive within the vector component.
+**Linear fallback**: `fusion_mode="linear"` preserves the original weighted-sum formula with BM25 overlap gating — selectable per-request for A/B comparison.
 
-- **Vector Score (V)**: Cosine similarity between query and node embeddings, plus a BM25 keyword overlap boost (`bm25_overlap × 0.35`). Range: 0.0 to ~1.35.
-- **Graph Score (G)**: Proximity based on 1/(1+d), where d is shortest path length from internal or explicit anchor nodes. Gated by BM25 keyword overlap relevance.
-- **Default Weights**: `vector_weight=0.5`, `graph_weight=0.15`, `bm25_boost_weight=0.35` (tuned for LoCoMo-style factoid queries).
-- **Distance → Score Table**:
-  - 0 (self/anchor): 1.0
-  - 1 (direct neighbor): 0.5
-  - 2 (2-hop): 0.33
-  - 3 (3-hop): 0.25
-  - ∞ (no path): 0.0
+**Cross-encoder reranker**: `BAAI/bge-reranker-v2-m3` re-ranks top-25 fusion pool. Before blending, both the fusion combined score and the cross-encoder score are independently normalized to [0,1]. Final: `0.7 * normalized_fusion + 0.3 * normalized_reranker`. This prevents the pure-text reranker from deleting graph-discovered candidates on multi-hop queries.
+
+**FusionScorer MLP** (opt-in): 2-layer MLP (~200 params) with heuristic init that approximates RRF. When trained via `scripts/train_fusion_mlp.py`, loads from config `HYBRIDMIND_FUSION_MODEL=<checkpoint.npz>`.
+
+**Distance → Graph Score Table**:
+- 0 (self/anchor): 1.0
+- 1 (direct neighbor): 0.5
+- 2 (2-hop): 0.33
+- 3 (3-hop): 0.25
+- ∞ (no path): 0.0
+
+### Auto-Edge Inference
+(`HYBRIDMIND_AUTO_EDGES_ENABLED=true`, `engine/edge_inference.py`)
+- **Cosine-threshold** (`HYBRIDMIND_AUTO_EDGE_COSINE_THRESHOLD=0.75`): Top-N vector neighbors above threshold get `similar_to` edges.
+- **Entity co-occurrence** (`HYBRIDMIND_AUTO_EDGE_ENTITY_ENABLED=true`): Nodes sharing named entities get `co_occurs` edges. Uses pre-extracted `fact.entities` from the fact extractor, with optional spaCy NER fallback.
+- **Typed walk weights** (`models/edge.py:EDGE_TYPE_WALK_WEIGHTS`): Per-edge-type contribution map used by `compute_weighted_proximity_score`. Strong causal edges (led_to, caused_by) weight 1.0; structural edges (similar_to) weight 0.7; session edges weight 0.3-0.6.
+- Wired into all three ingest paths: `/nodes`, `/bulk/nodes`, `/ingest/session-facts`.
+
+### Opt-In Research Modules
+
+| Module | Config | Requirement | Storage |
+|--------|--------|-------------|---------|
+| ColBERT MaxSim | `HYBRIDMIND_COLBERT_ENABLED=true` | `FlagEmbedding>=1.2.10` | `<mind>/colbert/*.npz` (~100-200KB/node) |
+| GNN Reranker (GraphSAGE) | `HYBRIDMIND_GNN_ENABLED=true` | `torch-geometric` | Checkpoint `.pt` via `HYBRIDMIND_GNN_MODEL_PATH` |
+
+All modules ship with CPU fallbacks and are off by default.
 
 ### Storage Layer
 
 #### SQLite Store
-- **Persistence**: Relational database (SQLite) in Write-Ahead Logging (WAL) mode.
-- **Schema**: `nodes` (full text, metadata, embeddings) and `edges` (from/to/type/weight).
-- **Soft-Delete**: Nodes are marked with `deleted_at`. Filtered at search time and cleaned during compaction.
-- **Concurrency**: SQLite handles multiple readers during active writes without blocking.
+- **Persistence**: SQLite in WAL mode. Schema: `nodes` (text, metadata, raw_embedding BLOB, deleted_at) and `edges` (from/to/type/weight/edge_id).
+- **Soft-Delete**: Nodes marked with `deleted_at`. Filtered at search time, cleaned during compaction.
+- **Concurrency**: Multiple readers during active writes without blocking.
 
 #### FAISS Vector Index
-- **Index Type**: `IndexHNSWFlat` (Approximate Nearest Neighbor using HNSW with Inner Product metric, `efSearch=64`, `M=32`).
-- **Mapping**: FAISS integer indices are mapped to Node UUIDs via a separate `vectors.map` file persisted alongside the index.
-- **Memory**: O(n·d) storage; HNSW search is O(log n) at query time.
+- **Index Type**: `IndexHNSWFlat` (HNSW with Inner Product, `efSearch=64`, `M=32`). `faiss-gpu` supported on Linux/Docker via `HYBRIDMIND_USE_FAISS_GPU=true`.
+- **Dynamic dimension**: Dimension set from `settings.embedding_dimension`. Mismatch between config and stored index raises clear "run reindex" error.
+- **Memory**: O(n·d) storage; HNSW search is O(log n).
 
 #### Okapi BM25 Index
-- **Engine**: Pure Python implementation with `nltk` PorterStemmer.
-- **Role**: Addresses the single-hop factual recall limitation of vector similarity by prioritizing exact keyword matches, especially for entities and dates.
-- **Serialization**: Python Pickle (v5).
+- **Engine**: Pure Python with `nltk` PorterStemmer. Pickle serialization.
+- **Role**: Exact keyword matching for entities, dates, and facts where semantic similarity is insufficient.
 
 #### NetworkX Graph Index
-- **Engine**: In-memory `DiGraph`.
-- **Traversal**: BFS-based graph proximity computation.
-- **Wait Mechanism**: Directed edges are used, but proximity allows for both incoming and outgoing traversal routes.
-- **Serialization**: Python Pickle (v5). Direct, fast, and local.
+- **Engine**: In-memory `DiGraph`. BFS traversal for proximity computation. Directed edges with bidirectional traversal.
+- **Serialization**: Python Pickle (v5).
+
+#### ColBERT Store (`storage/colbert_store.py`)
+- **Format**: Per-node `.npz` files in `<mind>/colbert/`. Each contains `(seq_len, 1024)` float32 for bge-m3.
+- **MaxSim rerank** (`engine/colbert_reranker.py`): At query time, encode query as colbert tokens, compute max cosine per query token vs stored candidate tokens, blend into combined score (α=0.3).
 
 ### Persistence (.mind format)
 The database persists as a directory with the `.mind` extension:
-- `manifest.json`: SHA256 checksums and a monotonic version counter for crash recovery.
+- `manifest.json`: SHA256 checksums, monotonic version counter, embedding model/dimension.
 - `store.db`: SQLite database.
-- `vectors.faiss`: Serialized FAISS index.
-- `vectors.map`: FAISS integer-index to Node UUID mapping.
+- `vectors.faiss` + `vectors.map`: Serialized FAISS index + integer-to-UUID mapping.
 - `graph.nx`: Pickled NetworkX graph.
 - `bm25.pkl`: Pickled BM25 index with NLTK stemmer state.
+- `colbert/`: Per-node `.npz` files (when enabled).
 
 **Atomic Snapshot Protocol**:
 1. Create temporary directory.
@@ -106,39 +139,50 @@ The database persists as a directory with the `.mind` extension:
 5. `fsync` directory and rename to final destination.
 6. Rotate backups (keeps 3 most recent snapshots).
 
+### Reindex Script
+`scripts/reindex_embeddings.py`: Re-embeds all node texts with the current model and rebuilds FAISS from scratch. Required when switching embedding models (e.g., all-mpnet→bge-m3). Fresh installs need no migration.
+
 ### API Layer
 Built on FastAPI for performance and Pydantic v2 for strict type safety.
 - **Request Timing**: Middleware adds `X-Process-Time-Ms` header to every response.
 - **CORS**: Permissive CORS for local development.
-- **Soft Filtering**: Queries respect the `deleted_at` field, ensuring "forgotten" nodes are invisible before physical compaction.
-- **Validation**: Strict edge type enforcement based on the research edge taxonomy.
+- **Validation**: Strict edge type enforcement based on the edge taxonomy (`models/edge.py`).
+- **Query Cache**: LRU cache (TTL=300s, maxsize=1000) for vector and hybrid searches.
 
 ### SDK
 The Python SDK (`HybridMemory`) provides high-level abstractions:
 - `store()` / `store_batch()` / `store_with_auto_edges()`: Node creation with optional auto-linking.
-- `recall()` / `recall_stream()`: Hybrid or vector retrieval, with optional streaming.
+- `recall()` / `recall_stream()`: Hybrid or vector retrieval.
 - `relate()`: Explicit edge creation.
-- `trace()`: Semantic-to-graph traversal (finds anchor via vector search, then traverses graph).
+- `trace()`: Semantic-to-graph traversal.
 - `forget()` / `compact()`: Soft-delete and physical rebuild.
 - `session.create/recall/archive/list()`: Scoped memory sessions.
 - `tools.get_schema()`: OpenAI function-calling compatible tool schemas.
 
 ## Data Flow: Hybrid Search Request
-1. **Validation**: Pydantic validates the request parameters and weights.
-2. **Embedding**: The query text is vectorized by `EmbeddingEngine`.
-3. **Candidate Selection**: FAISS performs a k-NN search to identify 3x the requested `top_k` results.
-4. **BM25 Scoring**: BM25 index scores candidates by keyword overlap; high-overlap candidates receive a vector score boost.
-5. **Anchor Identification**: If no `anchor_nodes` are provided, the top 3 vector results are used as anchors.
-6. **Relational Proximity**: NetworkX calculates shortest path distances from anchors to all candidates. Graph scores are gated by BM25 keyword relevance.
-7. **Fusion**: Candidate scores are calculated using the weighted fusion (`vector_weight × V + graph_weight × G`).
-8. **Refinement**: Results are re-ranked by their fused score and truncated to `top_k`.
+1. **Validation**: Pydantic validates parameters, weights, and optional `fusion_mode`.
+2. **Embedding**: Query text vectorized by `EmbeddingEngine` (bge-m3 1024-dim).
+3. **Candidate Selection**: FAISS k-NN (candidate_k=max(100, top_k*10)) + BM25 top-5000.
+4. **BM25 Boost**: Keyword overlap fraction multiplied by `bm25_boost_weight=0.35` added to vector score.
+5. **SGMem Chunk Rollup**: Sentence chunks rolled up to parent nodes by max score.
+6. **Anchor Identification**: Explicit `anchor_nodes` or top-3 vector hits.
+7. **Graph Expansion**: BFS traversal from anchors (depth=max_depth). Pure-graph candidates added to pool with vector_score=0.
+8. **Graph Scoring**: Shortest-path proximity `1/(1+d)` from anchors.
+9. **RRF Fusion**: Dense and graph rank lists fused with signal weights. `vector_weight`/`graph_weight` multiply per-signal RRF contribution.
+10. **Deduplication**: Text-identical candidates removed, preferring highest vector score.
+11. **ColBERT MaxSim** (if enabled): Per-token query vectors matched against stored candidate colberts; 30% weight blend into combined score.
+12. **Cross-Encoder Reranking**: Top-25 pool re-ranked by `bge-reranker-v2-m3`. Both fusion and CE scores normalized to [0,1], blended 70/30.
+13. **Final Sort**: Sorted by combined_score descending, sliced to top_k.
 
 ## Design Decisions and Trade-offs
-- **HNSW Vector Search**: Chose `IndexHNSWFlat` over exact `IndexFlatIP` for sub-logarithmic query latency at the cost of approximate recall. Acceptable trade-off for the ~10k node scale target.
-- **Local-First Architecture**: Chose SQLite/NetworkX (local) over Neo4j (remote) to minimize network latency within agent reasoning loops.
-- **Neighborhood Averaging**: Conditioning embeddings at ingest rather than just query-time provides semantic coherence even when graph edges are sparse.
+- **RRF over fixed linear weights**: Zero per-corpus tuning. Works across diverse benchmarks without weight sweeps.
+- **Normalized reranker blending**: Prevents the pure-text cross-encoder from deleting graph-discovered candidates on multi-hop queries.
+- **Local-First Architecture**: SQLite/NetworkX/FAISS over remote DBs to minimize latency within agent reasoning loops.
+- **bge-m3 default**: 1024-dim provides richer semantic separation than 768-dim all-mpnet, at the cost of ~30% more RAM and slower CPU encoding.
+- **Opt-in heavy modules**: ColBERT (~200KB/node) and GNN (~500MB model) are off by default with CPU fallbacks. The system stays local-native and test-suite-compatible.
 
 ## Scalability Ceiling
-- **Memory**: FAISS HNSW (n × 768 × 4 bytes + HNSW graph overhead) + NetworkX overhead. Estimated ~30MB for 10k nodes.
-- **Latency**: HNSW search is O(log n). The practical ceiling for sub-50ms p95 is estimated at **8,000-10,000 nodes** on modern hardware.
+- **Memory**: FAISS HNSW (n × 1024 × 4 bytes + HNSW graph) + NetworkX overhead. ~40MB for 10k nodes at 1024-dim.
+- **Latency**: HNSW search O(log n). Practical ceiling **~8,000-10,000 nodes** for sub-50ms p95.
 - **GIL**: Python embedding model serializes concurrent requests. Throughput beyond 10 rps requires external embedding services.
+- **ColBERT**: Per-token storage (~100-200KB/node) limits practical corpus to ~50K nodes with typical disk budgets.
