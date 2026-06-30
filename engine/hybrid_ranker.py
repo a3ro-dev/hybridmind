@@ -3,12 +3,16 @@ Hybrid ranker for HybridMind.
 Implements the Contextual Relevance Score (CRS) algorithm.
 """
 
+import logging
 import time
 from typing import Any, Dict, List, Optional, Set, Tuple
 import numpy as np
 
 from engine.vector_search import VectorSearchEngine
 from engine.graph_search import GraphSearchEngine
+from engine.fusion import rrf_fuse, get_fusion_mode, get_rrf_k
+
+logger = logging.getLogger(__name__)
 
 
 class HybridRanker:
@@ -52,6 +56,7 @@ class HybridRanker:
         bm25_boost_weight: float = 0.35,
         rerank_pool: int = 25,
         overlap_threshold: float = 0.15,
+        fusion_mode: Optional[str] = None,
     ) -> Tuple[List[Dict[str, Any]], float, int]:
         start_time = time.perf_counter()
 
@@ -237,44 +242,68 @@ class HybridRanker:
         )
 
         # Step 5: Late Fusion Scoring
-        # Score(q,n) = α·V(q,n) + β·G(A,n)
-        #
-        # Relevance-gated graph scoring:
-        # Graph proximity should amplify already-relevant nodes, not prop up irrelevant ones.
-        # We gate on BM25 keyword overlap fraction rather than raw cosine similarity, because
-        # the embedding model assigns uniformly high scores to all conversation-style text,
-        # making raw_v useless for discrimination. BM25 overlap is far more selective for
-        # factoid queries — a node about "pets" will have 0 overlap with a query about "identity".
-        hybrid_results = []
-        for nid in candidate_ids:
-            v_score = rolled_up_scores[nid]
-            g_score = graph_scores.get(nid, 0.0)
+        fusion_mode = fusion_mode or get_fusion_mode()
 
-            # Compute BM25 overlap fraction for gating (more selective than raw cosine)
-            overlap = bm25_overlap(query_text, rolled_up_nodes[nid]["text"])
+        if fusion_mode == "rrf":
+            # Build per-signal rank lists (sorted descending by score)
+            dense_list = sorted(
+                [(nid, rolled_up_scores[nid]) for nid in candidate_ids],
+                key=lambda x: -x[1],
+            )
+            graph_list = sorted(
+                [(nid, graph_scores.get(nid, 0.0)) for nid in candidate_ids],
+                key=lambda x: -x[1],
+            )
+            rrf_scores = rrf_fuse(
+                {"dense": dense_list, "graph": graph_list},
+                k=get_rrf_k(),
+                signal_weights={"dense": vector_weight, "graph": graph_weight},
+            )
+            hybrid_results = []
+            for nid in candidate_ids:
+                v_score = rolled_up_scores[nid]
+                g_score = graph_scores.get(nid, 0.0)
+                combined_score = rrf_scores.get(nid, 0.0)
+                hybrid_results.append({
+                    "node_id": nid,
+                    "text": rolled_up_nodes[nid]["text"],
+                    "metadata": rolled_up_nodes[nid]["metadata"],
+                    "vector_score": v_score,
+                    "graph_score": g_score,
+                    "graph_gate": 1.0,
+                    "effective_graph_score": round(g_score, 4),
+                    "combined_score": combined_score,
+                    "reasoning": f"RRF(dense={v_score:.4f}, graph={g_score:.4f})",
+                    "fusion_mode": "rrf",
+                })
+        else:
+            # Linear fusion (original CRS algorithm) with relevance gate — kept for back-compat
+            hybrid_results = []
+            for nid in candidate_ids:
+                v_score = rolled_up_scores[nid]
+                g_score = graph_scores.get(nid, 0.0)
 
-            # Relevance gate: scale graph score by keyword overlap
-            # Full graph score if overlap >= threshold, linearly ramped down otherwise
-            # If the node is structurally reachable (g_score > 0.0), it inherits its relevance from anchor nodes, so set gate = 1.0.
-            if g_score > 0.0:
-                gate = 1.0
-            else:
-                gate = min(1.0, overlap / overlap_threshold) if overlap_threshold > 0.0 else 1.0
-            effective_g_score = g_score * gate
+                # BM25 overlap gate: graph score should amplify already-relevant nodes
+                overlap = bm25_overlap(query_text, rolled_up_nodes[nid]["text"])
+                if g_score > 0.0:
+                    gate = 1.0
+                else:
+                    gate = min(1.0, overlap / overlap_threshold) if overlap_threshold > 0.0 else 1.0
+                effective_g_score = g_score * gate
 
-            combined_score = (vector_weight * v_score) + (graph_weight * effective_g_score)
-
-            hybrid_results.append({
-                "node_id": nid,
-                "text": rolled_up_nodes[nid]["text"],
-                "metadata": rolled_up_nodes[nid]["metadata"],
-                "vector_score": v_score,
-                "graph_score": g_score,
-                "graph_gate": round(gate, 4),
-                "effective_graph_score": round(effective_g_score, 4),
-                "combined_score": combined_score,
-                "reasoning": f"Score = {vector_weight}*{v_score:.4f} + {graph_weight}*{effective_g_score:.4f} (gate={gate:.2f})"
-            })
+                combined_score = (vector_weight * v_score) + (graph_weight * effective_g_score)
+                hybrid_results.append({
+                    "node_id": nid,
+                    "text": rolled_up_nodes[nid]["text"],
+                    "metadata": rolled_up_nodes[nid]["metadata"],
+                    "vector_score": v_score,
+                    "graph_score": g_score,
+                    "graph_gate": round(gate, 4),
+                    "effective_graph_score": round(effective_g_score, 4),
+                    "combined_score": combined_score,
+                    "reasoning": f"Score = {vector_weight}*{v_score:.4f} + {graph_weight}*{effective_g_score:.4f} (gate={gate:.2f})",
+                    "fusion_mode": "linear",
+                })
 
         if deduplicate:
             seen_texts: Set[str] = set()
@@ -290,8 +319,21 @@ class HybridRanker:
                     deduped.append(result)
             hybrid_results = deduped
 
-        hybrid_results.sort(key=lambda x: -x["combined_score"])
+        hybrid_results.sort(key=lambda x: (-x["combined_score"], -x.get("vector_score", 0.0)))
         hybrid_results = [r for r in hybrid_results if r["combined_score"] >= min_score]
+
+        # ── ColBERT MaxSim late interaction (opt-in: HYBRIDMIND_COLBERT_ENABLED=true) ──
+        try:
+            from storage.colbert_store import colbert_enabled
+            if colbert_enabled():
+                from engine.colbert_reranker import colbert_maxsim_rerank
+                # The embedding engine is accessible via the vector_engine
+                emb_engine = self.vector_engine.embedding_engine
+                hybrid_results = colbert_maxsim_rerank(
+                    query_text, hybrid_results, emb_engine,
+                )
+        except ImportError:
+            pass
 
         # Reranking: take a larger pool, rerank with a stronger model, then slice top_k.
         if self.reranker and rerank_pool > top_k and len(hybrid_results) > top_k:

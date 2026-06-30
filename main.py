@@ -35,6 +35,7 @@ from api.bulk import router as bulk_router
 from api.comparison import router as comparison_router
 from api.dependencies import get_db_manager
 from engine.cache import get_query_cache
+from engine.device import gpu_info as _gpu_info
 
 
 # Configure logging
@@ -426,7 +427,10 @@ async def health_check():
             "status": "healthy",
             **cache.stats
         }
-        
+
+        # GPU / device info
+        components["gpu"] = _gpu_info()
+
     except Exception as e:
         components["system"] = {"status": "unhealthy", "error": str(e)}
     
@@ -872,6 +876,29 @@ async def ingest_session_facts(request: SessionFactsRequest):
                 )
             except Exception as e:
                 logger.warning(f"Failed to create edge from fact {node_id} to turn {turn_id}: {e}")
+
+        # Auto-edge inference (config-gated: HYBRIDMIND_AUTO_EDGES_ENABLED=true)
+        from engine.edge_inference import run_auto_edge_inference
+        try:
+            run_auto_edge_inference(
+                node_id=node_id,
+                embedding=embedding,
+                node_metadata=metadata,
+                node_text=fact_text,
+                vector_index=db_manager.vector_index,
+                sqlite_store=db_manager.sqlite_store,
+                graph_index=db_manager.graph_index,
+            )
+        except Exception as e:
+            logger.debug(f"Auto-edge inference failed for fact {node_id}: {e}")
+
+        # ColBERT per-token vectors (opt-in: HYBRIDMIND_COLBERT_ENABLED=true)
+        try:
+            from storage.colbert_store import colbert_enabled, maybe_store_colbert
+            if colbert_enabled() and hasattr(db_manager, 'colbert_store') and db_manager.colbert_store is not None:
+                maybe_store_colbert(node_id, fact_text, db_manager.embedding_engine, db_manager.colbert_store)
+        except Exception as e:
+            logger.debug(f"ColBERT storage failed for fact {node_id}: {e}")
 
         node_ids.append(node_id)
 

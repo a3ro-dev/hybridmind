@@ -35,20 +35,46 @@ class Settings(BaseSettings):
     vector_index_path: str = "data/hybridmind.mind/vectors"
     graph_index_path: str = "data/hybridmind.mind/graph.nx"
     
-    # Embedding (local sentence-transformers, 768-dim)
-    embedding_model: str = "all-mpnet-base-v2"
-    embedding_dimension: int = 768
+    # Device (auto = cuda > mps > cpu)
+    device: str = "auto"
+    use_faiss_gpu: bool = False  # opt-in; Linux/Docker only (no Windows wheel)
+
+    # Embedding (default: bge-m3 1024-dim; set HYBRIDMIND_EMBEDDING_MODEL=all-mpnet-base-v2 for CPU-only)
+    embedding_model: str = "BAAI/bge-m3"
+    embedding_dimension: int = 1024
     use_graph_conditioned_embeddings: bool = True
     embedding_timeout_seconds: int = 30
-    
+    embedding_batch_size: int = 32  # per-batch size for model.encode()
+
     # Search Defaults (tuned for LoCoMo-style factoid queries)
     default_top_k: int = 10
     default_vector_weight: float = 0.5
     default_graph_weight: float = 0.15
     max_traversal_depth: int = 5
-    
+
+    # Fusion (rrf | linear)
+    fusion_mode: str = "rrf"
+    fusion_rrf_k: int = 60  # RRF constant; higher = smoother rank penalty
+
+    # Fusion MLP (Phase 2 post-training) — set to checkpoint path to enable
+    fusion_model_path: Optional[str] = None
+
+    # Reranker model (used by CrossEncoderReranker)
+    reranker_model: str = "BAAI/bge-reranker-v2-m3"
+
+    # Auto-edge inference (Phase 3)
+    auto_edges_enabled: bool = False
+    auto_edge_cosine_threshold: float = 0.75
+    auto_edge_max_per_node: int = 5
+    auto_edge_entity_enabled: bool = False  # requires spaCy or fact entities
+
+    # Opt-in research modules (Phase 3)
+    colbert_enabled: bool = False   # ColBERT MaxSim re-rank; needs bge-m3 colbert vecs
+    gnn_enabled: bool = False       # GNN reranker; needs torch-geometric
+    gnn_model_path: Optional[str] = None  # path to trained GNN checkpoint (.pt)
+
     # Performance
-    batch_size: int = 32
+    batch_size: int = 32            # legacy alias; use embedding_batch_size for new code
     cache_size: int = 1000
     
     # API

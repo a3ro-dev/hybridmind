@@ -27,6 +27,7 @@ from storage.bm25_index import BM25Index
 from storage.graph_index import GraphIndex
 from engine.embedding import EmbeddingEngine
 from engine.cache import invalidate_cache
+from engine.edge_inference import run_auto_edge_inference
 
 logger = logging.getLogger(__name__)
 
@@ -249,6 +250,38 @@ async def bulk_create_nodes(
             vector_index.add_batch(vector_batch)
         except Exception as e:
             errors.append(f"Vector index batch add failed: {str(e)}")
+
+    # Auto-edge inference (config-gated: HYBRIDMIND_AUTO_EDGES_ENABLED=true)
+    for node_data, (nid, emb) in zip(nodes_to_create, vector_batch):
+        try:
+            run_auto_edge_inference(
+                node_id=nid,
+                embedding=emb,
+                node_metadata=node_data.get("metadata") or {},
+                node_text=node_data.get("text", ""),
+                vector_index=vector_index,
+                sqlite_store=sqlite_store,
+                graph_index=graph_index,
+            )
+        except Exception as e:
+            logger.debug(f"Auto-edge inference failed for {nid}: {e}")
+
+    # ColBERT per-token vectors (opt-in: HYBRIDMIND_COLBERT_ENABLED=true)
+    try:
+        from storage.colbert_store import colbert_enabled, maybe_store_colbert
+        if colbert_enabled():
+            from api.dependencies import get_colbert_store, get_embedding_engine as _get_emb
+            cs = get_colbert_store()
+            ee = _get_emb()
+            if cs is not None and ee is not None:
+                for nid, _node_data, _emb in zip(
+                    [x[0] for x in vector_batch],
+                    nodes_to_create,
+                    [x[1] for x in vector_batch],
+                ):
+                    maybe_store_colbert(nid, _node_data.get("text", ""), ee, cs)
+    except Exception as e:
+        logger.debug(f"ColBERT storage failed during bulk ingest: {e}")
     
     # Batch add to BM25 index
     try:

@@ -31,6 +31,7 @@ class HybridSearchRequest(BaseModel):
     rerank_pool: int = Field(default=25, ge=1, le=100, description="Candidate pool size fed to the reranker before slicing top_k; set <= top_k to disable reranking")
     bm25_boost_weight: float = Field(default=0.35, ge=0.0, le=2.0, description="BM25 keyword overlap boost applied on top of vector score")
     overlap_threshold: float = Field(default=0.15, ge=0.0, le=1.0, description="BM25 overlap fraction below which graph score is ramped down")
+    fusion_mode: Optional[str] = Field(default=None, description="Override config fusion_mode: 'rrf' or 'linear'")
 
 
 class SearchResult(BaseModel):

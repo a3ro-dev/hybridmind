@@ -8,6 +8,10 @@ services:
       - "8000:8000"
     volumes:
       - hybridmind_data:/app/data
+    environment:
+      - HYBRIDMIND_DEVICE=auto
+      # Uncomment to pin a specific device:
+      # - HYBRIDMIND_DEVICE=cpu
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/live"]
       interval: 10s
@@ -15,6 +19,16 @@ services:
       retries: 5
       start_period: 120s
     restart: unless-stopped
+    # --- NVIDIA GPU (Linux/Docker only) ---
+    # To enable: uncomment the deploy block below and ensure nvidia-container-toolkit is installed.
+    # Also set HYBRIDMIND_USE_FAISS_GPU=true and install faiss-gpu (not faiss-cpu).
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
 
   ui:
     build:

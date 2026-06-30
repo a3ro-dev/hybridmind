@@ -19,9 +19,13 @@ import logging
 import os
 from typing import Any, Dict, List, Optional
 
+import numpy as np
+
 logger = logging.getLogger(__name__)
 
-_CROSS_MODEL = os.getenv("RERANK_CROSS_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
+from engine.device import resolve_device as _resolve_device
+
+_CROSS_MODEL = os.getenv("RERANK_CROSS_MODEL", "BAAI/bge-reranker-v2-m3")
 _LLM_MODEL = os.getenv("RERANK_LLM_MODEL", "~google/gemini-flash-latest")
 
 
@@ -41,13 +45,7 @@ class CrossEncoderReranker:
         if self._model is not None:
             return
         from sentence_transformers import CrossEncoder
-        device = self._device
-        if device is None:
-            try:
-                import torch
-                device = "cuda" if torch.cuda.is_available() else "cpu"
-            except Exception:
-                device = "cpu"
+        device = self._device if self._device is not None else _resolve_device("auto")
         logger.info(f"Loading cross-encoder reranker: {self.model_name} (device={device})...")
         self._model = CrossEncoder(self.model_name, device=device)
         logger.info("Cross-encoder reranker loaded")
@@ -72,9 +70,28 @@ class CrossEncoderReranker:
             self._ensure_model()
             pairs = [(query, c.get("text", "")) for c in candidates]
             scores = self._model.predict(pairs, batch_size=32)
-            for c, s in zip(candidates, scores):
+
+            # Normalize reranker scores to [0, 1]
+            s_arr = np.array([float(s) for s in scores])
+            s_min, s_max = s_arr.min(), s_arr.max()
+            if s_max > s_min:
+                s_norm = (s_arr - s_min) / (s_max - s_min)
+            else:
+                s_norm = np.ones_like(s_arr) * 0.5
+
+            # Normalize combined_scores to [0, 1] for fair blending
+            cs_arr = np.array([c.get("combined_score", 0.0) for c in candidates])
+            cs_min, cs_max = cs_arr.min(), cs_arr.max()
+            if cs_max > cs_min:
+                cs_norm = (cs_arr - cs_min) / (cs_max - cs_min)
+            else:
+                cs_norm = np.ones_like(cs_arr) * 0.5
+
+            for c, s, sn, csn in zip(candidates, s_arr, s_norm, cs_norm):
                 c["rerank_score"] = float(s)
-            ranked = sorted(candidates, key=lambda c: -c.get("rerank_score", 0.0))
+                c["combined_score"] = 0.7 * float(csn) + 0.3 * float(sn)
+
+            ranked = sorted(candidates, key=lambda c: -c.get("combined_score", 0.0))
             return ranked[:top_k] if top_k else ranked
         except Exception as e:
             logger.warning(f"Cross-encoder rerank failed, returning unchanged: {e}")
@@ -177,7 +194,13 @@ def get_reranker():
         elif mode == "llm":
             r = LLMReranker()
         else:
-            r = CrossEncoderReranker()
+            # Honour HYBRIDMIND_RERANKER_MODEL > RERANK_CROSS_MODEL > default
+            try:
+                from config import settings
+                model_name = settings.reranker_model or _CROSS_MODEL
+            except Exception:
+                model_name = _CROSS_MODEL
+            r = CrossEncoderReranker(model_name=model_name)
         r._mode = mode
         _reranker = r
     return _reranker

@@ -28,6 +28,7 @@ from storage.bm25_index import BM25Index
 from storage.graph_index import GraphIndex
 from engine.embedding import EmbeddingEngine
 from engine.cache import invalidate_cache
+from engine.edge_inference import run_auto_edge_inference
 
 # ── Text cleaning for embedding quality ──────────────────────────────────────
 
@@ -166,7 +167,26 @@ async def create_node(
     # Also index the parent for general macro searches
     vector_index.add(node_id, embedding)
     bm25_index.add(node_id, node.text)
-    
+
+    # Auto-edge inference (config-gated: HYBRIDMIND_AUTO_EDGES_ENABLED=true)
+    run_auto_edge_inference(
+        node_id=node_id,
+        embedding=embedding,
+        node_metadata=node.metadata or {},
+        node_text=node.text,
+        vector_index=vector_index,
+        sqlite_store=sqlite_store,
+        graph_index=graph_index,
+    )
+
+    # ColBERT per-token vectors (opt-in: HYBRIDMIND_COLBERT_ENABLED=true)
+    from storage.colbert_store import maybe_store_colbert, colbert_enabled
+    if colbert_enabled():
+        from api.dependencies import get_colbert_store
+        cs = get_colbert_store()
+        if cs is not None:
+            maybe_store_colbert(node_id, node.text, embedding_engine, cs)
+
     # Invalidate search cache
     invalidate_cache()
     

@@ -8,15 +8,23 @@ pydantic>=2.7.0
 pydantic-settings>=2.0.0
 
 # Vector Search
-# GPU acceleration for embeddings still works via PyTorch CUDA.
+# GPU acceleration for embeddings works via PyTorch CUDA.
+# faiss-gpu (Linux/Docker only — no Windows wheel):
+#   pip install faiss-gpu>=1.7.4  # then set HYBRIDMIND_USE_FAISS_GPU=true
 faiss-cpu>=1.7.4
 numpy>=1.24.0
 
 # Embeddings
 sentence-transformers>=2.2.2
+# bge-m3 and bge-reranker-v2-m3 backend (default models):
+FlagEmbedding>=1.2.10
 # PyTorch with CUDA support - install separately with:
 # pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 torch>=2.0.0
+
+# Optional research modules (off by default):
+# spaCy for entity co-occurrence edges:    pip install spacy && python -m spacy download en_core_web_sm
+# GNN reranker:                            pip install torch-geometric
 
 # Graph
 networkx>=3.2.1

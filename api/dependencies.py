@@ -13,6 +13,8 @@ from storage.sqlite_store import SQLiteStore
 from storage.vector_index import VectorIndex
 from storage.graph_index import GraphIndex
 from storage.mindfile import MindFile
+from storage.colbert_store import ColbertStore, colbert_enabled
+from engine.device import resolve_device
 from engine.embedding import EmbeddingEngine
 from engine.vector_search import VectorSearchEngine
 from engine.graph_search import GraphSearchEngine
@@ -68,11 +70,32 @@ class DatabaseManager:
         )
         self.graph_index = GraphIndex(index_path=paths["graph"])
         
-        # Initialize embedding engine
+        # ColBERT per-token vectors (opt-in, off by default)
+        if colbert_enabled():
+            self.colbert_store = ColbertStore(root_dir=paths["root"])
+            logger.info(f"ColBERT store initialized at {paths['root']}/colbert/")
+        else:
+            self.colbert_store = None
+        
+        # Initialize embedding engine with resolved device
+        _device = resolve_device(settings.device)
         self.embedding_engine = EmbeddingEngine(
-            model_name=settings.embedding_model
+            model_name=settings.embedding_model,
+            device=_device,
         )
         
+        # Sanity-check: configured embedding dim must match vector index dim.
+        # Mismatch = different model was used to build the stored index.
+        # Run: python scripts/reindex_embeddings.py  to rebuild.
+        _emb_dim = settings.embedding_dimension
+        _idx_dim = self.vector_index.dimension
+        if _emb_dim != _idx_dim:
+            raise RuntimeError(
+                f"Embedding model dimension ({_emb_dim}) does not match the stored "
+                f"vector index dimension ({_idx_dim}). The model was changed without "
+                f"re-indexing. Run:  python scripts/reindex_embeddings.py  to rebuild."
+            )
+
         # Initialize search engines
         self.vector_engine = VectorSearchEngine(
             vector_index=self.vector_index,
@@ -246,3 +269,7 @@ def get_hybrid_ranker() -> HybridRanker:
     """FastAPI dependency for hybrid ranker."""
     return get_db_manager().hybrid_ranker
 
+
+def get_colbert_store():
+    """FastAPI dependency for ColBERT vector store (None when disabled)."""
+    return get_db_manager().colbert_store if hasattr(get_db_manager(), 'colbert_store') else None

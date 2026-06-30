@@ -198,6 +198,7 @@ async def hybrid_search(
         rerank_pool=request.rerank_pool,
         bm25_boost_weight=request.bm25_boost_weight,
         overlap_threshold=request.overlap_threshold,
+        fusion_mode=request.fusion_mode,
     )
 
     search_results = [
