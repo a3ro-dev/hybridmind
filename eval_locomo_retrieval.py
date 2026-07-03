@@ -23,6 +23,8 @@ import httpx
 from pathlib import Path
 from statistics import mean
 
+import eval_common
+
 BASE_URL = "http://127.0.0.1:8000"
 LOCOMO_PATH = Path("memorybench/data/benchmarks/locomo/locomo10.json")
 
@@ -43,6 +45,10 @@ def parse_args():
                    help="Samples per category (default 5)")
     p.add_argument("--sweep",            action="store_true",
                    help="Grid-search over key params and print ranked table")
+    p.add_argument("--with-answers",     action="store_true",
+                   help="Also run LLM QA-answering + accuracy scoring on top of retrieval")
+    p.add_argument("--answer-model",     type=str,   default=None,
+                   help="Override the answering model (default: HYBRIDMIND_QA_MODEL env or openai/gpt-5)")
     return p.parse_args()
 
 
@@ -100,8 +106,11 @@ def run_eval(
     rerank_pool: int = 25,
     top_k: int = 15,
     verbose: bool = True,
+    with_answers: bool = False,
+    answer_model: str | None = None,
 ) -> dict:
     all_hits_1, all_hits_5, all_hits_10, all_mrr, all_prec_5, all_prec_10 = [], [], [], [], [], []
+    all_correct: list = []
     results_by_category: dict = {}
 
     for i, q in enumerate(questions):
@@ -154,6 +163,14 @@ def run_eval(
                 break
         all_mrr.append(mrr)
 
+        if with_answers:
+            snippets = [r.get("text", "") for r in res_list[:10] if r.get("text")]
+            hypothesis = eval_common.llm_answer(question, snippets, model=answer_model)
+            correct = eval_common.judge_correct(hypothesis, answer)
+            all_correct.append(1.0 if correct else 0.0)
+            if verbose:
+                print(f"  QA answer: {hypothesis[:100]!r} -> {'CORRECT' if correct else 'WRONG'}")
+
         if verbose:
             print(f"  Hit@1={all_hits_1[-1]:.0%} Hit@5={all_hits_5[-1]:.0%} Hit@10={all_hits_10[-1]:.0%} MRR={mrr:.3f}")
             for rank, r in enumerate(res_list[:3], 1):
@@ -167,9 +184,11 @@ def run_eval(
                 print(f"    #{rank} {rel} v={vs:.3f} g={gs:.3f} gate={gg:.3f} efg={egs:.3f} c={cs:.3f} {text[:100]}")
 
         if category not in results_by_category:
-            results_by_category[category] = {"hits": [], "mrrs": []}
+            results_by_category[category] = {"hits": [], "mrrs": [], "correct": []}
         results_by_category[category]["hits"].append(all_hits_5[-1])
         results_by_category[category]["mrrs"].append(mrr)
+        if with_answers:
+            results_by_category[category]["correct"].append(all_correct[-1])
 
         time.sleep(0.05)
 
@@ -185,9 +204,16 @@ def run_eval(
         "precision_at_10":mean(all_prec_10),
         "mrr":            mean(all_mrr),
         "n":              n,
-        "by_category":    {cat: {"hit5": mean(v["hits"]), "mrr": mean(v["mrrs"])}
-                           for cat, v in results_by_category.items()},
+        "by_category":    {
+            cat: {
+                "hit5": mean(v["hits"]), "mrr": mean(v["mrrs"]),
+                **({"accuracy": mean(v["correct"])} if with_answers and v["correct"] else {}),
+            }
+            for cat, v in results_by_category.items()
+        },
     }
+    if with_answers and all_correct:
+        summary["accuracy"] = mean(all_correct)
     return summary
 
 
@@ -204,15 +230,19 @@ def print_summary(summary: dict, label: str = ""):
     print(f"  Prec@5:  {summary['precision_at_5']:.4f}")
     print(f"  Prec@10: {summary['precision_at_10']:.4f}")
     print(f"  MRR:    {summary['mrr']:.4f}")
+    if "accuracy" in summary:
+        print(f"  Accuracy (LLM QA): {summary['accuracy']:.4f}  ({round(summary['accuracy']*n)}/{n})")
     print()
     print("  --- By Category ---")
     for cat in sorted(summary["by_category"].keys()):
         c = summary["by_category"][cat]
-        print(f"  {cat}: Hit@5={c['hit5']:.4f} MRR={c['mrr']:.4f}")
+        acc_str = f" Accuracy={c['accuracy']:.4f}" if "accuracy" in c else ""
+        print(f"  {cat}: Hit@5={c['hit5']:.4f} MRR={c['mrr']:.4f}{acc_str}")
     print()
+    acc_str = f" Accuracy={summary['accuracy']:.3f}" if "accuracy" in summary else ""
     print(f"  SUMMARY: Hit@1={summary['hit_at_1']:.3f} Hit@5={summary['hit_at_5']:.3f} "
           f"Hit@10={summary['hit_at_10']:.3f} Prec@5={summary['precision_at_5']:.3f} "
-          f"Prec@10={summary['precision_at_10']:.3f} MRR={summary['mrr']:.4f}")
+          f"Prec@10={summary['precision_at_10']:.3f} MRR={summary['mrr']:.4f}{acc_str}")
 
 
 def sweep(questions: list, client: httpx.Client):
@@ -316,6 +346,8 @@ def main():
                 rerank_pool=args.rerank_pool,
                 top_k=args.top_k,
                 verbose=True,
+                with_answers=args.with_answers,
+                answer_model=args.answer_model,
             )
             if summary:
                 print_summary(summary, label="RETRIEVAL EVALUATION RESULTS")

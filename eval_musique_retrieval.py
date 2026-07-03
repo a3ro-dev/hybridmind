@@ -22,6 +22,8 @@ from pathlib import Path
 
 import httpx
 
+import eval_common
+
 BASE_URL = "http://127.0.0.1:8000"
 DATA_DIR = Path("benchmarks/data/musique")
 
@@ -42,6 +44,9 @@ def parse_args():
     p.add_argument("--top-k",            type=int,   default=20)
     p.add_argument("--sweep",            action="store_true")
     p.add_argument("--base-url",         default=BASE_URL)
+    p.add_argument("--with-answers",     action="store_true",
+                   help="Also run LLM QA-answering + accuracy scoring on top of retrieval")
+    p.add_argument("--answer-model",     type=str,   default=None)
     return p.parse_args()
 
 
@@ -138,8 +143,11 @@ def run_eval(
     rerank_pool: int = 40,
     top_k: int = 20,
     base_url: str = BASE_URL,
+    with_answers: bool = False,
+    answer_model: str | None = None,
 ):
     hit1 = hit5 = hit10 = mrr = 0.0
+    correct_sum = 0.0
     # Multi-hop specific: did we retrieve ALL supporting paragraphs?
     recall_full = 0.0
     by_hops: dict = {}
@@ -194,6 +202,12 @@ def run_eval(
         if supporting_ids:
             recall_full += int(supporting_ids.issubset(retrieved_ids))
 
+        if with_answers:
+            snippets = [r.get("text", "") for r in results[:10] if r.get("text")]
+            hypothesis = eval_common.llm_answer(q["question"], snippets, model=answer_model)
+            correct = eval_common.judge_correct(hypothesis, q["answer"])
+            correct_sum += 1.0 if correct else 0.0
+
         hk = q.get("n_hops") or "?"
         by_hops.setdefault(hk, {"n": 0, "hit5": 0, "mrr": 0})
         by_hops[hk]["n"] += 1
@@ -201,7 +215,7 @@ def run_eval(
         by_hops[hk]["mrr"] += sum(1.0 / r for r, rel in enumerate(relevance[:10], 1) if rel)
 
     n = len(questions) or 1
-    return {
+    result = {
         "hit_at_1": round(hit1 / n, 3),
         "hit_at_5": round(hit5 / n, 3),
         "hit_at_10": round(hit10 / n, 3),
@@ -217,6 +231,9 @@ def run_eval(
             for hk, v in by_hops.items()
         },
     }
+    if with_answers:
+        result["accuracy"] = round(correct_sum / n, 3)
+    return result
 
 
 def print_results(metrics: dict, label: str = ""):
@@ -228,6 +245,8 @@ def print_results(metrics: dict, label: str = ""):
     print(f"  Hit@10       : {metrics['hit_at_10']:.1%}")
     print(f"  MRR          : {metrics['mrr']:.3f}")
     print(f"  Full Recall  : {metrics['full_recall']:.1%}  (all supporting paragraphs found)")
+    if "accuracy" in metrics:
+        print(f"  Accuracy (LLM QA): {metrics['accuracy']:.1%}")
     if metrics.get("by_hops"):
         print("  By hop count:")
         for hk in sorted(metrics["by_hops"], key=lambda x: str(x)):
@@ -268,6 +287,8 @@ def main():
                 rerank_pool=args.rerank_pool,
                 top_k=args.top_k,
                 base_url=args.base_url,
+                with_answers=args.with_answers,
+                answer_model=args.answer_model,
             )
             print_results(metrics, label="MuSiQue Multi-Hop Retrieval Results")
             out = Path("benchmarks/results/musique_retrieval.json")
