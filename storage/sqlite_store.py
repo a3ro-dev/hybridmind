@@ -105,6 +105,18 @@ class SQLiteStore:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_edges_target ON edges(target_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_edges_type ON edges(type)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_nodes_updated ON nodes(updated_at)")
+
+            # Temporal edge fields (Phase 3) — additive migrations safe for existing DBs
+            for col_def in [
+                "valid_from TEXT DEFAULT NULL",
+                "valid_until TEXT DEFAULT NULL",
+                "superseded_by TEXT DEFAULT NULL",
+                "confidence REAL DEFAULT 1.0",
+            ]:
+                try:
+                    cursor.execute(f"ALTER TABLE edges ADD COLUMN {col_def}")
+                except sqlite3.OperationalError:
+                    pass  # column already exists
     
     # ==================== Embedding Serialization ====================
     
@@ -352,16 +364,22 @@ class SQLiteStore:
         target_id: str,
         edge_type: str,
         weight: float = 1.0,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        valid_from: Optional[str] = None,
+        valid_until: Optional[str] = None,
+        superseded_by: Optional[str] = None,
+        confidence: float = 1.0,
     ) -> Dict[str, Any]:
         """Create a new edge."""
         now = datetime.utcnow()
         metadata = metadata or {}
-        
+
         with self._cursor() as cursor:
             cursor.execute("""
-                INSERT INTO edges (id, source_id, target_id, type, weight, metadata, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO edges
+                  (id, source_id, target_id, type, weight, metadata, created_at,
+                   valid_from, valid_until, superseded_by, confidence)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 edge_id,
                 source_id,
@@ -369,9 +387,13 @@ class SQLiteStore:
                 edge_type,
                 weight,
                 json.dumps(metadata),
-                now
+                now,
+                valid_from,
+                valid_until,
+                superseded_by,
+                confidence,
             ))
-        
+
         return {
             "id": edge_id,
             "source_id": source_id,
@@ -379,21 +401,26 @@ class SQLiteStore:
             "type": edge_type,
             "weight": weight,
             "metadata": metadata,
-            "created_at": now
+            "created_at": now,
+            "valid_from": valid_from,
+            "valid_until": valid_until,
+            "superseded_by": superseded_by,
+            "confidence": confidence,
         }
     
     def get_edge(self, edge_id: str) -> Optional[Dict[str, Any]]:
         """Get an edge by ID."""
         with self._cursor() as cursor:
             cursor.execute("""
-                SELECT id, source_id, target_id, type, weight, metadata, created_at
+                SELECT id, source_id, target_id, type, weight, metadata, created_at,
+                       valid_from, valid_until, superseded_by, confidence
                 FROM edges WHERE id = ?
             """, (edge_id,))
             row = cursor.fetchone()
-            
+
             if row is None:
                 return None
-            
+
             return {
                 "id": row["id"],
                 "source_id": row["source_id"],
@@ -401,7 +428,11 @@ class SQLiteStore:
                 "type": row["type"],
                 "weight": row["weight"],
                 "metadata": json.loads(row["metadata"]),
-                "created_at": row["created_at"]
+                "created_at": row["created_at"],
+                "valid_from": row["valid_from"],
+                "valid_until": row["valid_until"],
+                "superseded_by": row["superseded_by"],
+                "confidence": row["confidence"] if row["confidence"] is not None else 1.0,
             }
     
     def update_edge(
@@ -409,24 +440,32 @@ class SQLiteStore:
         edge_id: str,
         edge_type: Optional[str] = None,
         weight: Optional[float] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        valid_until: Optional[str] = None,
+        superseded_by: Optional[str] = None,
+        confidence: Optional[float] = None,
     ) -> Optional[Dict[str, Any]]:
         """Update an edge."""
         current = self.get_edge(edge_id)
         if current is None:
             return None
-        
+
         new_type = edge_type if edge_type is not None else current["type"]
         new_weight = weight if weight is not None else current["weight"]
         new_metadata = metadata if metadata is not None else current["metadata"]
-        
+        new_valid_until = valid_until if valid_until is not None else current.get("valid_until")
+        new_superseded_by = superseded_by if superseded_by is not None else current.get("superseded_by")
+        new_confidence = confidence if confidence is not None else current.get("confidence", 1.0)
+
         with self._cursor() as cursor:
             cursor.execute("""
                 UPDATE edges
-                SET type = ?, weight = ?, metadata = ?
+                SET type = ?, weight = ?, metadata = ?,
+                    valid_until = ?, superseded_by = ?, confidence = ?
                 WHERE id = ?
-            """, (new_type, new_weight, json.dumps(new_metadata), edge_id))
-        
+            """, (new_type, new_weight, json.dumps(new_metadata),
+                  new_valid_until, new_superseded_by, new_confidence, edge_id))
+
         return {
             "id": edge_id,
             "source_id": current["source_id"],
@@ -434,7 +473,11 @@ class SQLiteStore:
             "type": new_type,
             "weight": new_weight,
             "metadata": new_metadata,
-            "created_at": current["created_at"]
+            "created_at": current["created_at"],
+            "valid_from": current.get("valid_from"),
+            "valid_until": new_valid_until,
+            "superseded_by": new_superseded_by,
+            "confidence": new_confidence,
         }
     
     def delete_edge(self, edge_id: str) -> bool:
@@ -452,20 +495,23 @@ class SQLiteStore:
         with self._cursor() as cursor:
             if direction == "outgoing":
                 cursor.execute("""
-                    SELECT id, source_id, target_id, type, weight, metadata, created_at
+                    SELECT id, source_id, target_id, type, weight, metadata, created_at,
+                           valid_from, valid_until, superseded_by, confidence
                     FROM edges WHERE source_id = ?
                 """, (node_id,))
             elif direction == "incoming":
                 cursor.execute("""
-                    SELECT id, source_id, target_id, type, weight, metadata, created_at
+                    SELECT id, source_id, target_id, type, weight, metadata, created_at,
+                           valid_from, valid_until, superseded_by, confidence
                     FROM edges WHERE target_id = ?
                 """, (node_id,))
             else:  # both
                 cursor.execute("""
-                    SELECT id, source_id, target_id, type, weight, metadata, created_at
+                    SELECT id, source_id, target_id, type, weight, metadata, created_at,
+                           valid_from, valid_until, superseded_by, confidence
                     FROM edges WHERE source_id = ? OR target_id = ?
                 """, (node_id, node_id))
-            
+
             edges = []
             for row in cursor.fetchall():
                 edges.append({
@@ -475,19 +521,24 @@ class SQLiteStore:
                     "type": row["type"],
                     "weight": row["weight"],
                     "metadata": json.loads(row["metadata"]),
-                    "created_at": row["created_at"]
+                    "created_at": row["created_at"],
+                    "valid_from": row["valid_from"],
+                    "valid_until": row["valid_until"],
+                    "superseded_by": row["superseded_by"],
+                    "confidence": row["confidence"] if row["confidence"] is not None else 1.0,
                 })
-            
+
             return edges
     
     def get_all_edges(self) -> List[Dict[str, Any]]:
         """Get all edges for graph index rebuild."""
         with self._cursor() as cursor:
             cursor.execute("""
-                SELECT id, source_id, target_id, type, weight, metadata, created_at
+                SELECT id, source_id, target_id, type, weight, metadata, created_at,
+                       valid_from, valid_until, superseded_by, confidence
                 FROM edges
             """)
-            
+
             edges = []
             for row in cursor.fetchall():
                 edges.append({
@@ -497,9 +548,13 @@ class SQLiteStore:
                     "type": row["type"],
                     "weight": row["weight"],
                     "metadata": json.loads(row["metadata"]),
-                    "created_at": row["created_at"]
+                    "created_at": row["created_at"],
+                    "valid_from": row["valid_from"],
+                    "valid_until": row["valid_until"],
+                    "superseded_by": row["superseded_by"],
+                    "confidence": row["confidence"] if row["confidence"] is not None else 1.0,
                 })
-            
+
             return edges
     
     def count_edges(self) -> int:

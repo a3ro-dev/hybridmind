@@ -5,7 +5,7 @@ Node CRUD API endpoints for HybridMind.
 import re
 import uuid
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from models.node import (
@@ -20,7 +20,8 @@ from api.dependencies import (
     get_vector_index,
     get_bm25_index,
     get_graph_index,
-    get_embedding_engine
+    get_embedding_engine,
+    get_visual_store
 )
 from storage.sqlite_store import SQLiteStore
 from storage.vector_index import VectorIndex
@@ -196,6 +197,7 @@ async def create_node(
         metadata=result["metadata"],
         created_at=result["created_at"],
         updated_at=result["updated_at"],
+        modality=result["metadata"].get("modality", "text"),
         edges=[]
     )
 
@@ -238,6 +240,7 @@ async def get_node(
         metadata=node["metadata"],
         created_at=node["created_at"],
         updated_at=node["updated_at"],
+        modality=node["metadata"].get("modality", "text"),
         edges=edges
     )
 
@@ -337,6 +340,7 @@ async def update_node(
         metadata=result["metadata"],
         created_at=result["created_at"],
         updated_at=result["updated_at"],
+        modality=result["metadata"].get("modality", "text"),
         edges=edges
     )
 
@@ -412,8 +416,121 @@ async def list_nodes(
             metadata=node["metadata"],
             created_at=node["created_at"],
             updated_at=node["updated_at"],
+            modality=node["metadata"].get("modality", "text"),
             edges=edges
         ))
     
     return results
+
+
+from pydantic import BaseModel
+from storage.colbert_store import ColbertStore
+
+class ImageNodeCreate(BaseModel):
+    image_b64: str
+    caption: str
+    metadata: Optional[Dict[str, _AnyType]] = None
+
+
+@router.post("/image", response_model=NodeResponse, status_code=201)
+async def create_image_node(
+    node: ImageNodeCreate,
+    sqlite_store: SQLiteStore = Depends(get_sqlite_store),
+    vector_index: VectorIndex = Depends(get_vector_index),
+    bm25_index: _AnyType = Depends(get_bm25_index),
+    graph_index: GraphIndex = Depends(get_graph_index),
+    embedding_engine: EmbeddingEngine = Depends(get_embedding_engine),
+    visual_store: ColbertStore = Depends(get_visual_store)
+) -> NodeResponse:
+    """
+    Ingest an image by computing its patch vectors via a remote ColQwen2.5 server
+    and storing them in VisualColbertStore. Surfaced via image caption text embedding.
+    """
+    from engine.image_embedding import get_image_embedding_engine
+    from config import settings
+
+    img_engine = get_image_embedding_engine()
+    if img_engine is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Remote image embedding service is not configured. Set HYBRIDMIND_IMAGE_EMBEDDING_URL in .env."
+        )
+
+    # 1. Embed image patches via remote ColQwen2.5
+    patch_vectors = img_engine.embed_image(node.image_b64)
+    if patch_vectors is None or len(patch_vectors) == 0:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate patch vectors from remote image embedding service."
+        )
+
+    # 2. Generate node ID
+    node_id = str(uuid.uuid4())
+
+    # 3. Save patch vectors to visual store
+    visual_store.add(node_id, patch_vectors)
+
+    # 4. Embed the caption text
+    import numpy as np
+    caption_raw_emb = embedding_engine.embed(node.caption)
+    caption_emb = caption_raw_emb
+
+    if getattr(settings, "use_graph_conditioned_embeddings", False):
+        results = vector_index.search(caption_raw_emb, top_k=5)
+        if results:
+            neighbor_embeddings = []
+            for sim_node_id, score in results:
+                n = sqlite_store.get_node(sim_node_id)
+                if n:
+                    n_emb = n.get("raw_embedding") or n.get("embedding")
+                    if n_emb is not None:
+                        neighbor_embeddings.append(n_emb)
+            if neighbor_embeddings:
+                caption_emb = embedding_engine.embed_with_graph_context(
+                    node.caption,
+                    neighbor_embeddings,
+                    alpha=0.7
+                )
+
+    # 5. Build node metadata
+    metadata = node.metadata or {}
+    metadata["modality"] = "image"
+
+    # 6. Store in SQLite
+    result = sqlite_store.create_node(
+        node_id=node_id,
+        text=node.caption,
+        metadata=metadata,
+        embedding=caption_emb,
+        raw_embedding=caption_raw_emb
+    )
+
+    # 7. Add to vector index and graph index
+    vector_index.add(node_id, caption_emb)
+    bm25_index.add(node_id, node.caption)
+    graph_index.add_node(node_id)
+
+    # 8. Auto-edge inference
+    run_auto_edge_inference(
+        node_id=node_id,
+        embedding=caption_emb,
+        node_metadata=metadata,
+        node_text=node.caption,
+        vector_index=vector_index,
+        sqlite_store=sqlite_store,
+        graph_index=graph_index,
+    )
+
+    # Invalidate search cache
+    invalidate_cache()
+
+    return NodeResponse(
+        id=node_id,
+        text=node.caption,
+        metadata=metadata,
+        created_at=result["created_at"],
+        updated_at=result["updated_at"],
+        modality="image",
+        edges=[]
+    )
 

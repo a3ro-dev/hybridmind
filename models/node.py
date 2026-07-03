@@ -9,6 +9,7 @@ class NodeCreate(BaseModel):
     text: str = Field(..., min_length=1)
     metadata: Optional[Dict[str, Any]] = None
     embedding: Optional[List[float]] = None
+    modality: str = "text"
 
 
 class NodeUpdate(BaseModel):
@@ -31,6 +32,7 @@ class NodeResponse(BaseModel):
     metadata: Dict[str, Any]
     created_at: datetime
     updated_at: datetime
+    modality: str = "text"
     edges: List[EdgeSummary] = Field(default_factory=list)
 
 

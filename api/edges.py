@@ -66,21 +66,28 @@ async def create_edge(
         target_id=edge.target_id,
         edge_type=edge.type,
         weight=edge.weight,
-        metadata=edge.metadata or {}
+        metadata=edge.metadata or {},
+        valid_from=edge.valid_from.isoformat() if edge.valid_from else None,
+        valid_until=edge.valid_until.isoformat() if edge.valid_until else None,
+        superseded_by=edge.superseded_by,
+        confidence=edge.confidence,
     )
-    
+
     # Add to graph index
     graph_index.add_edge(
         source_id=edge.source_id,
         target_id=edge.target_id,
         edge_type=edge.type,
         weight=edge.weight,
-        edge_id=edge_id
+        edge_id=edge_id,
+        valid_from=result.get("valid_from"),
+        valid_until=result.get("valid_until"),
+        confidence=result.get("confidence", 1.0),
     )
-    
+
     # Invalidate search cache
     invalidate_cache()
-    
+
     return EdgeResponse(
         id=result["id"],
         source_id=result["source_id"],
@@ -88,7 +95,11 @@ async def create_edge(
         type=result["type"],
         weight=result["weight"],
         metadata=result["metadata"],
-        created_at=result["created_at"]
+        created_at=result["created_at"],
+        valid_from=result.get("valid_from"),
+        valid_until=result.get("valid_until"),
+        superseded_by=result.get("superseded_by"),
+        confidence=result.get("confidence", 1.0),
     )
 
 
@@ -143,9 +154,12 @@ async def update_edge(
         edge_id=edge_id,
         edge_type=update.type,
         weight=update.weight,
-        metadata=update.metadata
+        metadata=update.metadata,
+        valid_until=update.valid_until.isoformat() if update.valid_until else None,
+        superseded_by=update.superseded_by,
+        confidence=update.confidence,
     )
-    
+
     # Update graph index (remove and re-add)
     graph_index.remove_edge(existing["source_id"], existing["target_id"])
     graph_index.add_edge(
@@ -153,12 +167,14 @@ async def update_edge(
         target_id=result["target_id"],
         edge_type=result["type"],
         weight=result["weight"],
-        edge_id=result["id"]
+        edge_id=result["id"],
+        valid_until=result.get("valid_until"),
+        confidence=result.get("confidence", 1.0),
     )
-    
+
     # Invalidate search cache
     invalidate_cache()
-    
+
     return EdgeResponse(
         id=result["id"],
         source_id=result["source_id"],
@@ -166,7 +182,11 @@ async def update_edge(
         type=result["type"],
         weight=result["weight"],
         metadata=result["metadata"],
-        created_at=result["created_at"]
+        created_at=result["created_at"],
+        valid_from=result.get("valid_from"),
+        valid_until=result.get("valid_until"),
+        superseded_by=result.get("superseded_by"),
+        confidence=result.get("confidence", 1.0),
     )
 
 
@@ -235,7 +255,11 @@ async def list_edges(
             type=edge["type"],
             weight=edge["weight"],
             metadata=edge["metadata"],
-            created_at=edge["created_at"]
+            created_at=edge["created_at"],
+            valid_from=edge.get("valid_from"),
+            valid_until=edge.get("valid_until"),
+            superseded_by=edge.get("superseded_by"),
+            confidence=edge.get("confidence", 1.0),
         )
         for edge in paginated
     ]
@@ -272,7 +296,11 @@ async def get_node_edges(
             type=edge["type"],
             weight=edge["weight"],
             metadata=edge["metadata"],
-            created_at=edge["created_at"]
+            created_at=edge["created_at"],
+            valid_from=edge.get("valid_from"),
+            valid_until=edge.get("valid_until"),
+            superseded_by=edge.get("superseded_by"),
+            confidence=edge.get("confidence", 1.0),
         )
         for edge in edges
     ]

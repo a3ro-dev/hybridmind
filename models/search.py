@@ -32,6 +32,7 @@ class HybridSearchRequest(BaseModel):
     bm25_boost_weight: float = Field(default=0.35, ge=0.0, le=2.0, description="BM25 keyword overlap boost applied on top of vector score")
     overlap_threshold: float = Field(default=0.15, ge=0.0, le=1.0, description="BM25 overlap fraction below which graph score is ramped down")
     fusion_mode: Optional[str] = Field(default=None, description="Override config fusion_mode: 'rrf' or 'linear'")
+    include_images: bool = Field(default=False, description="Include relevant visual memory images ranked by ColQwen2.5 MaxSim")
 
 
 class SearchResult(BaseModel):
