@@ -399,6 +399,7 @@ async def bulk_import(
     vector_index: VectorIndex = Depends(get_vector_index),
     graph_index: GraphIndex = Depends(get_graph_index),
     embedding_engine: EmbeddingEngine = Depends(get_embedding_engine),
+    bm25_index: _BM25AnyType = Depends(get_bm25_index),
 ):
     """
     Combined bulk import of nodes and edges.
@@ -418,6 +419,7 @@ async def bulk_import(
         vector_index=vector_index,
         graph_index=graph_index,
         embedding_engine=embedding_engine,
+        bm25_index=bm25_index,
     ) if request.nodes else BulkResult(
         success=True, created=0, failed=0, errors=[], elapsed_ms=0
     )

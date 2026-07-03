@@ -78,6 +78,10 @@ class DatabaseManager:
         else:
             self.colbert_store = None
         
+        # Visual memory store
+        self.visual_store = ColbertStore(root_dir=str(Path(paths["root"]) / "visual"))
+        logger.info(f"Visual memory store initialized at {paths['root']}/visual/")
+        
         # Initialize embedding engine with resolved device
         _device = resolve_device(settings.device)
         self.embedding_engine = EmbeddingEngine(
@@ -272,3 +276,9 @@ def get_hybrid_ranker() -> HybridRanker:
 def get_colbert_store():
     """FastAPI dependency for ColBERT vector store (None when disabled)."""
     return get_db_manager().colbert_store if hasattr(get_db_manager(), 'colbert_store') else None
+
+
+def get_visual_store() -> ColbertStore:
+    """FastAPI dependency for Visual memory store."""
+    return get_db_manager().visual_store
+
