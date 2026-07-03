@@ -95,6 +95,7 @@ class HybridRanker:
         rerank_pool: int = 25,
         overlap_threshold: float = 0.15,
         fusion_mode: Optional[str] = None,
+        include_images: bool = False,
     ) -> Tuple[List[Dict[str, Any]], float, int]:
         start_time = time.perf_counter()
 
@@ -132,10 +133,12 @@ class HybridRanker:
         )
 
         bm25_results = []
+        bm25_score_by_node: Dict[str, float] = {}
         if self.bm25_index:
             # Always request many BM25 hits — the BM25 scorer already iterates all 50K documents,
             # so the top_k parameter only affects the final sort-and-slice, not computation cost.
             bm25_hits = self.bm25_index.search(query_text, top_k=5000)
+            bm25_score_by_node = {n_id: score for n_id, score in bm25_hits}
             for n_id, score in bm25_hits:
                 node = self.vector_engine.sqlite_store.get_node(n_id)
                 if node:
@@ -163,6 +166,7 @@ class HybridRanker:
 
         scores = {}
         raw_vector_scores = {}  # Track raw cosine similarity (pre-BM25 boost) for relevance gating
+        raw_bm25_scores = {}    # Real BM25 relevance scores — used as the dedicated "sparse" RRF signal
         node_data = {}
 
         # Give vector results their base cosine score + bm25 overlap boost
@@ -171,6 +175,7 @@ class HybridRanker:
             node_data[nid] = res
             raw_v = res.get("vector_score", 0.0)
             raw_vector_scores[nid] = raw_v
+            raw_bm25_scores[nid] = bm25_score_by_node.get(nid, 0.0)
             boost = bm25_overlap(query_text, res["text"]) * bm25_boost_weight
             scores[nid] = raw_v + boost
 
@@ -188,23 +193,31 @@ class HybridRanker:
                 # We assign a synthetic base score proportional to keyword overlap to fix this.
                 # Use raw overlap (no hard cap) so BM25-only hits with strong keyword overlap
                 # can compete with vector results.
+                # NOTE: this synthetic score (and `scores`/`rolled_up_scores` derived from it)
+                # is used for candidate-pool inclusion, the "linear" fusion mode, and the
+                # displayed vector_score — NOT as the RRF "dense" signal (see rolled_up_raw_scores
+                # below), so this heuristic no longer double-counts against the real BM25 score.
                 synthetic_base = min(overlap * 1.5, 1.0) if overlap > 0 else 0.0
                 node_data[nid]["vector_score"] = synthetic_base
-                raw_vector_scores[nid] = overlap  # Use keyword overlap as raw score proxy for BM25-only hits
+                raw_vector_scores[nid] = 0.0  # no real vector/cosine score for BM25-only hits
+                raw_bm25_scores[nid] = res.get("bm25_score", bm25_score_by_node.get(nid, 0.0))
                 scores[nid] = synthetic_base + boost
 
         # Step 3: SGMem Chunk Rollup to Parent
         rolled_up_scores = {}
         rolled_up_raw_scores = {}  # Raw vector scores after rollup (for relevance gating)
+        rolled_up_raw_bm25_scores = {}  # Real BM25 scores after rollup (RRF "sparse" signal)
         rolled_up_nodes = {}
 
         for nid, score in scores.items():
             raw_v = raw_vector_scores.get(nid, 0.0)
+            raw_bm25 = raw_bm25_scores.get(nid, 0.0)
             meta = node_data[nid].get("metadata", {})
             if meta.get("is_sentence_chunk") and meta.get("parent_id"):
                 parent_id = meta["parent_id"]
                 rolled_up_scores[parent_id] = max(rolled_up_scores.get(parent_id, 0.0), score)
                 rolled_up_raw_scores[parent_id] = max(rolled_up_raw_scores.get(parent_id, 0.0), raw_v)
+                rolled_up_raw_bm25_scores[parent_id] = max(rolled_up_raw_bm25_scores.get(parent_id, 0.0), raw_bm25)
                 if parent_id not in rolled_up_nodes:
                     p_node = self.vector_engine.sqlite_store.get_node(parent_id)
                     if p_node:
@@ -218,6 +231,7 @@ class HybridRanker:
             else:
                 rolled_up_scores[nid] = score
                 rolled_up_raw_scores[nid] = raw_v
+                rolled_up_raw_bm25_scores[nid] = raw_bm25
                 rolled_up_nodes[nid] = node_data[nid]
 
         # We cap normalized score to 1.0 just in case
@@ -285,6 +299,7 @@ class HybridRanker:
                     rolled_up_nodes[nid] = p_data
                     rolled_up_scores[nid] = 0.0
                     rolled_up_raw_scores[nid] = 0.0
+                    rolled_up_raw_bm25_scores[nid] = 0.0
 
         # Update candidate_ids to include expanded pool
         candidate_ids = [nid for nid in expanded_candidates_list if nid in rolled_up_nodes]
@@ -302,9 +317,17 @@ class HybridRanker:
         fusion_mode = fusion_mode or get_fusion_mode()
 
         if fusion_mode == "rrf":
-            # Build per-signal rank lists (sorted descending by score)
+            # Build per-signal rank lists (sorted descending by score).
+            # "dense" uses the true cosine score (rolled_up_raw_scores), NOT the
+            # BM25-overlap-boosted `rolled_up_scores` — BM25 relevance now gets its
+            # own dedicated "sparse" RRF signal below instead of being pre-baked
+            # into the dense signal, so it isn't double-counted.
             dense_list = sorted(
-                [(nid, rolled_up_scores[nid]) for nid in candidate_ids],
+                [(nid, rolled_up_raw_scores.get(nid, 0.0)) for nid in candidate_ids],
+                key=lambda x: -x[1],
+            )
+            sparse_list = sorted(
+                [(nid, rolled_up_raw_bm25_scores.get(nid, 0.0)) for nid in candidate_ids],
                 key=lambda x: -x[1],
             )
             graph_list = sorted(
@@ -312,25 +335,30 @@ class HybridRanker:
                 key=lambda x: -x[1],
             )
             rrf_scores = rrf_fuse(
-                {"dense": dense_list, "graph": graph_list},
+                {"dense": dense_list, "graph": graph_list, "sparse": sparse_list},
                 k=get_rrf_k(),
-                signal_weights={"dense": vector_weight, "graph": graph_weight},
+                signal_weights={"dense": vector_weight, "graph": graph_weight, "sparse": bm25_boost_weight},
             )
             hybrid_results = []
             for nid in candidate_ids:
-                v_score = rolled_up_scores[nid]
+                v_score = rolled_up_raw_scores.get(nid, 0.0)
                 g_score = graph_scores.get(nid, 0.0)
+                b_score = rolled_up_raw_bm25_scores.get(nid, 0.0)
                 combined_score = rrf_scores.get(nid, 0.0)
                 hybrid_results.append({
                     "node_id": nid,
                     "text": rolled_up_nodes[nid]["text"],
                     "metadata": rolled_up_nodes[nid]["metadata"],
-                    "vector_score": v_score,
+                    # Display vector_score as the boosted/back-compat value so existing
+                    # consumers (linear-mode UI, eval scripts) see the same field shape.
+                    "vector_score": rolled_up_scores.get(nid, v_score),
+                    "raw_vector_score": v_score,
+                    "bm25_score": b_score,
                     "graph_score": g_score,
                     "graph_gate": 1.0,
                     "effective_graph_score": round(g_score, 4),
                     "combined_score": combined_score,
-                    "reasoning": f"RRF(dense={v_score:.4f}, graph={g_score:.4f}, qtype={query_type})",
+                    "reasoning": f"RRF(dense={v_score:.4f}, sparse={b_score:.4f}, graph={g_score:.4f}, qtype={query_type})",
                     "fusion_mode": "rrf",
                     "query_type": query_type,
                 })
@@ -393,13 +421,73 @@ class HybridRanker:
         except ImportError:
             pass
 
-        # Reranking: take a larger pool, rerank with a stronger model, then slice top_k.
-        if self.reranker and rerank_pool > top_k and len(hybrid_results) > top_k:
-            pool = hybrid_results[:rerank_pool]
-            pool = self.reranker.rerank(query_text, pool, top_k=top_k)
-            hybrid_results = pool
-        else:
-            hybrid_results = hybrid_results[:top_k]
+        # ── GNN reranker (opt-in: HYBRIDMIND_GNN_ENABLED=true + torch-geometric installed) ──
+        # get_gnn_reranker() returns None whenever the flag is off or the dependency isn't
+        # installed, so this is a true no-op for every default/existing configuration.
+        try:
+            from engine.gnn_reranker import get_gnn_reranker
+            gnn_reranker = get_gnn_reranker()
+            if gnn_reranker is not None:
+                q_embedding = self.vector_engine.embedding_engine.embed(query_text)
+                hybrid_results = gnn_reranker.rerank(
+                    q_embedding,
+                    hybrid_results,
+                    self.graph_engine.graph_index,
+                    top_k=rerank_pool,
+                    sqlite_store=self.vector_engine.sqlite_store,
+                )
+        except Exception as e:
+            logger.debug(f"GNN reranking skipped ({e})")
+
+        # Visual search candidates merge (Phase 7)
+        if include_images:
+            try:
+                from engine.image_embedding import get_image_embedding_engine
+                from api.dependencies import get_visual_store
+                from storage.colbert_store import compute_maxsim
+                import json
+
+                img_engine = get_image_embedding_engine()
+                visual_store = get_visual_store()
+                if img_engine is not None and visual_store is not None:
+                    query_patches = img_engine.embed_query(query_text)
+                    if query_patches is not None and len(query_patches) > 0:
+                        cursor = self.vector_engine.sqlite_store.conn.cursor()
+                        cursor.execute(
+                            "SELECT id, text, metadata FROM nodes WHERE json_extract(metadata, '$.modality') = 'image' AND deleted_at IS NULL"
+                        )
+                        image_rows = cursor.fetchall()
+
+                        visual_candidates = []
+                        for row in image_rows:
+                            nid = row[0]
+                            text = row[1]
+                            meta_str = row[2]
+                            try:
+                                meta = json.loads(meta_str)
+                            except Exception:
+                                meta = {}
+
+                            candidate_patches = visual_store.get(nid)
+                            if candidate_patches is not None and len(candidate_patches) > 0:
+                                sim = compute_maxsim(query_patches, candidate_patches)
+                                visual_candidates.append({
+                                    "node_id": nid,
+                                    "text": text,
+                                    "metadata": meta,
+                                    "vector_score": sim,
+                                    "graph_score": 0.0,
+                                    "combined_score": sim,
+                                    "reasoning": "visual_maxsim",
+                                    "source": "visual_maxsim"
+                                })
+
+                        visual_candidates.sort(key=lambda x: -x["combined_score"])
+                        results_with_visual = list(hybrid_results)
+                        results_with_visual.extend(visual_candidates[:top_k])
+                        hybrid_results = sorted(results_with_visual, key=lambda x: -x["combined_score"])[:top_k]
+            except Exception as e:
+                logger.warning(f"Visual memory search failed: {e}")
 
         query_time_ms = (time.perf_counter() - start_time) * 1000
         return hybrid_results, round(query_time_ms, 2), len(candidate_ids)

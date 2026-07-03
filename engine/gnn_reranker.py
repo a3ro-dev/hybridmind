@@ -108,21 +108,32 @@ class GNNReranker:
         candidates: List[Dict[str, Any]],
         graph_index,
         top_k: Optional[int] = None,
+        sqlite_store: Optional[Any] = None,
     ) -> List[Dict[str, Any]]:
         """
         Re-rank candidates using GNN node embeddings.
         Falls back to original order if model is not available.
+
+        Args:
+            query_embedding: dense query vector (e.g. from embedding_engine.embed()).
+            candidates: hybrid_ranker result dicts (must have "node_id", "combined_score").
+            graph_index: GraphIndex instance (for adjacency).
+            top_k: slice size for the returned list.
+            sqlite_store: SQLiteStore instance used to fetch real per-node embeddings
+                for the GNN input features. Falls back to zero vectors (structure-only,
+                no node-identity signal) for nodes with no stored embedding or when
+                sqlite_store is not provided.
         """
         if not self.is_available():
             return candidates[:top_k] if top_k else candidates
 
         try:
-            return self._gnn_rerank(query_embedding, candidates, graph_index, top_k)
+            return self._gnn_rerank(query_embedding, candidates, graph_index, top_k, sqlite_store)
         except Exception as e:
             logger.warning(f"GNNReranker: inference failed, falling back: {e}")
             return candidates[:top_k] if top_k else candidates
 
-    def _gnn_rerank(self, query_embedding, candidates, graph_index, top_k):
+    def _gnn_rerank(self, query_embedding, candidates, graph_index, top_k, sqlite_store=None):
         import torch
         import numpy as np
 
@@ -138,10 +149,23 @@ class GNNReranker:
                     edge_src.append(id_to_idx[src_id])
                     edge_dst.append(id_to_idx[nb])
 
-        # Collect node feature vectors (placeholder: use existing embeddings)
-        # In production, use the stored embedding from the SQLite store
+        # Collect real per-node embeddings from SQLite so the GNN's input features
+        # actually encode node identity/content, not just graph structure. Nodes with
+        # no stored embedding (e.g. pure-graph-expansion candidates) fall back to a
+        # zero vector — the GraphSAGE aggregation still lets their neighbors' real
+        # features propagate in via message passing.
         feat_dim = len(query_embedding) if hasattr(query_embedding, "__len__") else 1024
         x = torch.zeros(len(node_ids), feat_dim, dtype=torch.float32)
+        if sqlite_store is not None:
+            for i, nid in enumerate(node_ids):
+                try:
+                    node = sqlite_store.get_node(nid)
+                except Exception:
+                    node = None
+                if node is not None:
+                    emb = node.get("embedding")
+                    if emb is not None and len(emb) == feat_dim:
+                        x[i] = torch.tensor(np.asarray(emb, dtype=np.float32))
 
         edge_index = torch.tensor(
             [edge_src, edge_dst], dtype=torch.long
@@ -157,12 +181,20 @@ class GNNReranker:
         q = np.asarray(query_embedding, dtype=np.float32)
         q_norm = q / (np.linalg.norm(q) + 1e-8)
 
+        # combined_score (RRF, ~1e-2 magnitude) and gnn_score (cosine, [-1,1]) are on
+        # very different scales — min-max normalize combined_score across this
+        # candidate pool before blending so neither signal is drowned out.
+        raw_combined = [cand.get("combined_score", 0.0) for cand in candidates]
+        lo, hi = min(raw_combined, default=0.0), max(raw_combined, default=0.0)
+        span = (hi - lo) or 1.0
+
         scores = []
         for i, cand in enumerate(candidates):
             emb = gnn_embeddings[i]
             emb_norm = emb / (np.linalg.norm(emb) + 1e-8)
             gnn_score = float(np.dot(q_norm, emb_norm))
-            blended = 0.5 * cand.get("combined_score", 0) + 0.5 * gnn_score
+            norm_combined = (raw_combined[i] - lo) / span
+            blended = 0.5 * norm_combined + 0.5 * gnn_score
             scores.append((blended, cand))
 
         scores.sort(key=lambda x: -x[0])
