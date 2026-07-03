@@ -18,6 +18,7 @@ import logging
 import math
 import os
 import random
+import re
 import time
 import uuid
 from datetime import datetime, timedelta
@@ -312,17 +313,30 @@ def check_contradiction(
     threshold: float = 0.85,
 ) -> Optional[str]:
     """
-    Check if new_fact_text semantically contradicts any existing node.
+    Check if new_fact_text supersedes any existing node.
 
-    Returns the node_id of the highest-similarity conflicting node if
-    cosine similarity >= threshold, else None.
+    Returns the node_id of an existing node when a simple slot-value update is
+    detected, or the highest-similarity node if cosine similarity >= threshold.
 
-    Uses dense embedding similarity only — no LLM call. Cheap and fast.
+    This is intentionally cheap and conservative. It is not full natural
+    language inference.
     """
     if not existing_nodes or not new_fact_text.strip():
         return None
     try:
         import numpy as np
+        new_slot = _extract_fact_slot(new_fact_text)
+        if new_slot:
+            for node in existing_nodes:
+                existing_slot = _extract_fact_slot(str(node.get("text", "")))
+                if (
+                    existing_slot
+                    and new_slot[:2] == existing_slot[:2]
+                    and new_slot[2] != existing_slot[2]
+                ):
+                    logger.debug(f"check_contradiction: slot update -> conflict with {node.get('id')}")
+                    return node.get("id")
+
         new_emb = np.asarray(embedding_engine.embed(new_fact_text), dtype=np.float32)
         new_norm = new_emb / (np.linalg.norm(new_emb) + 1e-8)
 
@@ -346,3 +360,43 @@ def check_contradiction(
     except Exception as e:
         logger.debug(f"check_contradiction: failed: {e}")
         return None
+
+
+_SLOT_PATTERNS = [
+    re.compile(
+        r"^(?:the\s+)?(?P<subject>[a-z0-9_\-\s']+?)\s+"
+        r"(?P<slot>address|email|phone(?:\s+number)?|location)\s+"
+        r"(?:is|=|:)\s+(?P<value>.+)$",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"^(?:the\s+)?(?P<subject>[a-z0-9_\-\s']+?)\s+"
+        r"(?:prefers|likes|uses|favorite\s+(?P<slot2>[a-z0-9_\-\s]+)\s+is)\s+"
+        r"(?P<value>.+)$",
+        re.IGNORECASE,
+    ),
+]
+
+
+def _normalize_slot_part(value: str) -> str:
+    value = value.lower().strip().rstrip(".")
+    value = re.sub(r"\b(the|a|an)\b", " ", value)
+    value = value.replace("'s", "")
+    value = re.sub(r"\s+", " ", value)
+    return value.strip()
+
+
+def _extract_fact_slot(text: str) -> Optional[tuple[str, str, str]]:
+    """Extract a simple subject/slot/value triple from update-like facts."""
+    text = text.strip()
+    for pattern in _SLOT_PATTERNS:
+        match = pattern.match(text)
+        if not match:
+            continue
+        subject = _normalize_slot_part(match.group("subject"))
+        slot = match.groupdict().get("slot") or match.groupdict().get("slot2") or "preference"
+        slot = _normalize_slot_part(slot)
+        value = _normalize_slot_part(match.group("value"))
+        if subject and slot and value:
+            return subject, slot, value
+    return None

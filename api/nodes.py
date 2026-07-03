@@ -126,12 +126,24 @@ async def create_node(
             # Temporal 'next_turn' edge
             t_edge_id = str(uuid.uuid4())
             sqlite_store.create_edge(t_edge_id, prev_node["id"], node_id, "next_turn", 1.0)
-            graph_index.add_edge(t_edge_id, prev_node["id"], node_id, "next_turn", 1.0)
+            graph_index.add_edge(
+                source_id=prev_node["id"],
+                target_id=node_id,
+                edge_type="next_turn",
+                weight=1.0,
+                edge_id=t_edge_id,
+            )
             
             # Session 'same_session' edge
             s_edge_id = str(uuid.uuid4())
             sqlite_store.create_edge(s_edge_id, prev_node["id"], node_id, "same_session", 0.5)
-            graph_index.add_edge(s_edge_id, prev_node["id"], node_id, "same_session", 0.5)
+            graph_index.add_edge(
+                source_id=prev_node["id"],
+                target_id=node_id,
+                edge_type="same_session",
+                weight=0.5,
+                edge_id=s_edge_id,
+            )
     
     # Chunking / SGMem Approach (Priority 3)
     sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', node.text) if len(s.strip()) > 5]
@@ -159,7 +171,13 @@ async def create_node(
         # Edge to parent
         c_edge_id = str(uuid.uuid4())
         sqlite_store.create_edge(c_edge_id, child_id, node_id, "belongs_to", 1.0)
-        graph_index.add_edge(c_edge_id, child_id, node_id, "belongs_to", 1.0)
+        graph_index.add_edge(
+            source_id=child_id,
+            target_id=node_id,
+            edge_type="belongs_to",
+            weight=1.0,
+            edge_id=c_edge_id,
+        )
         
         # Index children
         vector_index.add(child_id, child_embedding)
@@ -463,6 +481,8 @@ async def create_image_node(
             status_code=500,
             detail="Failed to generate patch vectors from remote image embedding service."
         )
+    import numpy as np
+    patch_vectors = np.asarray(patch_vectors, dtype=np.float32)
 
     # 2. Generate node ID
     node_id = str(uuid.uuid4())
@@ -471,7 +491,6 @@ async def create_image_node(
     visual_store.add(node_id, patch_vectors)
 
     # 4. Embed the caption text
-    import numpy as np
     caption_raw_emb = embedding_engine.embed(node.caption)
     caption_emb = caption_raw_emb
 

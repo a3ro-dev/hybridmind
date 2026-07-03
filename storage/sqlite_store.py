@@ -32,7 +32,6 @@ class SQLiteStore:
         if not hasattr(self._local, 'connection') or self._local.connection is None:
             self._local.connection = sqlite3.connect(
                 str(self.db_path),
-                detect_types=sqlite3.PARSE_DECLTYPES,
                 check_same_thread=False
             )
             self._local.connection.row_factory = sqlite3.Row
@@ -281,8 +280,13 @@ class SQLiteStore:
             # Soft delete node
             cursor.execute("UPDATE nodes SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?", (node_id,))
             deleted = cursor.rowcount > 0
-            
+
         return deleted, edges_count
+
+    def soft_delete_node(self, node_id: str) -> bool:
+        """Soft delete a node and its incident edges."""
+        deleted, _ = self.delete_node(node_id)
+        return deleted
         
     def get_deleted_nodes_count(self) -> int:
         """Get the number of soft-deleted nodes waiting for compaction."""

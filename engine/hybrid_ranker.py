@@ -452,17 +452,18 @@ class HybridRanker:
                 if img_engine is not None and visual_store is not None:
                     query_patches = img_engine.embed_query(query_text)
                     if query_patches is not None and len(query_patches) > 0:
-                        cursor = self.vector_engine.sqlite_store.conn.cursor()
-                        cursor.execute(
-                            "SELECT id, text, metadata FROM nodes WHERE json_extract(metadata, '$.modality') = 'image' AND deleted_at IS NULL"
-                        )
-                        image_rows = cursor.fetchall()
+                        query_patches = np.asarray(query_patches, dtype=np.float32)
+                        with self.vector_engine.sqlite_store._cursor() as cursor:
+                            cursor.execute(
+                                "SELECT id, text, metadata FROM nodes WHERE json_extract(metadata, '$.modality') = 'image' AND deleted_at IS NULL"
+                            )
+                            image_rows = cursor.fetchall()
 
                         visual_candidates = []
                         for row in image_rows:
-                            nid = row[0]
-                            text = row[1]
-                            meta_str = row[2]
+                            nid = row["id"]
+                            text = row["text"]
+                            meta_str = row["metadata"]
                             try:
                                 meta = json.loads(meta_str)
                             except Exception:

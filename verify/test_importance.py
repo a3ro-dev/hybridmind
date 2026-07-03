@@ -15,7 +15,7 @@ def test_importance_pruning(client, db_manager):
 
     now = datetime.utcnow()
     past_time = now - timedelta(days=90)
-    emb = np.zeros(1024, dtype=np.float32)
+    emb = np.zeros(db_manager.vector_index.dimension, dtype=np.float32)
 
     # Node 1: new node
     store.create_node("new_node", "Fresh node content.", {"type": "fact"}, emb, emb)
@@ -35,7 +35,13 @@ def test_importance_pruning(client, db_manager):
     db_manager.graph_index.add_node("other_node")
 
     store.create_edge("edge_1", "new_node", "other_node", "related_to", 1.0)
-    db_manager.graph_index.add_edge("edge_1", "new_node", "other_node", "related_to", 1.0)
+    db_manager.graph_index.add_edge(
+        source_id="new_node",
+        target_id="other_node",
+        edge_type="related_to",
+        weight=1.0,
+        edge_id="edge_1",
+    )
 
     # Compute importance scores
     from engine.consolidation import importance_score

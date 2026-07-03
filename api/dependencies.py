@@ -214,9 +214,10 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Error saving indexes: {e}")
     
-    def close(self):
+    def close(self, save: bool = True):
         """Close all connections."""
-        self.save_indexes()
+        if save:
+            self.save_indexes()
         self.sqlite_store.close()
         logger.info("Database connections closed")
 

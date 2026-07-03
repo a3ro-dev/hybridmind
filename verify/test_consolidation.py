@@ -26,7 +26,7 @@ def test_session_consolidation(client, db_manager):
         
         for i in range(5):
             nid = f"fact_node_{i}"
-            embedding = np.zeros(1024, dtype=np.float32)
+            embedding = np.zeros(db_manager.vector_index.dimension, dtype=np.float32)
             store.create_node(
                 node_id=nid,
                 text=f"Fact statement detail number {i}.",

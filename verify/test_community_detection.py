@@ -10,7 +10,7 @@ def test_community_detection(client, db_manager):
     # Cluster B: nodes 3, 4, 5
     store = db_manager.sqlite_store
     import numpy as np
-    emb = np.zeros(1024, dtype=np.float32)
+    emb = np.zeros(db_manager.vector_index.dimension, dtype=np.float32)
 
     for i in range(6):
         nid = f"c_node_{i}"

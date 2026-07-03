@@ -6,7 +6,7 @@ def test_boot_and_health(client):
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "healthy"
-    assert "database" in data
+    assert "database" in data["components"]
 
 def test_node_crud(client):
     # 1. Create a node

@@ -130,7 +130,11 @@ async def get_edge(
         type=edge["type"],
         weight=edge["weight"],
         metadata=edge["metadata"],
-        created_at=edge["created_at"]
+        created_at=edge["created_at"],
+        valid_from=edge.get("valid_from"),
+        valid_until=edge.get("valid_until"),
+        superseded_by=edge.get("superseded_by"),
+        confidence=edge.get("confidence", 1.0),
     )
 
 

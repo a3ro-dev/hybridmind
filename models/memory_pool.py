@@ -28,7 +28,7 @@ _TEMPORAL_RE = re.compile(
 _OPINION_RE = re.compile(
     r"\b(i think|i believe|i feel|i prefer|i like|i love|i hate|in my opinion|"
     r"personally|honestly|to me|it seems|i find|i noticed|i realized|i remember "
-    r"thinking)\b",
+    r"thinking|prefers?|likes?|loves?|hates?)\b",
     re.I
 )
 _SUMMARY_RE = re.compile(

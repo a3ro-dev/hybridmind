@@ -26,10 +26,8 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-_IMAGE_EMB_URL = os.getenv("HYBRIDMIND_IMAGE_EMBEDDING_URL", "")
-_IMAGE_RUNPOD_KEY = os.getenv("HYBRIDMIND_IMAGE_RUNPOD_KEY", "")
-
 _INSTANCE: Optional["RemoteImageEmbeddingEngine"] = None
+_INSTANCE_KEY: Optional[tuple[str, str]] = None
 
 
 class RemoteImageEmbeddingEngine:
@@ -120,13 +118,23 @@ def get_image_embedding_engine() -> Optional[RemoteImageEmbeddingEngine]:
     """
     Singleton factory. Returns None if HYBRIDMIND_IMAGE_EMBEDDING_URL is not set.
     """
-    global _INSTANCE
-    if not _IMAGE_EMB_URL:
+    global _INSTANCE, _INSTANCE_KEY
+    try:
+        from config import settings
+        base_url = (settings.image_embedding_url or os.getenv("HYBRIDMIND_IMAGE_EMBEDDING_URL", "")).strip()
+    except Exception:
+        base_url = os.getenv("HYBRIDMIND_IMAGE_EMBEDDING_URL", "").strip()
+    api_key = os.getenv("HYBRIDMIND_IMAGE_RUNPOD_KEY", "")
+
+    if not base_url:
         return None
-    if _INSTANCE is None:
+
+    key = (base_url, api_key)
+    if _INSTANCE is None or _INSTANCE_KEY != key:
         _INSTANCE = RemoteImageEmbeddingEngine(
-            base_url=_IMAGE_EMB_URL,
-            api_key=_IMAGE_RUNPOD_KEY,
+            base_url=base_url,
+            api_key=api_key,
         )
-        logger.info(f"image_embedding: engine initialized → {_IMAGE_EMB_URL}")
+        _INSTANCE_KEY = key
+        logger.info(f"image_embedding: engine initialized -> {base_url}")
     return _INSTANCE

@@ -76,7 +76,13 @@ def infer_cosine_edges(
             edge_id = str(uuid.uuid4())
             weight = round(min(1.0, float(score)), 4)
             sqlite_store.create_edge(edge_id, node_id, cand_id, "similar_to", weight)
-            graph_index.add_edge(edge_id, node_id, cand_id, "similar_to", weight)
+            graph_index.add_edge(
+                source_id=node_id,
+                target_id=cand_id,
+                edge_type="similar_to",
+                weight=weight,
+                edge_id=edge_id,
+            )
             created += 1
         except Exception as e:
             logger.debug(f"edge_inference: failed to create similar_to edge {node_id}→{cand_id}: {e}")
@@ -170,7 +176,13 @@ def infer_entity_edges(
             try:
                 edge_id = str(uuid.uuid4())
                 sqlite_store.create_edge(edge_id, node_id, rel_id, "co_occurs", 0.6)
-                graph_index.add_edge(edge_id, node_id, rel_id, "co_occurs", 0.6)
+                graph_index.add_edge(
+                    source_id=node_id,
+                    target_id=rel_id,
+                    edge_type="co_occurs",
+                    weight=0.6,
+                    edge_id=edge_id,
+                )
                 created += 1
             except Exception as e:
                 logger.debug(f"edge_inference: co_occurs edge failed {node_id}→{rel_id}: {e}")

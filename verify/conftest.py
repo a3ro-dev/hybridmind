@@ -24,7 +24,7 @@ from main import app
 from api.dependencies import get_db_manager
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def test_env():
     """Ensure cleanup of temp database files after runs."""
     yield
@@ -34,14 +34,14 @@ def test_env():
         pass
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def client():
     """Provide isolated API TestClient."""
     with TestClient(app) as c:
         yield c
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def db_manager():
     """Provide database manager singleton for direct assertions."""
     return get_db_manager()

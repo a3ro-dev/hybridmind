@@ -12,6 +12,7 @@ Production-ready with:
 
 import asyncio
 import hashlib
+import json
 import logging
 import time
 import os
@@ -164,8 +165,15 @@ async def lifespan(app: FastAPI):
         all_edges = db_manager.sqlite_store.get_all_edges()
         for edge in all_edges:
             db_manager.graph_index.add_edge(
-                edge["source_id"], edge["target_id"],
-                edge["type"], edge.get("weight", 1.0)
+                source_id=edge["source_id"],
+                target_id=edge["target_id"],
+                edge_type=edge["type"],
+                weight=edge.get("weight", 1.0),
+                edge_id=edge.get("id"),
+                valid_from=edge.get("valid_from"),
+                valid_until=edge.get("valid_until"),
+                superseded_by=edge.get("superseded_by"),
+                confidence=edge.get("confidence", 1.0),
             )
         logger.info(
             f"Index rebuild complete: {db_manager.vector_index.size} vectors, "
@@ -218,7 +226,7 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Shutting down HybridMind...")
     db_manager.save_indexes()
-    db_manager.close()
+    db_manager.close(save=False)
     logger.info("HybridMind shutdown complete")
 
 
@@ -652,6 +660,11 @@ async def clear_database():
             conn.commit()
         db_manager.vector_index.clear()
         db_manager.graph_index.clear()
+        db_manager.bm25_index.clear()
+        if getattr(db_manager, "visual_store", None) is not None:
+            db_manager.visual_store.clear()
+        if getattr(db_manager, "colbert_store", None) is not None:
+            db_manager.colbert_store.clear()
         clear_fact_cache()
         return {"status": "success", "message": "Database cleared"}
     except Exception as e:
@@ -719,6 +732,8 @@ async def prune_low_importance(request: PruneRequest = PruneRequest()):
             if score < request.threshold:
                 try:
                     db_manager.sqlite_store.soft_delete_node(node_id)
+                    db_manager.vector_index.remove(node_id)
+                    db_manager.graph_index.remove_node(node_id)
                     pruned += 1
                 except Exception as e:
                     logger.debug(f"prune: failed to soft-delete {node_id}: {e}")
@@ -909,16 +924,16 @@ async def ingest_session_facts(request: SessionFactsRequest):
     # Find all raw turn nodes for this session
     session_turns = []
     try:
-        cursor = db_manager.sqlite_store.conn.cursor()
-        cursor.execute(
-            """
-            SELECT id FROM nodes 
-            WHERE json_extract(metadata, '$.sessionId') = ? 
-               OR json_extract(metadata, '$.session_id') = ?
-            """,
-            (request.session_id, request.session_id)
-        )
-        session_turns = [row[0] for row in cursor.fetchall()]
+        with db_manager.sqlite_store._cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id FROM nodes
+                WHERE json_extract(metadata, '$.sessionId') = ?
+                   OR json_extract(metadata, '$.session_id') = ?
+                """,
+                (request.session_id, request.session_id)
+            )
+            session_turns = [row[0] for row in cursor.fetchall()]
     except Exception as e:
         logger.warning(f"Failed to query session turns for edges: {e}")
 
@@ -943,6 +958,7 @@ async def ingest_session_facts(request: SessionFactsRequest):
         # Check contradiction/supersession (Phase 3)
         from engine.consolidation import check_contradiction
         from datetime import datetime
+        contradicted_id = None
         try:
             emb_arr = _np.asarray(embedding, dtype=_np.float32)
             candidates = db_manager.vector_index.search(emb_arr, top_k=5)
@@ -969,46 +985,8 @@ async def ingest_session_facts(request: SessionFactsRequest):
                 db_manager.embedding_engine,
                 threshold=getattr(settings, "fact_contradiction_threshold", 0.85)
             )
-
-            if contradicted_id:
-                edge_id = str(_uuid.uuid4())
-                now_iso = datetime.utcnow().isoformat()
-                # Create the supersedes edge in sqlite
-                db_manager.sqlite_store.create_edge(
-                    edge_id=edge_id,
-                    source_id=node_id,
-                    target_id=contradicted_id,
-                    edge_type="supersedes",
-                    weight=1.0,
-                    valid_from=now_iso,
-                    valid_until=None,
-                    superseded_by=None,
-                    confidence=1.0
-                )
-                # Add edge to graph index
-                db_manager.graph_index.add_edge(
-                    edge_id=edge_id,
-                    source_id=node_id,
-                    target_id=contradicted_id,
-                    edge_type="supersedes",
-                    weight=1.0,
-                    valid_from=now_iso,
-                    valid_until=None,
-                    confidence=1.0
-                )
-                # Mark old node as superseded in metadata
-                node_b = db_manager.sqlite_store.get_node(contradicted_id)
-                if node_b:
-                    b_meta = node_b.get("metadata") or {}
-                    if isinstance(b_meta, str):
-                        try:
-                            b_meta = json.loads(b_meta)
-                        except Exception:
-                            b_meta = {}
-                    b_meta["superseded_by"] = node_id
-                    db_manager.sqlite_store.update_node(contradicted_id, metadata=b_meta)
         except Exception as e:
-            logger.warning(f"Failed to check contradiction or create supersedes edge: {e}")
+            logger.warning(f"Failed to check contradiction for fact node: {e}")
 
         # Store in SQLite
         db_manager.sqlite_store.create_node(
@@ -1024,6 +1002,44 @@ async def ingest_session_facts(request: SessionFactsRequest):
 
         # Add to graph index
         db_manager.graph_index.add_node(node_id)
+
+        if contradicted_id:
+            try:
+                edge_id = str(_uuid.uuid4())
+                now_iso = datetime.utcnow().isoformat()
+                db_manager.sqlite_store.create_edge(
+                    edge_id=edge_id,
+                    source_id=node_id,
+                    target_id=contradicted_id,
+                    edge_type="supersedes",
+                    weight=1.0,
+                    valid_from=now_iso,
+                    valid_until=None,
+                    superseded_by=None,
+                    confidence=1.0
+                )
+                db_manager.graph_index.add_edge(
+                    edge_id=edge_id,
+                    source_id=node_id,
+                    target_id=contradicted_id,
+                    edge_type="supersedes",
+                    weight=1.0,
+                    valid_from=now_iso,
+                    valid_until=None,
+                    confidence=1.0
+                )
+                node_b = db_manager.sqlite_store.get_node(contradicted_id)
+                if node_b:
+                    b_meta = node_b.get("metadata") or {}
+                    if isinstance(b_meta, str):
+                        try:
+                            b_meta = json.loads(b_meta)
+                        except Exception:
+                            b_meta = {}
+                    b_meta["superseded_by"] = node_id
+                    db_manager.sqlite_store.update_node(contradicted_id, metadata=b_meta)
+            except Exception as e:
+                logger.warning(f"Failed to create supersedes edge for fact {node_id}: {e}")
 
         # Add belongs_to edges from fact to turn nodes in same session
         for turn_id in session_turns:

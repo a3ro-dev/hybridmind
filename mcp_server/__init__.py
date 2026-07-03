@@ -1,0 +1,1 @@
+"""HybridMind MCP server package."""

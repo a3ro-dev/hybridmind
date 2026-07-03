@@ -235,12 +235,24 @@ async def bulk_create_nodes(
                 # next_turn edge
                 t_edge_id = f"edge_{uuid.uuid4().hex[:12]}"
                 sqlite_store.create_edge(t_edge_id, src_id, tgt_id, "next_turn", 1.0)
-                graph_index.add_edge(t_edge_id, src_id, tgt_id, "next_turn", 1.0)
+                graph_index.add_edge(
+                    source_id=src_id,
+                    target_id=tgt_id,
+                    edge_type="next_turn",
+                    weight=1.0,
+                    edge_id=t_edge_id,
+                )
                 
                 # same_session edge
                 s_edge_id = f"edge_{uuid.uuid4().hex[:12]}"
                 sqlite_store.create_edge(s_edge_id, src_id, tgt_id, "same_session", 0.5)
-                graph_index.add_edge(s_edge_id, src_id, tgt_id, "same_session", 0.5)
+                graph_index.add_edge(
+                    source_id=src_id,
+                    target_id=tgt_id,
+                    edge_type="same_session",
+                    weight=0.5,
+                    edge_id=s_edge_id,
+                )
             except Exception as e:
                 logger.warning(f"Failed to create edge in bulk ingest: {e}")
     
