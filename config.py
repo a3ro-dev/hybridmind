@@ -75,14 +75,22 @@ class Settings(BaseSettings):
 
     # Auto-edge inference (Phase 3)
     auto_edges_enabled: bool = False
-    auto_edge_cosine_threshold: float = 0.75
-    auto_edge_max_per_node: int = 5
+    # 0.70/10 (lowered from 0.75/5): ablation showed too-sparse auto-edges yield
+    # zero graph signal on graph-dependent queries — a slightly looser threshold
+    # and higher per-node cap keeps precision reasonable while actually producing
+    # enough edges for graph traversal/proximity scoring to matter.
+    auto_edge_cosine_threshold: float = 0.70
+    auto_edge_max_per_node: int = 10
     auto_edge_entity_enabled: bool = False  # requires spaCy or fact entities
 
     # Opt-in research modules (Phase 3)
     colbert_enabled: bool = False   # ColBERT MaxSim re-rank; needs bge-m3 colbert vecs
     gnn_enabled: bool = False       # GNN reranker; needs torch-geometric
     gnn_model_path: Optional[str] = None  # path to trained GNN checkpoint (.pt)
+    
+    # Memory lifecycle & Visual memory
+    fact_contradiction_threshold: float = 0.85
+    image_embedding_url: Optional[str] = None
 
     # Performance
     batch_size: int = 32            # legacy alias; use embedding_batch_size for new code

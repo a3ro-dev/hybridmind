@@ -395,10 +395,20 @@ class BM25Index:
 
 try:
     import bm25s as _bm25s_lib
-    import Stemmer as _Stemmer_lib
     _HAS_BM25S = True
 except ImportError:
     _HAS_BM25S = False
+
+try:
+    import Stemmer as _Stemmer_lib
+    _HAS_PYSTEMMER = True
+except ImportError:
+    _HAS_PYSTEMMER = False
+    logger.info(
+        "PyStemmer (Snowball C extension) not installed — "
+        "BM25SBackend will use bm25s without stemming (slightly lower precision). "
+        "Install with: pip install PyStemmer"
+    )
 
 
 class BM25SBackend:
@@ -415,13 +425,14 @@ class BM25SBackend:
     def __init__(self, index_path: str = None, k1: float = 1.5, b: float = 0.75):
         if not _HAS_BM25S:
             raise ImportError(
-                "BM25SBackend requires bm25s and PyStemmer: pip install bm25s PyStemmer"
+                "BM25SBackend requires bm25s: pip install bm25s"
             )
         self.index_path = index_path
         self.k1 = k1
         self.b = b
 
-        self._stemmer = _Stemmer_lib.Stemmer("english")
+        # PyStemmer is optional — bm25s works without it (stemmer=None)
+        self._stemmer = _Stemmer_lib.Stemmer("english") if _HAS_PYSTEMMER else None
         self._stop_words = _STOP_WORDS
 
         # Corpus buffer: [(node_id, text), ...]
@@ -433,11 +444,12 @@ class BM25SBackend:
     # ── Tokenization (string tokens; used for BM25 overlap in hybrid_ranker) ──
 
     def tokenize(self, text: str) -> List[str]:
-        """Return stemmed, stop-word-filtered string tokens (for overlap calc)."""
+        """Return stemmed (if PyStemmer available) stop-word-filtered string tokens."""
         import re
         tokens = re.findall(r'[a-z0-9]+', text.lower())
         tokens = [t for t in tokens if len(t) > 1 and t not in self._stop_words]
-        tokens = [self._stemmer.stemWord(t) for t in tokens]
+        if self._stemmer is not None:
+            tokens = [self._stemmer.stemWord(t) for t in tokens]
         return [t for t in tokens if len(t) > 1]
 
     # ── Corpus management ────────────────────────────────────────────────────

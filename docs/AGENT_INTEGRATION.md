@@ -409,3 +409,34 @@ with HybridMemory(base_url="http://127.0.0.1:8000") as memory:
     memory.store("example")
 # HTTP client is closed automatically
 ```
+
+---
+
+## Pattern 5: Connecting via MCP (Model Context Protocol)
+
+HybridMind exposes a plug-n-play MCP server at `mcp_server/main.py`.
+This enables any MCP-compatible AI assistant (like Claude Code, Cursor, Windsurf) to call memory tools directly.
+
+### Tools Exposed via MCP
+- **`remember`**: Store a new fact in the database.
+- **`recall`**: Search the database using vector/graph hybrid search.
+- **`relate`**: Create a relationship link between two memories.
+- **`forget`**: Soft-delete a memory.
+
+### Claude Code Configuration (`~/.claude/mcp.json`)
+```json
+{
+  "mcpServers": {
+    "hybridmind": {
+      "command": "python",
+      "args": ["/absolute/path/to/hybridmind/mcp_server/main.py"],
+      "env": {
+        "HYBRIDMIND_API_URL": "http://localhost:8000"
+      }
+    }
+  }
+}
+```
+
+For Cursor or Windsurf, configure the same block in their respective MCP configuration files.
+Refer to [hybridmind-mcp-setup](file:///.agents/skills/hybridmind-mcp-setup/SKILL.md) for full setup instructions.

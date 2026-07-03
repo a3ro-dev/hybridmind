@@ -68,3 +68,4 @@ httpx>=0.25.1
 
 # No benchmarks needed.
 hypothesis
+mcp[cli]>=1.0.0
