@@ -1,0 +1,21 @@
+# ColQwen2.5 Image Embedding Server for RunPod Serverless
+# Build: docker build -f deploy/Dockerfile.image_server -t hybridmind-image-server .
+# Push:  docker tag hybridmind-image-server <your-registry>/hybridmind-image-server:latest
+#        docker push <your-registry>/hybridmind-image-server:latest
+
+FROM runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
+
+WORKDIR /app
+
+# Install server deps
+COPY deploy/requirements_image_server.txt .
+RUN pip install --no-cache-dir -r requirements_image_server.txt
+
+# Copy handler
+COPY deploy/runpod_image_handler.py handler.py
+
+# Pre-download model weights to bake into image (optional, reduces cold start)
+# Uncomment to pre-download vidore/colqwen2.5-v0.2:
+# RUN python -c "from colpali_engine.models import ColQwen2_5, ColQwen2_5_Processor; ColQwen2_5_Processor.from_pretrained('vidore/colqwen2.5-v0.2'); ColQwen2_5.from_pretrained('vidore/colqwen2.5-v0.2')"
+
+CMD ["python", "-u", "handler.py"]

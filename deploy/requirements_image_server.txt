@@ -1,0 +1,16 @@
+# ColQwen2.5 image embedding server dependencies
+# Install SEPARATELY from the main HybridMind venv to avoid conflicts.
+#
+# Usage:
+#   python -m venv .venv_image
+#   .venv_image/Scripts/pip install -r deploy/requirements_image_server.txt
+
+colpali-engine>=0.3.0
+torch>=2.0.0
+torchvision>=0.15.0
+transformers>=4.40.0
+pillow>=10.0.0
+fastapi>=0.115.0
+uvicorn[standard]>=0.24.0
+httpx>=0.25.0
+runpod>=1.7.0
