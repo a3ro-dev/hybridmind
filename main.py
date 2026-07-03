@@ -658,6 +658,99 @@ async def clear_database():
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 
+# ==================== Admin: Memory Lifecycle ====================
+
+class ConsolidateRequest(BaseModel):
+    min_facts: int = 5
+    max_age_hours: int = 24
+    model: Optional[str] = None
+
+
+@app.post("/admin/consolidate", tags=["Admin"])
+async def consolidate_memory(request: ConsolidateRequest = ConsolidateRequest()):
+    """
+    Consolidate old session memories into summary nodes.
+
+    Groups extracted_fact nodes by session_id, summarizes sessions with
+    >= min_facts facts that are older than max_age_hours. Idempotent.
+    """
+    try:
+        db_manager = get_db_manager()
+        from engine.consolidation import consolidate_sessions
+        result = await asyncio.to_thread(
+            consolidate_sessions,
+            db_manager,
+            min_facts=request.min_facts,
+            max_age_hours=request.max_age_hours,
+            model=request.model,
+        )
+        return {"status": "success", **result}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+
+
+class PruneRequest(BaseModel):
+    threshold: float = 0.3
+
+
+@app.post("/admin/prune-low-importance", tags=["Admin"])
+async def prune_low_importance(request: PruneRequest = PruneRequest()):
+    """
+    Soft-delete low-importance memory nodes.
+
+    Computes importance_score() for every node (recency + centrality +
+    access frequency). Nodes with score < threshold are soft-deleted.
+    Runs compaction automatically after pruning.
+    """
+    try:
+        db_manager = get_db_manager()
+        from engine.consolidation import importance_score
+
+        # Get all active node IDs
+        with db_manager.sqlite_store._cursor() as cursor:
+            cursor.execute(
+                "SELECT id FROM nodes WHERE deleted_at IS NULL"
+            )
+            all_ids = [row["id"] for row in cursor.fetchall()]
+
+        pruned = 0
+        for node_id in all_ids:
+            score = importance_score(node_id, db_manager)
+            if score < request.threshold:
+                try:
+                    db_manager.sqlite_store.soft_delete_node(node_id)
+                    pruned += 1
+                except Exception as e:
+                    logger.debug(f"prune: failed to soft-delete {node_id}: {e}")
+
+        logger.info(f"prune-low-importance: pruned {pruned}/{len(all_ids)} nodes (threshold={request.threshold})")
+        return {
+            "status": "success",
+            "threshold": request.threshold,
+            "nodes_evaluated": len(all_ids),
+            "nodes_pruned": pruned,
+        }
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+
+
+@app.post("/admin/detect-communities", tags=["Admin"])
+async def detect_communities():
+    """
+    Run Louvain community detection and create community summary nodes.
+
+    Detects clusters in the memory graph and creates a summary node for
+    each community with >= 3 members. Idempotent per run.
+    """
+    try:
+        db_manager = get_db_manager()
+        from engine.community_detector import run_community_detection
+        result = await asyncio.to_thread(run_community_detection, db_manager)
+        return {"status": "success", **result}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+
+
 # ==================== Ingest Helpers ====================
 
 class SessionTurn(BaseModel):
@@ -831,15 +924,91 @@ async def ingest_session_facts(request: SessionFactsRequest):
 
     for fact, fact_text, embedding in zip(valid_facts, fact_texts, embeddings):
         node_id = str(_uuid.uuid4())
+        
+        # Memory pool classification (Phase 4)
+        from models.memory_pool import classify_memory_type
+        pool = classify_memory_type(fact_text)
+
         metadata = {
             "type": "extracted_fact",
             "session_id": request.session_id,
             "entities": fact.get("entities", []),
             "date": fact.get("date", ""),
+            "memory_pool": pool.value,
         }
         if request.container_tag:
             metadata["container_tag"] = request.container_tag
             metadata["containerTag"] = request.container_tag
+
+        # Check contradiction/supersession (Phase 3)
+        from engine.consolidation import check_contradiction
+        from datetime import datetime
+        try:
+            emb_arr = _np.asarray(embedding, dtype=_np.float32)
+            candidates = db_manager.vector_index.search(emb_arr, top_k=5)
+            existing_nodes = []
+            for cand_id, score in candidates:
+                node_data = db_manager.sqlite_store.get_node(cand_id)
+                if node_data and not node_data.get("deleted_at"):
+                    meta_cand = node_data.get("metadata") or {}
+                    if isinstance(meta_cand, str):
+                        try:
+                            meta_cand = json.loads(meta_cand)
+                        except Exception:
+                            meta_cand = {}
+                    if meta_cand.get("type") == "extracted_fact":
+                        existing_nodes.append({
+                            "id": cand_id,
+                            "text": node_data["text"],
+                            "embedding": node_data.get("embedding")
+                        })
+
+            contradicted_id = check_contradiction(
+                fact_text,
+                existing_nodes,
+                db_manager.embedding_engine,
+                threshold=getattr(settings, "fact_contradiction_threshold", 0.85)
+            )
+
+            if contradicted_id:
+                edge_id = str(_uuid.uuid4())
+                now_iso = datetime.utcnow().isoformat()
+                # Create the supersedes edge in sqlite
+                db_manager.sqlite_store.create_edge(
+                    edge_id=edge_id,
+                    source_id=node_id,
+                    target_id=contradicted_id,
+                    edge_type="supersedes",
+                    weight=1.0,
+                    valid_from=now_iso,
+                    valid_until=None,
+                    superseded_by=None,
+                    confidence=1.0
+                )
+                # Add edge to graph index
+                db_manager.graph_index.add_edge(
+                    edge_id=edge_id,
+                    source_id=node_id,
+                    target_id=contradicted_id,
+                    edge_type="supersedes",
+                    weight=1.0,
+                    valid_from=now_iso,
+                    valid_until=None,
+                    confidence=1.0
+                )
+                # Mark old node as superseded in metadata
+                node_b = db_manager.sqlite_store.get_node(contradicted_id)
+                if node_b:
+                    b_meta = node_b.get("metadata") or {}
+                    if isinstance(b_meta, str):
+                        try:
+                            b_meta = json.loads(b_meta)
+                        except Exception:
+                            b_meta = {}
+                    b_meta["superseded_by"] = node_id
+                    db_manager.sqlite_store.update_node(contradicted_id, metadata=b_meta)
+        except Exception as e:
+            logger.warning(f"Failed to check contradiction or create supersedes edge: {e}")
 
         # Store in SQLite
         db_manager.sqlite_store.create_node(
@@ -917,7 +1086,7 @@ async def ingest_session_facts(request: SessionFactsRequest):
 
 
 
-if __name__ == "__main__":
+def start():
     import uvicorn
     uvicorn.run(
         "main:app",
@@ -925,3 +1094,7 @@ if __name__ == "__main__":
         port=settings.port,
         reload=settings.debug
     )
+
+
+if __name__ == "__main__":
+    start()
