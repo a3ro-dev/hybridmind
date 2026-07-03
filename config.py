@@ -60,7 +60,18 @@ class Settings(BaseSettings):
     fusion_model_path: Optional[str] = None
 
     # Reranker model (used by CrossEncoderReranker)
-    reranker_model: str = "BAAI/bge-reranker-v2-m3"
+    # mxbai-rerank-large-v2: Apache 2.0, ~84% Hit@1 vs 77% bge-reranker-v2-m3, 8x faster
+    reranker_model: str = "mixedbread-ai/mxbai-rerank-large-v2"
+
+    # Sparse retrieval backend: "bm25" (pure Python, no deps) | "bm25s" (100x faster, needs bm25s+PyStemmer) | "splade" (needs fastembed)
+    sparse_retrieval_backend: str = "bm25s"
+
+    # Query routing: classify query type → apply per-type vector/graph/bm25 weights
+    query_routing_enabled: bool = True
+
+    # Temporal decay: weight graph edges by recency (exp decay on created_at)
+    temporal_decay_enabled: bool = False   # set True to activate; tune half_life_days per use case
+    temporal_decay_half_life_days: float = 30.0  # 7 for conversation, 90 for domain knowledge
 
     # Auto-edge inference (Phase 3)
     auto_edges_enabled: bool = False

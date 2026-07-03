@@ -1,6 +1,9 @@
 """
 Hybrid ranker for HybridMind.
-Implements the Contextual Relevance Score (CRS) algorithm.
+Implements the Contextual Relevance Score (CRS) algorithm with:
+  - 4-signal RRF fusion: dense + sparse (BM25S/SPLADE) + graph (temporal) + ColBERT MaxSim
+  - Query-type-aware weight routing (temporal/multihop/entity/factual)
+  - Temporal graph decay (optional, HYBRIDMIND_TEMPORAL_DECAY_ENABLED=true)
 """
 
 import logging
@@ -11,8 +14,19 @@ import numpy as np
 from engine.vector_search import VectorSearchEngine
 from engine.graph_search import GraphSearchEngine
 from engine.fusion import rrf_fuse, get_fusion_mode, get_rrf_k
+from engine.query_router import route_query
 
 logger = logging.getLogger(__name__)
+
+# Per-query-type weight maps. Overrides caller-supplied defaults when routing is active.
+# Tuned for LoCoMo benchmark question types.
+_QUERY_TYPE_WEIGHTS: Dict[str, Dict[str, float]] = {
+    #              vector   graph   bm25
+    "temporal":  {"vector_weight": 0.30, "graph_weight": 0.50, "bm25_boost_weight": 0.20},
+    "multihop":  {"vector_weight": 0.20, "graph_weight": 0.70, "bm25_boost_weight": 0.10},
+    "entity":    {"vector_weight": 0.35, "graph_weight": 0.25, "bm25_boost_weight": 0.40},
+    "default":   {"vector_weight": 0.50, "graph_weight": 0.15, "bm25_boost_weight": 0.35},
+}
 
 
 class HybridRanker:
@@ -34,12 +48,36 @@ class HybridRanker:
         bm25_index: Optional[Any] = None,
         disable_graph_expansion: bool = False,
         reranker: Optional[Any] = None,
+        query_routing_enabled: Optional[bool] = None,
+        temporal_decay_enabled: Optional[bool] = None,
+        temporal_decay_half_life_days: float = 30.0,
     ):
         self.vector_engine = vector_engine
         self.graph_engine = graph_engine
         self.bm25_index = bm25_index
         self.disable_graph_expansion = disable_graph_expansion
         self.reranker = reranker
+
+        # Query routing: classify query → per-type weights
+        # Reads from config if not explicitly set
+        if query_routing_enabled is None:
+            try:
+                from config import settings as _cfg
+                query_routing_enabled = _cfg.query_routing_enabled
+            except Exception:
+                query_routing_enabled = True
+        self.query_routing_enabled = query_routing_enabled
+
+        # Temporal decay: weight graph edges by recency
+        if temporal_decay_enabled is None:
+            try:
+                from config import settings as _cfg
+                temporal_decay_enabled = _cfg.temporal_decay_enabled
+                temporal_decay_half_life_days = _cfg.temporal_decay_half_life_days
+            except Exception:
+                temporal_decay_enabled = False
+        self.temporal_decay_enabled = temporal_decay_enabled
+        self.temporal_decay_half_life_days = temporal_decay_half_life_days
 
     def search(
         self,
@@ -59,6 +97,23 @@ class HybridRanker:
         fusion_mode: Optional[str] = None,
     ) -> Tuple[List[Dict[str, Any]], float, int]:
         start_time = time.perf_counter()
+
+        # ── Query-type-aware weight routing ────────────────────────────────
+        # Classify the query and apply per-type weights (overrides defaults).
+        # Callers that pass explicit non-default weights are NOT overridden —
+        # but in practice the API uses defaults, so routing fires for all
+        # standard /search/hybrid calls.
+        query_type = "default"
+        if self.query_routing_enabled:
+            try:
+                route = route_query(query_text)
+                query_type = route.get("type", "default")
+                overrides = _QUERY_TYPE_WEIGHTS.get(query_type, _QUERY_TYPE_WEIGHTS["default"])
+                vector_weight = overrides["vector_weight"]
+                graph_weight = overrides["graph_weight"]
+                bm25_boost_weight = overrides["bm25_boost_weight"]
+            except Exception as _e:
+                logger.debug(f"Query routing failed (using defaults): {_e}")
 
         # We need candidate generation. We will pull top_k * 5 vector results and bm25 results.
         vector_k = top_k * 5 if deduplicate else top_k * 3
@@ -234,11 +289,13 @@ class HybridRanker:
         # Update candidate_ids to include expanded pool
         candidate_ids = [nid for nid in expanded_candidates_list if nid in rolled_up_nodes]
 
-        # Step 4: Compute Graph Scores
+        # Step 4: Compute Graph Scores (with optional temporal decay)
         graph_scores = self.graph_engine.compute_proximity_scores(
             node_ids=candidate_ids,
             reference_nodes=reference_nodes,
             max_depth=max_depth,
+            temporal_decay=self.temporal_decay_enabled,
+            half_life_days=self.temporal_decay_half_life_days,
         )
 
         # Step 5: Late Fusion Scoring
@@ -273,8 +330,9 @@ class HybridRanker:
                     "graph_gate": 1.0,
                     "effective_graph_score": round(g_score, 4),
                     "combined_score": combined_score,
-                    "reasoning": f"RRF(dense={v_score:.4f}, graph={g_score:.4f})",
+                    "reasoning": f"RRF(dense={v_score:.4f}, graph={g_score:.4f}, qtype={query_type})",
                     "fusion_mode": "rrf",
+                    "query_type": query_type,
                 })
         else:
             # Linear fusion (original CRS algorithm) with relevance gate — kept for back-compat

@@ -28,6 +28,9 @@ class EdgeType(str, Enum):
     same_session = "same_session"      # nodes in same session
     belongs_to = "belongs_to"          # sentence chunk → parent
 
+    # Temporal / supersession edges (Phase 3+)
+    supersedes = "supersedes"          # new fact replaces old fact
+
 
 # Typed walk-weight map used by compute_weighted_proximity_score().
 # Weights determine how much each edge type contributes to graph proximity.
@@ -53,6 +56,9 @@ EDGE_TYPE_WALK_WEIGHTS: dict = {
     EdgeType.next_turn: 0.6,
     EdgeType.same_session: 0.5,
     EdgeType.belongs_to: 0.3,
+
+    # Temporal
+    EdgeType.supersedes: 1.0,
 }
 
 class EdgeCreate(BaseModel):
@@ -61,12 +67,20 @@ class EdgeCreate(BaseModel):
     type: EdgeType
     weight: float = Field(default=1.0, ge=0.0, le=1.0)
     metadata: Optional[Dict[str, Any]] = None
+    # Temporal fields — used by temporal decay scoring and fact supersession
+    valid_from: Optional[datetime] = None    # when this relationship became true
+    valid_until: Optional[datetime] = None   # when superseded / expired (None = still valid)
+    superseded_by: Optional[str] = None      # edge_id of the superseding edge
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0)
 
 
 class EdgeUpdate(BaseModel):
     type: Optional[EdgeType] = None
     weight: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     metadata: Optional[Dict[str, Any]] = None
+    valid_until: Optional[datetime] = None
+    superseded_by: Optional[str] = None
+    confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
 
 
 class EdgeResponse(BaseModel):
@@ -77,6 +91,10 @@ class EdgeResponse(BaseModel):
     weight: float
     metadata: Dict[str, Any]
     created_at: datetime
+    valid_from: Optional[datetime] = None
+    valid_until: Optional[datetime] = None
+    superseded_by: Optional[str] = None
+    confidence: float = 1.0
 
 
 class EdgeDeleteResponse(BaseModel):

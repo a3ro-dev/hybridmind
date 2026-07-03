@@ -385,3 +385,328 @@ class BM25Index:
     @property
     def size(self) -> int:
         return self.doc_count
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# BM25SBackend — 100x faster, uses bm25s + PyStemmer (Snowball).
+# Same interface as BM25Index; swappable via create_sparse_index().
+# Requires: pip install bm25s PyStemmer
+# ──────────────────────────────────────────────────────────────────────────────
+
+try:
+    import bm25s as _bm25s_lib
+    import Stemmer as _Stemmer_lib
+    _HAS_BM25S = True
+except ImportError:
+    _HAS_BM25S = False
+
+
+class BM25SBackend:
+    """
+    bm25s-accelerated BM25 with the same interface as BM25Index.
+
+    Buffers added documents and rebuilds the index lazily on first search after
+    any mutation (add/add_batch). This makes single-doc ingestion O(1) while
+    keeping search performance optimal.
+
+    Falls back to BM25Index if bm25s is not installed.
+    """
+
+    def __init__(self, index_path: str = None, k1: float = 1.5, b: float = 0.75):
+        if not _HAS_BM25S:
+            raise ImportError(
+                "BM25SBackend requires bm25s and PyStemmer: pip install bm25s PyStemmer"
+            )
+        self.index_path = index_path
+        self.k1 = k1
+        self.b = b
+
+        self._stemmer = _Stemmer_lib.Stemmer("english")
+        self._stop_words = _STOP_WORDS
+
+        # Corpus buffer: [(node_id, text), ...]
+        self._corpus: List[Tuple[str, str]] = []
+        self._id_to_idx: Dict[str, int] = {}
+        self._retriever = None
+        self._dirty = True  # index needs rebuild
+
+    # ── Tokenization (string tokens; used for BM25 overlap in hybrid_ranker) ──
+
+    def tokenize(self, text: str) -> List[str]:
+        """Return stemmed, stop-word-filtered string tokens (for overlap calc)."""
+        import re
+        tokens = re.findall(r'[a-z0-9]+', text.lower())
+        tokens = [t for t in tokens if len(t) > 1 and t not in self._stop_words]
+        tokens = [self._stemmer.stemWord(t) for t in tokens]
+        return [t for t in tokens if len(t) > 1]
+
+    # ── Corpus management ────────────────────────────────────────────────────
+
+    def add(self, node_id: str, text: str):
+        if node_id in self._id_to_idx:
+            idx = self._id_to_idx[node_id]
+            self._corpus[idx] = (node_id, text)
+        else:
+            self._id_to_idx[node_id] = len(self._corpus)
+            self._corpus.append((node_id, text))
+        self._dirty = True
+
+    def add_batch(self, batch: List[Tuple[str, str]]):
+        for node_id, text in batch:
+            self.add(node_id, text)
+
+    def rebuild_from_nodes(self, nodes: List[Dict[str, Any]]):
+        self._corpus = []
+        self._id_to_idx = {}
+        for node in nodes:
+            nid = node["id"]
+            self._id_to_idx[nid] = len(self._corpus)
+            self._corpus.append((nid, node["text"]))
+        self._dirty = True
+
+    def clear(self):
+        self._corpus = []
+        self._id_to_idx = {}
+        self._retriever = None
+        self._dirty = True
+
+    # ── Index rebuild ────────────────────────────────────────────────────────
+
+    def _rebuild(self):
+        if not self._corpus:
+            self._retriever = None
+            self._dirty = False
+            return
+        texts = [text for _, text in self._corpus]
+        tokens = _bm25s_lib.tokenize(
+            texts,
+            stemmer=self._stemmer,
+            stopwords="en",
+            show_progress=False,
+        )
+        self._retriever = _bm25s_lib.BM25(k1=self.k1, b=self.b)
+        self._retriever.index(tokens)
+        self._dirty = False
+        logger.debug(f"BM25SBackend: rebuilt index over {len(self._corpus)} docs")
+
+    # ── Search ───────────────────────────────────────────────────────────────
+
+    def search(self, query_text: str, top_k: int = 10) -> List[Tuple[str, float]]:
+        if not self._corpus:
+            return []
+        if self._dirty:
+            self._rebuild()
+        if self._retriever is None:
+            return []
+
+        k = min(top_k, len(self._corpus))
+        query_tokens = _bm25s_lib.tokenize(
+            [query_text],
+            stemmer=self._stemmer,
+            stopwords="en",
+            show_progress=False,
+        )
+        results, scores = self._retriever.retrieve(query_tokens, k=k)
+        out = []
+        for idx, score in zip(results[0], scores[0]):
+            score = float(score)
+            if score <= 0.0:
+                continue
+            node_id = self._corpus[int(idx)][0]
+            out.append((node_id, score))
+        return out
+
+    # ── Persistence ──────────────────────────────────────────────────────────
+
+    def save(self):
+        if not self.index_path:
+            return
+        if self._dirty:
+            self._rebuild()
+        os.makedirs(os.path.dirname(os.path.abspath(self.index_path)), exist_ok=True)
+        # Save corpus map
+        with open(self.index_path + ".corpus.pkl", "wb") as f:
+            pickle.dump(self._corpus, f)
+        # Save bm25s index
+        if self._retriever is not None:
+            self._retriever.save(self.index_path + ".bm25s")
+        logger.info(f"BM25SBackend: saved {len(self._corpus)} docs to {self.index_path}")
+
+    def load(self):
+        if not self.index_path:
+            return
+        corpus_path = self.index_path + ".corpus.pkl"
+        index_path = self.index_path + ".bm25s"
+        if os.path.exists(corpus_path):
+            with open(corpus_path, "rb") as f:
+                self._corpus = pickle.load(f)
+            self._id_to_idx = {nid: i for i, (nid, _) in enumerate(self._corpus)}
+        if os.path.exists(index_path):
+            self._retriever = _bm25s_lib.BM25.load(index_path, mmap=True)
+            self._dirty = False
+            logger.info(f"BM25SBackend: loaded {len(self._corpus)} docs from {index_path}")
+        elif self._corpus:
+            self._dirty = True  # corpus present but no index — rebuild on next search
+
+    @property
+    def size(self) -> int:
+        return len(self._corpus)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# SpladeBackend — learned sparse retrieval via fastembed (SPLADE-v3).
+# Handles vocabulary mismatch ("cancel membership" ↔ "terminate subscription").
+# Requires: pip install fastembed
+# ──────────────────────────────────────────────────────────────────────────────
+
+try:
+    from fastembed import SparseTextEmbedding as _SparseEmb
+    _HAS_FASTEMBED = True
+except ImportError:
+    _HAS_FASTEMBED = False
+
+
+class SpladeBackend:
+    """
+    SPLADE-v3 learned sparse retrieval via fastembed.
+
+    Stores per-document sparse vectors in memory.  Search is O(N) dot products
+    (same as the current pure-Python BM25).  At 50K docs, ~200ms/query on CPU.
+
+    Models:
+      "prithivida/Splade_PP_en_v1"  — fast, good BEIR scores
+      "naver/splade-v3"             — best quality, 2x slower
+    """
+
+    def __init__(
+        self,
+        index_path: str = None,
+        model_name: str = "prithivida/Splade_PP_en_v1",
+    ):
+        if not _HAS_FASTEMBED:
+            raise ImportError(
+                "SpladeBackend requires fastembed: pip install fastembed"
+            )
+        self.index_path = index_path
+        self.model_name = model_name
+        self._model = None
+
+        # node_id → {indices: np.ndarray, values: np.ndarray}
+        self._vectors: Dict[str, Any] = {}
+        self._ids: List[str] = []  # ordered list for save/load
+        self._stop_words = _STOP_WORDS
+
+    def _ensure_model(self):
+        if self._model is None:
+            self._model = _SparseEmb(self.model_name)
+
+    def tokenize(self, text: str) -> List[str]:
+        """Approximate token list for overlap heuristic (not SPLADE internal)."""
+        import re
+        tokens = re.findall(r'[a-z0-9]+', text.lower())
+        return [t for t in tokens if len(t) > 1 and t not in self._stop_words]
+
+    def add(self, node_id: str, text: str):
+        self._ensure_model()
+        vec = next(self._model.embed([text]))
+        self._vectors[node_id] = {"indices": vec.indices, "values": vec.values}
+        if node_id not in self._ids:
+            self._ids.append(node_id)
+
+    def add_batch(self, batch: List[Tuple[str, str]]):
+        self._ensure_model()
+        node_ids = [nid for nid, _ in batch]
+        texts = [t for _, t in batch]
+        for nid, vec in zip(node_ids, self._model.embed(texts)):
+            self._vectors[nid] = {"indices": vec.indices, "values": vec.values}
+            if nid not in self._ids:
+                self._ids.append(nid)
+
+    def rebuild_from_nodes(self, nodes: List[Dict[str, Any]]):
+        self._vectors = {}
+        self._ids = []
+        self.add_batch([(n["id"], n["text"]) for n in nodes])
+
+    def clear(self):
+        self._vectors = {}
+        self._ids = []
+
+    def search(self, query_text: str, top_k: int = 10) -> List[Tuple[str, float]]:
+        if not self._vectors:
+            return []
+        self._ensure_model()
+        q_vec = next(self._model.embed([query_text]))
+        q_idx = set(q_vec.indices)
+        q_vals = {i: v for i, v in zip(q_vec.indices, q_vec.values)}
+
+        scores = {}
+        for nid in self._ids:
+            dv = self._vectors[nid]
+            # Sparse dot product
+            score = sum(
+                q_vals[i] * v
+                for i, v in zip(dv["indices"], dv["values"])
+                if i in q_idx
+            )
+            if score > 0:
+                scores[nid] = score
+
+        ranked = sorted(scores.items(), key=lambda x: -x[1])
+        return ranked[:top_k]
+
+    def save(self):
+        if not self.index_path:
+            return
+        with open(self.index_path + ".splade.pkl", "wb") as f:
+            pickle.dump({"ids": self._ids, "vectors": self._vectors}, f)
+
+    def load(self):
+        p = self.index_path + ".splade.pkl" if self.index_path else None
+        if p and os.path.exists(p):
+            with open(p, "rb") as f:
+                data = pickle.load(f)
+            self._ids = data["ids"]
+            self._vectors = data["vectors"]
+
+    @property
+    def size(self) -> int:
+        return len(self._ids)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Factory
+# ──────────────────────────────────────────────────────────────────────────────
+
+def create_sparse_index(
+    backend: str = "bm25s",
+    index_path: str = None,
+    **kwargs,
+) -> "BM25Index | BM25SBackend | SpladeBackend":
+    """
+    Factory for sparse retrieval backends.
+
+    Args:
+        backend: "bm25"  — original pure-Python BM25Index (no extra deps)
+                 "bm25s" — BM25SBackend (100x faster; needs bm25s + PyStemmer)
+                 "splade"— SpladeBackend (learned sparse; needs fastembed)
+        index_path: Persistence path prefix.
+        **kwargs: Passed to the backend constructor.
+
+    Falls back to "bm25" if the requested backend's deps are not installed.
+    """
+    if backend == "splade":
+        if _HAS_FASTEMBED:
+            logger.info("Sparse index: SPLADE via fastembed")
+            return SpladeBackend(index_path=index_path, **kwargs)
+        logger.warning("fastembed not installed — falling back to bm25s")
+        backend = "bm25s"
+
+    if backend == "bm25s":
+        if _HAS_BM25S:
+            logger.info("Sparse index: bm25s (fast) backend")
+            return BM25SBackend(index_path=index_path, **kwargs)
+        logger.warning("bm25s not installed — falling back to pure-Python BM25. Install: pip install bm25s PyStemmer")
+        backend = "bm25"
+
+    logger.info("Sparse index: pure-Python BM25 backend")
+    return BM25Index(index_path=index_path, **kwargs)

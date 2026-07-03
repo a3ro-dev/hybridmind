@@ -60,7 +60,11 @@ stress_test_sections_3_7.py
 
 # ── Sentence-transformers model cache ────────────────────────────
 .cache/
-models/
+*.bin
+*.safetensors
+*.onnx
+*.pt
+*.pth
 
 # ── IDE & agent config ───────────────────────────────────────────
 .vscode/

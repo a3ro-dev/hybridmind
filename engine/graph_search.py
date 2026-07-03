@@ -149,23 +149,35 @@ class GraphSearchEngine:
         node_ids: List[str],
         reference_nodes: List[str],
         max_depth: int = 3,
-        edge_type_weights: Optional[Dict[str, float]] = None
+        edge_type_weights: Optional[Dict[str, float]] = None,
+        temporal_decay: bool = False,
+        half_life_days: float = 30.0,
     ) -> Dict[str, float]:
         """
         Compute graph proximity scores for multiple nodes.
-        
+
         Args:
             node_ids: List of nodes to score
             reference_nodes: Anchor nodes for proximity
             max_depth: Maximum path length
-            
+            edge_type_weights: Optional per-edge-type walk weights
+            temporal_decay: If True, apply exponential decay on edge age
+            half_life_days: Decay half-life (7=conversation, 30=default, 90=domain)
+
         Returns:
             Dict mapping node_id to proximity score
         """
         scores = {}
-        
+
         for node_id in node_ids:
-            if edge_type_weights:
+            if temporal_decay:
+                score = self.graph_index.compute_temporal_proximity_score(
+                    node_id,
+                    reference_nodes,
+                    max_depth,
+                    half_life_days=half_life_days,
+                )
+            elif edge_type_weights:
                 score = self.graph_index.compute_weighted_proximity_score(
                     node_id,
                     reference_nodes,
@@ -179,7 +191,7 @@ class GraphSearchEngine:
                     max_depth
                 )
             scores[node_id] = round(score, 4)
-        
+
         return scores
     
     def find_path(

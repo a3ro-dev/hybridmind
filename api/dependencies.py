@@ -64,9 +64,10 @@ class DatabaseManager:
             index_path=paths["vector_index"]
         )
         
-        from storage.bm25_index import BM25Index
-        self.bm25_index = BM25Index(
-            index_path=str(Path(paths["root"]) / "bm25.pkl")
+        from storage.bm25_index import create_sparse_index
+        self.bm25_index = create_sparse_index(
+            backend=settings.sparse_retrieval_backend,
+            index_path=str(Path(paths["root"]) / "bm25.pkl"),
         )
         self.graph_index = GraphIndex(index_path=paths["graph"])
         
@@ -234,10 +235,8 @@ def get_sqlite_store() -> SQLiteStore:
     return get_db_manager().sqlite_store
 
 
-from storage.bm25_index import BM25Index
-
-def get_bm25_index() -> BM25Index:
-    """FastAPI dependency for BM25 index."""
+def get_bm25_index():
+    """FastAPI dependency for sparse index (BM25Index / BM25SBackend / SpladeBackend)."""
     return get_db_manager().bm25_index
 
 def get_vector_index() -> VectorIndex:

@@ -24,7 +24,7 @@ from api.dependencies import (
 )
 from storage.sqlite_store import SQLiteStore
 from storage.vector_index import VectorIndex
-from storage.bm25_index import BM25Index
+from typing import Any as _AnyType
 from storage.graph_index import GraphIndex
 from engine.embedding import EmbeddingEngine
 from engine.cache import invalidate_cache
@@ -55,7 +55,7 @@ async def create_node(
     node: NodeCreate,
     sqlite_store: SQLiteStore = Depends(get_sqlite_store),
     vector_index: VectorIndex = Depends(get_vector_index),
-    bm25_index: BM25Index = Depends(get_bm25_index),
+    bm25_index: _AnyType = Depends(get_bm25_index),
     graph_index: GraphIndex = Depends(get_graph_index),
     embedding_engine: EmbeddingEngine = Depends(get_embedding_engine)
 ) -> NodeResponse:

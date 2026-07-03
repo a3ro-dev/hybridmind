@@ -22,7 +22,7 @@ from engine.hybrid_ranker import HybridRanker
 from storage.sqlite_store import SQLiteStore
 from storage.vector_index import VectorIndex
 from storage.graph_index import GraphIndex
-from storage.bm25_index import BM25Index
+from storage.bm25_index import create_sparse_index
 
 def setup_engines(disable_averaging=False):
     db_path = ":memory:"
@@ -35,7 +35,7 @@ def setup_engines(disable_averaging=False):
     vector_index = VectorIndex()
 
     graph_index = GraphIndex()
-    bm25_index = BM25Index()
+    bm25_index = create_sparse_index()  # uses bm25s if available, else pure Python
 
     vector_search = VectorSearchEngine(vector_index, sqlite_store, embedding_engine)
     graph_search = GraphSearchEngine(graph_index, sqlite_store)

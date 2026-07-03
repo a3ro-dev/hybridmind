@@ -1,18 +1,25 @@
 """
 Embedding pipeline for HybridMind.
 
-Supports two backends, selected by model name:
-- bge-m3  (BAAI/bge-m3*)  : FlagEmbedding BGEM3FlagModel, 1024-dim, returns
-  dense + sparse (lexical weights) + colbert (per-token) vectors natively.
-- SentenceTransformer (*): all other models, including the legacy
-  all-mpnet-base-v2 (768-dim) for CPU-only deploys.
+Backends (selected automatically):
+- RemoteEmbeddingEngine: when HC_EMBEDDING_URL or RUNPOD_EMBEDDING_URL is set.
+  Calls a remote OpenAI-compatible /v1/embeddings endpoint (e.g. Hack Club AI
+  Qwen3-Embedding-8B). Falls back to local bge-m3 on HTTP errors.
+- EmbeddingEngine (local):
+  - bge-m3  (BAAI/bge-m3*)  : FlagEmbedding BGEM3FlagModel, 1024-dim,
+    dense + sparse (lexical weights) + colbert (per-token) natively.
+  - SentenceTransformer (*): all other models, e.g. all-mpnet-base-v2 (768-dim).
 
-Default: BAAI/bge-m3 (1024-dim).  To keep the old model:
-  HYBRIDMIND_EMBEDDING_MODEL=all-mpnet-base-v2
-  HYBRIDMIND_EMBEDDING_DIMENSION=768
+Env vars:
+  HC_EMBEDDING_URL      — Hack Club AI base URL (https://ai.hackclub.com/proxy/v1)
+  HC_API_KEY            — Hack Club AI API key
+  RUNPOD_EMBEDDING_URL  — fallback RunPod base URL (legacy)
+  RUNPOD_API_KEY        — RunPod API key (legacy fallback)
+  HYBRIDMIND_EMBEDDING_DIMENSION — output dimension (MRL); default 1024
 """
 
 import logging
+import os
 import time
 from typing import Dict, List, Optional
 import numpy as np
@@ -295,12 +302,145 @@ class EmbeddingEngine:
         return self
 
 
+class RemoteEmbeddingEngine:
+    """
+    Remote embedding backend via any OpenAI-compatible /v1/embeddings endpoint.
+
+    Configured with:
+      HC_EMBEDDING_URL   — base URL (Hack Club AI: https://ai.hackclub.com/proxy/v1)
+      HC_API_KEY         — bearer token
+      HYBRIDMIND_EMBEDDING_DIMENSION — MRL output dim (default: 1024)
+
+    Falls back to the local EmbeddingEngine on any HTTP error.
+    """
+
+    def __init__(self, base_url: str, api_key: str, dimension: int = 1024, model: str = "qwen/qwen3-embedding-8b"):
+        import httpx
+        self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
+        self._dimension = dimension
+        self.model_name = model
+        self._client = httpx.Client(
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            limits=httpx.Limits(max_connections=8, max_keepalive_connections=4),
+            timeout=httpx.Timeout(connect=10.0, read=60.0, write=10.0, pool=10.0),
+        )
+        self._fallback: Optional[EmbeddingEngine] = None
+        logger.info(f"RemoteEmbeddingEngine: {self.base_url} model={model} dim={dimension}")
+
+    def _get_fallback(self) -> EmbeddingEngine:
+        if self._fallback is None:
+            logger.warning("RunPod embedding: falling back to local bge-m3")
+            self._fallback = EmbeddingEngine(model_name=_DEFAULT_MODEL)
+        return self._fallback
+
+    @property
+    def dimension(self) -> int:
+        return self._dimension
+
+    @property
+    def is_available(self) -> bool:
+        return True
+
+    def _normalize(self, vec: np.ndarray) -> np.ndarray:
+        vec = np.asarray(vec, dtype=np.float32)
+        norm = float(np.linalg.norm(vec))
+        return (vec / norm).astype(np.float32) if norm > 0 else vec
+
+    def _call_api(self, texts: List[str]) -> Optional[np.ndarray]:
+        payload: dict = {"model": self.model_name, "input": texts, "dimensions": self._dimension}
+        try:
+            resp = self._client.post(f"{self.base_url}/embeddings", json=payload)
+            resp.raise_for_status()
+            data = resp.json()["data"]
+            data.sort(key=lambda x: x["index"])
+            vecs = np.array([d["embedding"] for d in data], dtype=np.float32)
+            norms = np.linalg.norm(vecs, axis=1, keepdims=True)
+            norms = np.where(norms > 0, norms, 1)
+            return vecs / norms
+        except Exception as e:
+            logger.error(f"RunPod embedding API error: {e}")
+            return None
+
+    def embed(self, text: str, normalize: bool = True) -> np.ndarray:
+        result = self._call_api([text])
+        if result is not None:
+            return result[0]
+        return self._get_fallback().embed(text, normalize=normalize)
+
+    def embed_batch(self, texts: List[str], normalize: bool = True, batch_size: int = 32, show_progress: bool = False) -> np.ndarray:
+        if not texts:
+            return np.array([]).reshape(0, self._dimension)
+        all_vecs = []
+        for i in range(0, len(texts), batch_size):
+            chunk = texts[i:i + batch_size]
+            result = self._call_api(chunk)
+            if result is not None:
+                all_vecs.append(result)
+            else:
+                fb = self._get_fallback().embed_batch(chunk, normalize=normalize, batch_size=batch_size)
+                all_vecs.append(fb)
+        return np.vstack(all_vecs).astype(np.float32)
+
+    def embed_hybrid(self, texts: List[str], batch_size: int = 32, return_colbert: bool = False) -> Dict:
+        # RunPod endpoint returns dense only; sparse/colbert not available remotely
+        dense = self.embed_batch(texts, normalize=True, batch_size=batch_size)
+        return {"dense": dense, "sparse": None, "colbert": None}
+
+    def embed_with_graph_context(self, text: str, neighbor_embeddings: List[np.ndarray], alpha: float = 0.7) -> np.ndarray:
+        own = self.embed(text, normalize=False)
+        if not neighbor_embeddings:
+            return self._normalize(own)
+        neighbor_mean = np.mean(neighbor_embeddings, axis=0)
+        return self._normalize(alpha * own + (1.0 - alpha) * neighbor_mean)
+
+    def compute_similarity(self, embedding1: np.ndarray, embedding2: np.ndarray) -> float:
+        n1, n2 = np.linalg.norm(embedding1), np.linalg.norm(embedding2)
+        if n1 == 0 or n2 == 0:
+            return 0.0
+        return float(np.dot(embedding1, embedding2) / (n1 * n2))
+
+    def compute_similarity_batch(self, query_embedding: np.ndarray, embeddings: np.ndarray) -> np.ndarray:
+        qn = np.linalg.norm(query_embedding)
+        if qn == 0:
+            return np.zeros(len(embeddings))
+        q = query_embedding / qn
+        norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+        norms = np.where(norms > 0, norms, 1)
+        return np.dot(embeddings / norms, q)
+
+    @property
+    def model(self):
+        return self
+
+
 # Singleton instance for shared use
-_embedding_engine: Optional[EmbeddingEngine] = None
+_embedding_engine = None
 
 
-def get_embedding_engine(model_name: str = _DEFAULT_MODEL) -> EmbeddingEngine:
+def get_embedding_engine(model_name: str = _DEFAULT_MODEL):
+    """
+    Return the process-wide embedding engine singleton.
+
+    Priority:
+    1. RemoteEmbeddingEngine if HC_EMBEDDING_URL or RUNPOD_EMBEDDING_URL is set
+    2. Local EmbeddingEngine (bge-m3 or specified model_name)
+    """
     global _embedding_engine
-    if _embedding_engine is None or _embedding_engine.model_name != model_name:
+    remote_url = (
+        os.getenv("HC_EMBEDDING_URL", "").strip()
+        or os.getenv("RUNPOD_EMBEDDING_URL", "").strip()
+    )
+    if remote_url:
+        if not isinstance(_embedding_engine, RemoteEmbeddingEngine):
+            api_key = os.getenv("HC_API_KEY") or os.getenv("RUNPOD_API_KEY", "")
+            dim = int(os.getenv("HYBRIDMIND_EMBEDDING_DIMENSION", "1024"))
+            remote_model = os.getenv("HYBRIDMIND_REMOTE_EMBEDDING_MODEL", "qwen/qwen3-embedding-8b")
+            _embedding_engine = RemoteEmbeddingEngine(base_url=remote_url, api_key=api_key, dimension=dim, model=remote_model)
+        return _embedding_engine
+
+    if _embedding_engine is None or (
+        isinstance(_embedding_engine, EmbeddingEngine) and _embedding_engine.model_name != model_name
+    ):
         _embedding_engine = EmbeddingEngine(model_name=model_name)
     return _embedding_engine

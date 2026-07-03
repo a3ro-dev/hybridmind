@@ -3,8 +3,10 @@ NetworkX-based graph index for HybridMind.
 Handles graph storage, traversal, and proximity scoring.
 """
 
+import math
 import pickle
 from collections import deque
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 import networkx as nx
@@ -380,8 +382,129 @@ class GraphIndex:
         
         return min(1.0, base_score + bonus)
     
+    # ==================== Temporal Scoring ====================
+
+    @staticmethod
+    def _temporal_decay(created_at_str: Optional[str], half_life_days: float = 30.0) -> float:
+        """
+        Exponential decay weight based on edge age.
+
+        w(t) = exp(-ln(2) * Δdays / half_life_days)
+
+        Returns 1.0 if created_at is missing (no decay applied).
+        half_life_days=7  → conversation memory (halves weekly)
+        half_life_days=30 → default
+        half_life_days=90 → domain knowledge (halves quarterly)
+        """
+        if not created_at_str:
+            return 1.0
+        try:
+            if isinstance(created_at_str, datetime):
+                edge_time = created_at_str
+            else:
+                # Parse ISO string (SQLite stores as "YYYY-MM-DD HH:MM:SS.ffffff")
+                s = str(created_at_str).replace(" ", "T")
+                if s.endswith("+00:00") or "Z" in s:
+                    edge_time = datetime.fromisoformat(s.rstrip("Z")).replace(tzinfo=timezone.utc)
+                else:
+                    edge_time = datetime.fromisoformat(s)
+                    if edge_time.tzinfo is None:
+                        edge_time = edge_time.replace(tzinfo=timezone.utc)
+            now = datetime.now(tz=timezone.utc)
+            delta_days = (now - edge_time).total_seconds() / 86400.0
+            return math.exp(-math.log(2) * delta_days / half_life_days)
+        except Exception:
+            return 1.0
+
+    def compute_temporal_proximity_score(
+        self,
+        node_id: str,
+        reference_nodes: List[str],
+        max_depth: int = 3,
+        half_life_days: float = 30.0,
+        skip_stale: bool = True,
+    ) -> float:
+        """
+        Proximity score with temporal edge decay.
+
+        G_temporal(q, n) = (1 / (1 + d_min)) * min(decay(e) for e in path)
+
+        Stale edges (valid_until set and in the past) are skipped when
+        skip_stale=True, making the effective graph reflect current knowledge.
+
+        Args:
+            node_id: Target node to score.
+            reference_nodes: Anchor nodes (from vector search or explicit).
+            max_depth: BFS depth limit.
+            half_life_days: Decay half-life; tune per use-case.
+            skip_stale: If True, skip edges where valid_until < now.
+
+        Returns:
+            Score in [0, 1]; 0 means no valid path found.
+        """
+        if not reference_nodes or node_id not in self.graph:
+            return 0.0
+
+        now = datetime.now(tz=timezone.utc)
+        min_weighted_dist = float("inf")
+
+        for ref_node in reference_nodes:
+            if ref_node not in self.graph:
+                continue
+            if ref_node == node_id:
+                return 1.0
+
+            # Try both directions (bidirectional proximity like base method)
+            for src, tgt in [(ref_node, node_id), (node_id, ref_node)]:
+                try:
+                    path = nx.shortest_path(self.graph, src, tgt)
+                    if len(path) - 1 > max_depth:
+                        continue
+
+                    # Compute minimum decay along path edges
+                    path_decay = 1.0
+                    valid_path = True
+                    for i in range(len(path) - 1):
+                        edge_data = self.graph.edges.get((path[i], path[i + 1]), {})
+
+                        # Skip stale edges (superseded facts)
+                        if skip_stale:
+                            vu = edge_data.get("valid_until")
+                            if vu:
+                                try:
+                                    if isinstance(vu, str):
+                                        vu_dt = datetime.fromisoformat(vu.replace(" ", "T"))
+                                        if vu_dt.tzinfo is None:
+                                            vu_dt = vu_dt.replace(tzinfo=timezone.utc)
+                                    else:
+                                        vu_dt = vu
+                                    if vu_dt < now:
+                                        valid_path = False
+                                        break
+                                except Exception:
+                                    pass
+
+                        decay = self._temporal_decay(
+                            edge_data.get("created_at"), half_life_days
+                        )
+                        path_decay = min(path_decay, decay)
+
+                    if not valid_path:
+                        continue
+
+                    # Effective distance: hop count discounted by decay
+                    # (lower decay → path is "longer" in temporal sense)
+                    eff_dist = (len(path) - 1) / max(path_decay, 1e-6)
+                    min_weighted_dist = min(min_weighted_dist, eff_dist)
+                except (nx.NetworkXNoPath, nx.NodeNotFound):
+                    pass
+
+        if min_weighted_dist == float("inf"):
+            return 0.0
+        return 1.0 / (1.0 + min_weighted_dist)
+
     # ==================== Persistence ====================
-    
+
     def save(self, path: Optional[str] = None):
         """Save graph to disk."""
         save_path = Path(path) if path else self.index_path
@@ -408,14 +531,21 @@ class GraphIndex:
         Used when loading from SQLite.
         """
         self.graph = nx.DiGraph()
-        
+
         for edge in edges:
+            # Propagate created_at + temporal fields so temporal_decay can use them
+            extra = {}
+            for field in ("created_at", "valid_from", "valid_until", "superseded_by", "confidence"):
+                val = edge.get(field)
+                if val is not None:
+                    extra[field] = str(val) if isinstance(val, datetime) else val
             self.add_edge(
                 source_id=edge["source_id"],
                 target_id=edge["target_id"],
                 edge_type=edge["type"],
                 weight=edge.get("weight", 1.0),
                 edge_id=edge.get("id"),
+                **extra,
                 **edge.get("metadata", {})
             )
     
