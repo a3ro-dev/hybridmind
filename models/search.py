@@ -3,6 +3,8 @@
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 
+from config import settings
+
 
 class VectorSearchRequest(BaseModel):
     query_text: str = Field(..., min_length=1)
@@ -28,7 +30,7 @@ class HybridSearchRequest(BaseModel):
     min_score: float = Field(default=0.0, ge=0.0, le=1.0)
     filter_metadata: Optional[Dict[str, Any]] = None
     deduplicate: bool = Field(default=True, description="Deduplicate results with identical text")
-    rerank_pool: int = Field(default=25, ge=1, le=100, description="Candidate pool size fed to the reranker before slicing top_k; set <= top_k to disable reranking")
+    rerank_pool: int = Field(default_factory=lambda: settings.rerank_pool_size, ge=1, le=100, description="Candidate pool size fed to the reranker before slicing top_k; set <= top_k to disable reranking. Default from settings.rerank_pool_size (Phase 6.2.4).")
     bm25_boost_weight: float = Field(default=0.35, ge=0.0, le=2.0, description="BM25 keyword overlap boost applied on top of vector score")
     overlap_threshold: float = Field(default=0.15, ge=0.0, le=1.0, description="BM25 overlap fraction below which graph score is ramped down")
     fusion_mode: Optional[str] = Field(default=None, description="Override config fusion_mode: 'rrf' or 'linear'")
