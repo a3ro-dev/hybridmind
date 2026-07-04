@@ -1,6 +1,10 @@
 """
-Ingest-time fact extraction via HackClub proxy.
+Ingest-time fact extraction.
 Called once per session during ingest. Never at query time.
+
+Primary backend: self-hosted RunPod vLLM (engine/runpod_llm.py), when
+RUNPOD_LLM_ENDPOINT_ID is configured. Falls back to the Hack Club proxy
+otherwise, so existing deployments without RunPod keep working unchanged.
 
 Uses a shared pooled httpx client + bounded retry with exponential backoff and
 jitter, so transient HC proxy drops ("socket connection was closed
@@ -11,9 +15,12 @@ import logging
 import os
 import random
 import time
+from typing import Optional
 from dotenv import load_dotenv
 
 import httpx
+
+from engine import runpod_llm
 
 load_dotenv()
 
@@ -83,8 +90,8 @@ def extract_facts_from_session(turns: list[dict]) -> list[dict]:
     if not turns:
         return []
 
-    if not _HC_API_KEY:
-        logger.warning("HC_API_KEY not set — fact extraction disabled")
+    if not runpod_llm.is_configured() and not _HC_API_KEY:
+        logger.warning("Neither RunPod nor HC_API_KEY configured — fact extraction disabled")
         return []
 
     # Build the conversation text with date and speaker context
@@ -126,36 +133,83 @@ def extract_facts_from_session(turns: list[dict]) -> list[dict]:
         "strict": True,
     }
 
+    messages = [
+        {"role": "system", "content": _SYSTEM_PROMPT},
+        {"role": "user", "content": conversation},
+    ]
+    response_format = {"type": "json_schema", "json_schema": _FACT_JSON_SCHEMA}
+
+    logger.info(
+        f"fact_extractor: extracting facts for {len(turns)} turns ({len(conversation)} chars)"
+    )
+    content = _call_llm(messages, max_tokens=1536, response_format=response_format)
+    if content is None:
+        return []
+
+    cleaned = _parse_facts_content(content)
+
+    # Retry if we got 0 facts — rephrase to elicit at least a few
+    if not cleaned and turns:
+        logger.info("fact_extractor: 0 facts extracted, retrying with rephrased prompt")
+        retry_messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You extract facts from conversations. "
+                    "Return a JSON array of at least 3 short facts. "
+                    'Format: [{"fact":"...","entities":[],"date":""}]. '
+                    "Return ONLY the JSON array."
+                ),
+            },
+            {"role": "user", "content": conversation[:8000]},
+        ]
+        retry_content = _call_llm(retry_messages, max_tokens=1024)
+        if retry_content:
+            cleaned.extend(_parse_facts_content(retry_content))
+
+    logger.info(f"fact_extractor: extracted {len(cleaned)} facts from {len(turns)} turns")
+    return cleaned
+
+
+def _call_llm(
+    messages: list[dict],
+    max_tokens: int,
+    response_format: Optional[dict] = None,
+) -> Optional[str]:
+    """
+    Call the configured LLM backend: self-hosted RunPod vLLM first (if
+    configured), falling back to the Hack Club proxy. Returns raw content
+    string, or None if both backends fail/are unavailable.
+    """
+    if runpod_llm.is_configured():
+        content = runpod_llm.chat_completion(
+            messages, max_tokens=max_tokens, temperature=0.0, response_format=response_format,
+        )
+        if content is not None:
+            return content
+        logger.warning("fact_extractor: RunPod LLM unavailable/failed, falling back to HC proxy")
+
+    if not _HC_API_KEY:
+        logger.warning("fact_extractor: HC_API_KEY not set and RunPod unavailable — cannot extract facts")
+        return None
+
     payload = {
         "model": _MODEL,
-        "messages": [
-            {"role": "system", "content": _SYSTEM_PROMPT},
-            {"role": "user", "content": conversation},
-        ],
-        "max_tokens": 4096,
+        "messages": messages,
+        "max_tokens": max_tokens,
         "temperature": 0.0,
-        "response_format": {"type": "json_schema", "json_schema": _FACT_JSON_SCHEMA},
     }
+    if response_format:
+        payload["response_format"] = response_format
     headers = {
         "Authorization": f"Bearer {_HC_API_KEY}",
         "Content-Type": "application/json",
     }
     client = _get_client()
 
-    logger.info(
-        f"fact_extractor: calling {_MODEL} at {_BASE_URL} for {len(turns)} turns "
-        f"({len(conversation)} chars)"
-    )
-
-    content = None
     for attempt in range(_MAX_ATTEMPTS):
         try:
-            response = client.post(
-                f"{_BASE_URL}/chat/completions",
-                headers=headers,
-                json=payload,
-            )
-            # Retry on transient server-side / rate-limit statuses.
+            response = client.post(f"{_BASE_URL}/chat/completions", headers=headers, json=payload)
             if response.status_code in (429, 500, 502, 503, 504):
                 raise httpx.HTTPStatusError(
                     f"retryable status {response.status_code}",
@@ -163,18 +217,16 @@ def extract_facts_from_session(turns: list[dict]) -> list[dict]:
                     response=response,
                 )
             response.raise_for_status()
-            content = response.json()["choices"][0]["message"]["content"]
-            break  # success
+            return response.json()["choices"][0]["message"]["content"]
 
         except httpx.HTTPStatusError as e:
             status = e.response.status_code if e.response is not None else None
             if status in (429, 500, 502, 503, 504) and attempt < _MAX_ATTEMPTS - 1:
                 _sleep_backoff(attempt, f"HTTP {status}")
                 continue
-            # Non-retryable (400/401/422/etc.) or out of attempts.
             body = e.response.text[:500] if e.response is not None else ""
             logger.error(f"fact_extractor HTTP error: {status} {body}")
-            return []
+            return None
         except (
             httpx.ConnectError,
             httpx.TimeoutException,
@@ -190,14 +242,17 @@ def extract_facts_from_session(turns: list[dict]) -> list[dict]:
                 f"fact_extractor transient error to {_BASE_URL} after "
                 f"{_MAX_ATTEMPTS} attempts ({type(e).__name__}): {e}"
             )
-            return []
+            return None
         except Exception as e:
             logger.error(f"fact_extractor unexpected error ({type(e).__name__}): {e}")
-            return []
+            return None
+    return None
 
-    if content is None:
+
+def _parse_facts_content(content: str) -> list[dict]:
+    """Parse+clean one LLM response into a validated facts list. Returns [] on any failure."""
+    if not content:
         return []
-
     try:
         logger.debug(f"fact_extractor: raw response ({len(content)} chars): {content[:500]}")
 
@@ -221,7 +276,6 @@ def extract_facts_from_session(turns: list[dict]) -> list[dict]:
             logger.warning(f"fact_extractor: facts is not a list: {type(raw_facts)}")
             return []
 
-        # Validate and clean
         cleaned = []
         for item in raw_facts:
             if not isinstance(item, dict):
@@ -234,63 +288,12 @@ def extract_facts_from_session(turns: list[dict]) -> list[dict]:
                 "entities": item.get("entities", []) if isinstance(item.get("entities"), list) else [],
                 "date": str(item.get("date", "")).strip(),
             })
-
-        # Retry if we got 0 facts — rephrase to elicit at least a few
-        if not cleaned and turns:
-            logger.info("fact_extractor: 0 facts extracted, retrying with rephrased prompt")
-            retry_payload = {
-                "model": _MODEL,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": (
-                            "You extract facts from conversations. "
-                            "Return a JSON array of at least 3 short facts. "
-                            'Format: [{"fact":"...","entities":[],"date":""}]. '
-                            "Return ONLY the JSON array."
-                        ),
-                    },
-                    {"role": "user", "content": conversation[:8000]},
-                ],
-                "max_tokens": 2048,
-                "temperature": 0.0,
-            }
-            retry_content = None
-            try:
-                resp = client.post(
-                    f"{_BASE_URL}/chat/completions",
-                    headers=headers,
-                    json=retry_payload,
-                )
-                resp.raise_for_status()
-                retry_content = resp.json()["choices"][0]["message"]["content"]
-            except Exception as retry_err:
-                logger.warning(f"fact_extractor retry failed: {retry_err}")
-
-            if retry_content:
-                try:
-                    start = retry_content.find("[")
-                    end = retry_content.rfind("]") + 1
-                    if start >= 0 and end > start:
-                        retry_facts = json.loads(retry_content[start:end])
-                        for item in (retry_facts if isinstance(retry_facts, list) else []):
-                            if isinstance(item, dict) and str(item.get("fact", "")).strip():
-                                cleaned.append({
-                                    "fact": str(item["fact"]).strip(),
-                                    "entities": item.get("entities", []) if isinstance(item.get("entities"), list) else [],
-                                    "date": str(item.get("date", "")).strip(),
-                                })
-                except Exception:
-                    pass
-
-        logger.info(f"fact_extractor: extracted {len(cleaned)} facts from {len(turns)} turns")
         return cleaned
 
     except json.JSONDecodeError as e:
         logger.error(f"fact_extractor JSON parse error: {e}. Raw content: {content[:500]}")
     except Exception as e:
         logger.error(f"fact_extractor unexpected error ({type(e).__name__}): {e}")
-
     return []
 
 

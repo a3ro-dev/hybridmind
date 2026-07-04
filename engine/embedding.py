@@ -1,21 +1,30 @@
 """
 Embedding pipeline for HybridMind.
 
-Backends (selected automatically):
-- RemoteEmbeddingEngine: when HC_EMBEDDING_URL or RUNPOD_EMBEDDING_URL is set.
-  Calls a remote OpenAI-compatible /v1/embeddings endpoint (e.g. Hack Club AI
-  Qwen3-Embedding-8B). Falls back to local bge-m3 on HTTP errors.
-- EmbeddingEngine (local):
+Backends (selected automatically, in priority order):
+1. TEIEmbeddingEngine: when RUNPOD_TEI_EMBEDDING_URL is set. Calls a
+   self-hosted HuggingFace TEI /embed endpoint (e.g. our own RunPod
+   Qwen3-Embedding-8B deployment). Native output dim (4096 for that model,
+   no MRL truncation). Falls back to local bge-m3 on HTTP errors.
+2. RemoteEmbeddingEngine: when HC_EMBEDDING_URL or RUNPOD_EMBEDDING_URL is
+   set. Calls a remote OpenAI-compatible /v1/embeddings endpoint (e.g. Hack
+   Club AI). Falls back to local bge-m3 on HTTP errors.
+3. EmbeddingEngine (local):
   - bge-m3  (BAAI/bge-m3*)  : FlagEmbedding BGEM3FlagModel, 1024-dim,
     dense + sparse (lexical weights) + colbert (per-token) natively.
   - SentenceTransformer (*): all other models, e.g. all-mpnet-base-v2 (768-dim).
 
 Env vars:
+  RUNPOD_TEI_EMBEDDING_URL — self-hosted RunPod TEI base URL (raw HF TEI
+                             protocol, e.g. https://<id>.api.runpod.ai)
+  RUNPOD_API_KEY           — RunPod account API key (Bearer token)
   HC_EMBEDDING_URL      — Hack Club AI base URL (https://ai.hackclub.com/proxy/v1)
   HC_API_KEY            — Hack Club AI API key
-  RUNPOD_EMBEDDING_URL  — fallback RunPod base URL (legacy)
-  RUNPOD_API_KEY        — RunPod API key (legacy fallback)
-  HYBRIDMIND_EMBEDDING_DIMENSION — output dimension (MRL); default 1024
+  RUNPOD_EMBEDDING_URL  — fallback OpenAI-compatible RunPod base URL (legacy)
+  HYBRIDMIND_EMBEDDING_DIMENSION — output dimension; default 4096 (native
+                                   Qwen3-Embedding-8B dim via TEI). Set to
+                                   1024 if using the MRL-truncated OpenAI-
+                                   compatible path instead.
 """
 
 import logging
@@ -414,6 +423,123 @@ class RemoteEmbeddingEngine:
         return self
 
 
+class TEIEmbeddingEngine:
+    """
+    Remote embedding backend for a self-hosted HuggingFace TEI (text-embeddings-
+    inference) deployment, e.g. Qwen3-Embedding-8B on our own RunPod pod.
+
+    TEI's raw /embed protocol differs from OpenAI's /v1/embeddings:
+      - Request:  {"inputs": "<str>"} or {"inputs": ["<str>", ...]}
+        (no "model"/"dimensions" fields — the deployed model's native output
+        dimension is always returned, no MRL truncation.)
+      - Response: a plain List[List[float]], order-preserved, no wrapper
+        object and no per-item "index" to sort by (unlike OpenAI's schema).
+
+    Configured with:
+      RUNPOD_TEI_EMBEDDING_URL — base URL (e.g. https://<id>.api.runpod.ai)
+      RUNPOD_API_KEY           — bearer token
+      HYBRIDMIND_EMBEDDING_DIMENSION — informational only (TEI doesn't take
+                                         a dimension param); default 4096.
+
+    Falls back to the local EmbeddingEngine on any HTTP error.
+    """
+
+    def __init__(self, base_url: str, api_key: str, dimension: int = 4096):
+        import httpx
+        self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
+        self._dimension = dimension
+        self._client = httpx.Client(
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            limits=httpx.Limits(max_connections=8, max_keepalive_connections=4),
+            timeout=httpx.Timeout(connect=10.0, read=90.0, write=10.0, pool=10.0),
+        )
+        self._fallback: Optional[EmbeddingEngine] = None
+        logger.info(f"TEIEmbeddingEngine: {self.base_url} dim={dimension}")
+
+    def _get_fallback(self) -> EmbeddingEngine:
+        if self._fallback is None:
+            logger.warning("TEI embedding: falling back to local bge-m3")
+            self._fallback = EmbeddingEngine(model_name=_DEFAULT_MODEL)
+        return self._fallback
+
+    @property
+    def dimension(self) -> int:
+        return self._dimension
+
+    @property
+    def is_available(self) -> bool:
+        return True
+
+    def _normalize(self, vec: np.ndarray) -> np.ndarray:
+        vec = np.asarray(vec, dtype=np.float32)
+        norm = float(np.linalg.norm(vec))
+        return (vec / norm).astype(np.float32) if norm > 0 else vec
+
+    def _call_api(self, texts: List[str]) -> Optional[np.ndarray]:
+        try:
+            resp = self._client.post(f"{self.base_url}/embed", json={"inputs": texts})
+            resp.raise_for_status()
+            vecs = np.array(resp.json(), dtype=np.float32)
+            norms = np.linalg.norm(vecs, axis=1, keepdims=True)
+            norms = np.where(norms > 0, norms, 1)
+            return vecs / norms
+        except Exception as e:
+            logger.error(f"TEI embedding API error: {e}")
+            return None
+
+    def embed(self, text: str, normalize: bool = True) -> np.ndarray:
+        result = self._call_api([text])
+        if result is not None:
+            return result[0]
+        return self._get_fallback().embed(text, normalize=normalize)
+
+    def embed_batch(self, texts: List[str], normalize: bool = True, batch_size: int = 32, show_progress: bool = False) -> np.ndarray:
+        if not texts:
+            return np.array([]).reshape(0, self._dimension)
+        all_vecs = []
+        for i in range(0, len(texts), batch_size):
+            chunk = texts[i:i + batch_size]
+            result = self._call_api(chunk)
+            if result is not None:
+                all_vecs.append(result)
+            else:
+                fb = self._get_fallback().embed_batch(chunk, normalize=normalize, batch_size=batch_size)
+                all_vecs.append(fb)
+        return np.vstack(all_vecs).astype(np.float32)
+
+    def embed_hybrid(self, texts: List[str], batch_size: int = 32, return_colbert: bool = False) -> Dict:
+        # TEI returns dense only; sparse/colbert not available remotely
+        dense = self.embed_batch(texts, normalize=True, batch_size=batch_size)
+        return {"dense": dense, "sparse": None, "colbert": None}
+
+    def embed_with_graph_context(self, text: str, neighbor_embeddings: List[np.ndarray], alpha: float = 0.7) -> np.ndarray:
+        own = self.embed(text, normalize=False)
+        if not neighbor_embeddings:
+            return self._normalize(own)
+        neighbor_mean = np.mean(neighbor_embeddings, axis=0)
+        return self._normalize(alpha * own + (1.0 - alpha) * neighbor_mean)
+
+    def compute_similarity(self, embedding1: np.ndarray, embedding2: np.ndarray) -> float:
+        n1, n2 = np.linalg.norm(embedding1), np.linalg.norm(embedding2)
+        if n1 == 0 or n2 == 0:
+            return 0.0
+        return float(np.dot(embedding1, embedding2) / (n1 * n2))
+
+    def compute_similarity_batch(self, query_embedding: np.ndarray, embeddings: np.ndarray) -> np.ndarray:
+        qn = np.linalg.norm(query_embedding)
+        if qn == 0:
+            return np.zeros(len(embeddings))
+        q = query_embedding / qn
+        norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+        norms = np.where(norms > 0, norms, 1)
+        return np.dot(embeddings / norms, q)
+
+    @property
+    def model(self):
+        return self
+
+
 # Singleton instance for shared use
 _embedding_engine = None
 
@@ -423,10 +549,20 @@ def get_embedding_engine(model_name: str = _DEFAULT_MODEL):
     Return the process-wide embedding engine singleton.
 
     Priority:
-    1. RemoteEmbeddingEngine if HC_EMBEDDING_URL or RUNPOD_EMBEDDING_URL is set
-    2. Local EmbeddingEngine (bge-m3 or specified model_name)
+    1. TEIEmbeddingEngine if RUNPOD_TEI_EMBEDDING_URL is set (self-hosted TEI)
+    2. RemoteEmbeddingEngine if HC_EMBEDDING_URL or RUNPOD_EMBEDDING_URL is set
+    3. Local EmbeddingEngine (bge-m3 or specified model_name)
     """
     global _embedding_engine
+
+    tei_url = os.getenv("RUNPOD_TEI_EMBEDDING_URL", "").strip()
+    if tei_url:
+        if not isinstance(_embedding_engine, TEIEmbeddingEngine):
+            api_key = os.getenv("RUNPOD_API_KEY", "")
+            dim = int(os.getenv("HYBRIDMIND_EMBEDDING_DIMENSION", "4096"))
+            _embedding_engine = TEIEmbeddingEngine(base_url=tei_url, api_key=api_key, dimension=dim)
+        return _embedding_engine
+
     remote_url = (
         os.getenv("HC_EMBEDDING_URL", "").strip()
         or os.getenv("RUNPOD_EMBEDDING_URL", "").strip()

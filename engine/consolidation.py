@@ -9,7 +9,9 @@ Provides:
 Design:
 - All operations are idempotent (double-run safe).
 - Pruning is soft-delete only (sets deleted_at, never removes rows).
-- Uses the same HC proxy + retry pattern as fact_extractor.py.
+- Primary LLM backend: self-hosted RunPod vLLM (engine/runpod_llm.py), when
+  configured. Falls back to the Hack Club proxy + retry pattern otherwise
+  (same as fact_extractor.py).
 """
 from __future__ import annotations
 
@@ -26,6 +28,8 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 from dotenv import load_dotenv
+
+from engine import runpod_llm
 
 load_dotenv()
 
@@ -59,7 +63,17 @@ def _sleep_backoff(attempt: int, reason: str) -> None:
 
 
 def _call_llm(messages: list, max_tokens: int = 512, model: Optional[str] = None) -> Optional[str]:
-    """Single LLM call with retry/backoff. Returns content or None."""
+    """
+    Call the configured LLM backend: self-hosted RunPod vLLM first (if
+    configured), falling back to the Hack Club proxy + retry/backoff.
+    Returns content or None if both are unavailable/fail.
+    """
+    if runpod_llm.is_configured():
+        content = runpod_llm.chat_completion(messages, max_tokens=max_tokens, temperature=0.3, model=model)
+        if content is not None:
+            return content
+        logger.warning("consolidation: RunPod LLM unavailable/failed, falling back to HC proxy")
+
     if not _HC_API_KEY:
         return None
     model = model or _DEFAULT_MODEL
