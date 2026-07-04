@@ -49,6 +49,9 @@ def parse_args():
     p.add_argument("--with-answers",     action="store_true",
                    help="Also run LLM QA-answering + accuracy scoring on top of retrieval")
     p.add_argument("--answer-model",     type=str,   default=None)
+    p.add_argument("--decompose-multihop", dest="decompose_multihop", action="store_true", default=True,
+                   help="6.2.2: decompose multihop-routed queries into sub-questions (default on for eval)")
+    p.add_argument("--no-decompose-multihop", dest="decompose_multihop", action="store_false")
     return p.parse_args()
 
 
@@ -147,6 +150,7 @@ def run_eval(
     base_url: str = BASE_URL,
     with_answers: bool = False,
     answer_model: str | None = None,
+    decompose_multihop: bool = True,
 ):
     hit1 = hit5 = hit10 = mrr = 0.0
     correct_sum = 0.0
@@ -170,12 +174,13 @@ def run_eval(
 
     for q in questions:
         supporting_ids = q["supporting_ids"]
+        qtype = route_query(q["question"])["type"]
 
-        try:
+        def _post(q_text: str) -> list:
             resp = client.post(
                 f"{base_url}/search/hybrid",
                 json={
-                    "query_text": q["question"],
+                    "query_text": q_text,
                     "top_k": pool_top_k,
                     "min_score": 0.0,
                     "vector_weight": vector_weight,
@@ -187,7 +192,12 @@ def run_eval(
                 timeout=30,
             )
             resp.raise_for_status()
-            results = resp.json().get("results", [])
+            return resp.json().get("results", [])
+
+        try:
+            results = eval_common.retrieve_with_decomposition(
+                q["question"], qtype, _post, decompose_enabled=decompose_multihop
+            )
         except Exception as e:
             print(f"  ERROR {q['question_id']}: {e}")
             results = []
@@ -218,7 +228,6 @@ def run_eval(
         if supporting_ids:
             recall_full += int(supporting_ids.issubset(retrieved_ids))
 
-        qtype = route_query(q["question"])["type"]
         hypothesis, judged_correct, judge_rationale = "", False, "not evaluated (retrieval-only run, pass --with-answers)"
         prompt_version = ""
         if with_answers:
@@ -326,6 +335,7 @@ def main():
                 rerank_pool=args.rerank_pool,
                 top_k=args.top_k,
                 base_url=args.base_url,
+                decompose_multihop=args.decompose_multihop,
                 with_answers=args.with_answers,
                 answer_model=args.answer_model,
             )

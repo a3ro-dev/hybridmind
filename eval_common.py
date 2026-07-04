@@ -421,6 +421,43 @@ def judge_correct_normalized(hypothesis: str, gold_answer: str) -> tuple[bool, s
     return ok, f"[normalized] {rationale}"
 
 
+def retrieve_with_decomposition(
+    query_text: str,
+    question_type: str,
+    post_fn,
+    decompose_enabled: bool = True,
+    model: str | None = None,
+) -> list:
+    """
+    6.2.2: for multihop-routed queries, decompose into sub-questions and
+    retrieve per sub-question via `post_fn(query_string) -> list[dict]`,
+    unioning candidates by node_id (keeping the highest combined_score seen
+    across sub-question retrievals). Falls through to a single
+    post_fn(query_text) call whenever decomposition doesn't apply — including
+    the guards inside decompose_query() (RunPod not configured, degenerates
+    to <=1 sub-question, or all sub-questions rejected for novel entities).
+    """
+    from engine.query_decomposition import decompose_query
+
+    if question_type != "multihop":
+        return post_fn(query_text)
+
+    sub_questions = decompose_query(query_text, model=model, enabled=decompose_enabled)
+    if not sub_questions:
+        return post_fn(query_text)
+
+    seen: dict = {}
+    for sq in sub_questions:
+        for r in post_fn(sq):
+            nid = r.get("node_id") or r.get("id")
+            if nid is None:
+                continue
+            if nid not in seen or r.get("combined_score", 0) > seen[nid].get("combined_score", 0):
+                seen[nid] = r
+    unioned = sorted(seen.values(), key=lambda r: -r.get("combined_score", 0))
+    return unioned or post_fn(query_text)
+
+
 def export_training_record(path: str, query_id: str, query_type: str, candidates: list) -> bool:
     """
     Append one training record to a shared fusion_train_data.jsonl.

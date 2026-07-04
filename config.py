@@ -75,6 +75,13 @@ class Settings(BaseSettings):
     # Query routing: classify query type → apply per-type vector/graph/bm25 weights
     query_routing_enabled: bool = True
 
+    # Multi-hop query decomposition (Phase 6.2.2). Not wired into the live
+    # search path yet — currently consumed only by the eval_*.py harness,
+    # which opts in explicitly regardless of this default. See
+    # engine/query_decomposition.py and docs/PHASE_6_REALISTIC.md section 4.
+    query_decomposition_enabled: bool = False
+    rerank_pool_size: int = 25  # Phase 6.2.4 candidate pool size knob
+
     # Temporal decay: weight graph edges by recency (exp decay on created_at)
     temporal_decay_enabled: bool = False   # set True to activate; tune half_life_days per use case
     temporal_decay_half_life_days: float = 30.0  # 7 for conversation, 90 for domain knowledge

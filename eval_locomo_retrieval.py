@@ -52,6 +52,9 @@ def parse_args():
                    help="Also run LLM QA-answering + accuracy scoring on top of retrieval")
     p.add_argument("--answer-model",     type=str,   default=None,
                    help="Override the answering model (default: HYBRIDMIND_QA_MODEL env or openai/gpt-5)")
+    p.add_argument("--decompose-multihop", dest="decompose_multihop", action="store_true", default=True,
+                   help="6.2.2: decompose multihop-routed queries into sub-questions (default on for eval)")
+    p.add_argument("--no-decompose-multihop", dest="decompose_multihop", action="store_false")
     return p.parse_args()
 
 
@@ -113,6 +116,7 @@ def run_eval(
     verbose: bool = True,
     with_answers: bool = False,
     answer_model: str | None = None,
+    decompose_multihop: bool = True,
 ) -> dict:
     all_hits_1, all_hits_5, all_hits_10, all_mrr, all_prec_5, all_prec_10 = [], [], [], [], [], []
     all_correct: list = []
@@ -142,9 +146,11 @@ def run_eval(
             print(f"[{i+1}/{len(questions)}] [{category}] {question[:80]}...")
             print(f"  Answer: {answer[:80]}...")
 
-        try:
+        qtype = route_query(question)["type"]
+
+        def _post(q_text: str) -> list:
             resp = client.post("/search/hybrid", json={
-                "query_text": question,
+                "query_text": q_text,
                 "top_k": pool_top_k,
                 "min_score": 0.0,
                 "vector_weight": vector_weight,
@@ -153,12 +159,13 @@ def run_eval(
                 "overlap_threshold": overlap_threshold,
                 "rerank_pool": rerank_pool,
             })
-            if resp.status_code != 200:
-                if verbose:
-                    print(f"  ERROR: HTTP {resp.status_code}")
-                continue
-            data = resp.json()
-            res_list = data.get("results", [])
+            resp.raise_for_status()
+            return resp.json().get("results", [])
+
+        try:
+            res_list = eval_common.retrieve_with_decomposition(
+                question, qtype, _post, decompose_enabled=decompose_multihop
+            )
         except Exception as e:
             if verbose:
                 print(f"  ERROR: {e}")
@@ -183,7 +190,6 @@ def run_eval(
                 break
         all_mrr.append(mrr)
 
-        qtype = route_query(question)["type"]
         hypothesis, judged_correct, judge_rationale = "", False, "not evaluated (retrieval-only run, pass --with-answers)"
         prompt_version = ""
         if with_answers:
@@ -385,6 +391,7 @@ def main():
                 rerank_pool=args.rerank_pool,
                 top_k=args.top_k,
                 verbose=True,
+                decompose_multihop=args.decompose_multihop,
                 with_answers=args.with_answers,
                 answer_model=args.answer_model,
             )

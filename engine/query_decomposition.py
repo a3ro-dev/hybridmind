@@ -1,0 +1,98 @@
+"""
+Multi-hop query decomposition (Phase 6.2.2, docs/PHASE_6_REALISTIC.md section 4).
+
+A single dense query embedding for a two-hop question geometrically lands
+between the two evidence clusters and hits neither — this is a property of
+mean-pooled query embeddings, not a tuning problem. Decomposing a
+multihop-routed query into sub-questions via the RunPod LLM and retrieving
+per sub-question lets each hop's retrieval anchor on its own cluster.
+
+Off by default (see `enabled` param / settings.query_decomposition_enabled);
+callers (currently only the eval_*.py retrieval path — this is NOT wired into
+the live hybrid_ranker.search()) opt in explicitly.
+"""
+from __future__ import annotations
+
+import json
+import logging
+import re
+from typing import List, Optional
+
+from engine.runpod_llm import chat_completion, is_configured
+
+logger = logging.getLogger(__name__)
+
+DECOMPOSITION_PROMPT_VERSION = "decompose_v1"
+
+_DECOMPOSE_SYSTEM_PROMPT = (
+    "Break the following multi-hop question into 2-3 simpler sub-questions "
+    "that, answered in sequence, would let someone answer the original "
+    "question. Each sub-question MUST only mention entities/concepts already "
+    "present in the original question -- do not invent new named entities. "
+    'Return ONLY a JSON array of strings, e.g. ["...", "..."].'
+)
+
+
+def _entity_tokens(text: str) -> set:
+    """Coarse proxy for 'named entity': capitalized words, as a stand-in for full NER."""
+    return {t.lower() for t in re.findall(r"\b[A-Z][a-zA-Z']*\b", text)}
+
+
+def decompose_query(
+    query_text: str,
+    model: Optional[str] = None,
+    enabled: Optional[bool] = None,
+) -> List[str]:
+    """
+    Return sub-questions for `query_text`, or [] when decomposition is
+    disabled, unavailable, fails, or degenerates to <=1 sub-question (the
+    fall-through guard from docs/PHASE_6_REALISTIC.md section 4).
+
+    enabled=None defers to settings.query_decomposition_enabled (default
+    False); pass enabled=True/False explicitly to override per call site
+    (the eval harness does this since it wants the feature on regardless of
+    the server-wide default).
+    """
+    if enabled is None:
+        from config import settings
+        enabled = getattr(settings, "query_decomposition_enabled", False)
+    if not enabled or not is_configured():
+        return []
+
+    content = chat_completion(
+        messages=[
+            {"role": "system", "content": _DECOMPOSE_SYSTEM_PROMPT},
+            {"role": "user", "content": query_text},
+        ],
+        max_tokens=300,
+        temperature=0.0,
+        model=model,
+    )
+    if not content:
+        return []
+
+    start, end = content.find("["), content.rfind("]") + 1
+    if start < 0 or end <= start:
+        return []
+    try:
+        sub_questions = json.loads(content[start:end])
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(sub_questions, list) or not all(isinstance(s, str) for s in sub_questions):
+        return []
+
+    # Guard: a single sub-question buys nothing over the original query.
+    if len(sub_questions) <= 1:
+        return []
+
+    # Guard: reject sub-questions that introduce entities absent from the original query.
+    original_entities = _entity_tokens(query_text)
+    accepted = []
+    for sq in sub_questions:
+        novel = _entity_tokens(sq) - original_entities
+        if novel:
+            logger.debug(f"query_decomposition: rejecting sub-question with novel entities {novel}: {sq!r}")
+            continue
+        accepted.append(sq)
+
+    return accepted if len(accepted) > 1 else []
