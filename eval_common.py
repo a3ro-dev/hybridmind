@@ -19,6 +19,7 @@ import os
 import random
 import re
 import time
+from pathlib import Path
 
 import httpx
 from dotenv import load_dotenv
@@ -173,6 +174,27 @@ def llm_answer(question: str, snippets: list[str], question_date: str = "", mode
         return retry_content.strip()
 
     return answer  # still empty/abstained after both attempts
+
+
+def export_training_record(path: str, query_id: str, query_type: str, candidates: list) -> bool:
+    """
+    Append one training record to a shared fusion_train_data.jsonl.
+
+    candidates: [{"node_id": str, "dense_score": float, "bm25_score": float,
+                   "graph_score": float, "is_relevant": bool}, ...]
+                 — pass the FULL rerank pool, not just the trimmed top-k, so
+                   correct-but-buried candidates are still usable training pairs.
+
+    Returns True if the record has at least one positive and one negative
+    candidate (i.e. is actually usable for pairwise training).
+    """
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    record = {"query_id": query_id, "query_type": query_type, "candidates": candidates}
+    with open(path, "a") as f:
+        f.write(json.dumps(record) + "\n")
+    has_pos = any(c.get("is_relevant") for c in candidates)
+    has_neg = any(not c.get("is_relevant") for c in candidates)
+    return has_pos and has_neg
 
 
 def judge_correct(hypothesis: str, gold_answer: str) -> bool:
