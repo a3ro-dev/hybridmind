@@ -105,16 +105,7 @@ class Settings(BaseSettings):
     # API
     host: str = "0.0.0.0"
     port: int = 8000
-    
-    # Neo4j (for comparison)
-    neo4j_uri: str = "bolt://localhost:7687"
-    neo4j_user: str = "neo4j"
-    neo4j_password: str = "password"
-    
-    # ChromaDB (for comparison)
-    chromadb_path: str = "data/chromadb"
-    chromadb_collection: str = "arxiv_papers"
-    
+
     def get_data_dir(self) -> Path:
         """Get the data directory, creating it if necessary."""
         data_dir = Path(self.database_path).parent

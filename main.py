@@ -93,7 +93,7 @@ def verify_integrity(mind_path: str) -> str:
         return "PASSED"
         
     logger.warning("  Database corrupted! Attempting to restore from backup...")
-    backup_dir = Path("data/backups")
+    backup_dir = Path(mind_path).parent / "backups"
     if backup_dir.exists():
         backups = sorted(backup_dir.glob("snapshot_*.mind.zip"))
         if backups:
