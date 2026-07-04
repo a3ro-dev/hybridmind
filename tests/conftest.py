@@ -14,8 +14,13 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 # Set test environment
 os.environ.setdefault("HYBRIDMIND_DATABASE_PATH", "test_data/hybridmind_test.db")
-os.environ.setdefault("HYBRIDMIND_VECTOR_INDEX_PATH", "test_data/vector_test.index") 
+os.environ.setdefault("HYBRIDMIND_VECTOR_INDEX_PATH", "test_data/vector_test.index")
 os.environ.setdefault("HYBRIDMIND_GRAPH_INDEX_PATH", "test_data/graph_test.pkl")
+# Tests run with no network access to TEI/RunPod, so the embedding backend
+# always resolves to the local bge-m3 fallback (1024-dim, not the TEI-default
+# 4096). Match the FAISS index dimension to that so a fresh test index isn't
+# born mismatched (see main.py's startup dimension guard, added in Phase 6 A2).
+os.environ.setdefault("HYBRIDMIND_EMBEDDING_DIMENSION", "1024")
 
 from fastapi.testclient import TestClient
 from main import app
