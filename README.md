@@ -29,11 +29,11 @@ HybridMind is an engineering system that correctly applies known hybrid retrieva
 
 **Auto-edge inference** (`HYBRIDMIND_AUTO_EDGES_ENABLED=true`): cosine-threshold similarity edges and entity co-occurrence edges created automatically at ingest time across all three ingest paths (nodes, bulk, session-facts).
 
-**Opt-in research modules** (off by default, CPU fallbacks):
-- ColBERT MaxSim late interaction (`HYBRIDMIND_COLBERT_ENABLED=true`, requires `FlagEmbedding`)
-- GNN reranker with GraphSAGE/HGT (`HYBRIDMIND_GNN_ENABLED=true`, requires `torch-geometric`)
-- Post-trainable fusion MLP head (`HYBRIDMIND_FUSION_MODEL=<checkpoint.npz>`)
-- Online contrastive fine-tuning of bge-m3 on graph edges (RunPod script: `scripts/train_contrastive.py`)
+**Opt-in research modules** (off by default, CPU fallbacks). The three below are **scaffolded, untrained — no checkpoints exist**; the training scripts run but have not been executed against real data, and no `.pt`/`.npz` artifact ships with the repo:
+- ColBERT MaxSim late interaction (`HYBRIDMIND_COLBERT_ENABLED=true`, requires `FlagEmbedding`) — pre-trained, not training-dependent, works out of the box
+- GNN reranker with GraphSAGE/HGT (`HYBRIDMIND_GNN_ENABLED=true`, requires `torch-geometric`) — **scaffolded, untrained — no checkpoint exists**; `scripts/train_gnn.py` must be run first
+- Post-trainable fusion MLP head (`HYBRIDMIND_FUSION_MODEL=<checkpoint.npz>`) — **scaffolded, untrained — no checkpoint exists**; falls back to a heuristic RRF-approximating init
+- Online contrastive fine-tuning of bge-m3 on graph edges (RunPod script: `scripts/train_contrastive.py`) — **scaffolded, untrained**; disqualified for the current corpus size, see `docs/PHASE_6_REALISTIC.md` §0
 
 Full scoring definition, architecture diagram, and data-flow: [docs/ALGORITHM.md](docs/ALGORITHM.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
