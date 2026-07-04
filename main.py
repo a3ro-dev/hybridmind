@@ -140,10 +140,25 @@ async def lifespan(app: FastAPI):
     embedding_engine = db_manager.embedding_engine
     if embedding_engine.model is not None:
         # Run warmup embedding to ensure model is fully loaded
-        _ = embedding_engine.embed("warmup query for model initialization")
+        warmup_vec = embedding_engine.embed("warmup query for model initialization")
         _model_loaded = True
         warmup_time = (time.perf_counter() - warmup_start) * 1000
         logger.info(f"  Embedding model loaded in {warmup_time:.0f}ms")
+
+        # Step 2.1: Hard-fail on embedding/FAISS dimension mismatch.
+        # A silent mismatch corrupts every similarity score in the index — never allow it.
+        actual_dim = int(warmup_vec.shape[-1])
+        index_dim = db_manager.vector_index.dimension
+        if actual_dim != index_dim:
+            raise RuntimeError(
+                f"Embedding/FAISS dimension mismatch: the resolved embedding backend "
+                f"({type(embedding_engine).__name__}) outputs {actual_dim}-dim vectors, "
+                f"but the FAISS index at {settings.mind_file_path} was built with "
+                f"{index_dim} dims. This corrupts every similarity score. Fix by either "
+                f"(a) setting RUNPOD_TEI_EMBEDDING_URL to a TEI endpoint serving a "
+                f"{index_dim}-dim model, or (b) re-indexing the existing corpus for the "
+                f"current embedder with `python scripts/reindex_embeddings.py`."
+            )
     else:
         logger.warning("  Embedding model not available, using mock embeddings")
 
