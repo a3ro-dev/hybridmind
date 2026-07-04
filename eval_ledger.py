@@ -10,6 +10,14 @@ a stable substrate to work from.
 
 Kept as a flat top-level module (eval_ledger.py) to match this repo's existing
 eval_common.py / eval_*.py layout rather than introducing a new eval/ package.
+
+Determinism (6.0.2 / 6.0.3, "B3"): every LLM call reachable from the eval
+paths (eval_common.llm_answer's primary + retry calls, engine/runpod_llm.py,
+the "llm" reranker mode) is already pinned to temperature=0. The answering
+prompts are centralized in eval_common.py behind QA_PROMPT_VERSION; that
+string, plus DEFAULT_SEED below, are recorded on every ledger row so a
+changed prompt or seed is visible in the artifact rather than silently
+invalidating prior comparisons.
 """
 from __future__ import annotations
 
