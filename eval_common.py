@@ -42,6 +42,11 @@ _STOPWORDS = {"the", "a", "an", "in", "on", "at", "to", "for", "of", "is", "was"
 
 _ABSTENTION_RE = re.compile(r"^\s*(i don'?t know|none|not (specified|available|mentioned)|n/?a)\b", re.I)
 
+# Versioned eval prompts (docs/PHASE_6_REALISTIC.md §6.0.2): a changed prompt
+# invalidates prior ledger rows for A/B comparison, so the version travels
+# with every judged answer. Bump this whenever the prompt text below changes.
+QA_PROMPT_VERSION = "qa_v1"
+
 _ANSWER_SCHEMA = {
     "name": "answer",
     "schema": {
@@ -199,15 +204,23 @@ def export_training_record(path: str, query_id: str, query_type: str, candidates
 
 def judge_correct(hypothesis: str, gold_answer: str) -> bool:
     """Deterministic overlap-based judge — no extra LLM call, cheap and repeatable."""
+    return judge_correct_with_rationale(hypothesis, gold_answer)[0]
+
+
+def judge_correct_with_rationale(hypothesis: str, gold_answer: str) -> tuple[bool, str]:
+    """Same verdict as judge_correct(), plus the rule that fired (for the ledger)."""
     if not hypothesis or not gold_answer:
-        return False
+        return False, "empty hypothesis or gold answer"
     hyp_l, gold_l = hypothesis.lower(), gold_answer.lower()
     if gold_l in hyp_l:
-        return True
+        return True, "gold answer is a substring of the hypothesis"
     gold_toks = set(re.findall(r"[A-Za-z0-9']+", gold_l)) - _STOPWORDS
     if not gold_toks:
-        return False
+        return False, "gold answer has no non-stopword tokens"
     hyp_toks = set(re.findall(r"[A-Za-z0-9']+", hyp_l))
     if len(gold_toks) <= 3:
-        return gold_toks.issubset(hyp_toks)
-    return len(gold_toks & hyp_toks) / len(gold_toks) >= 0.7
+        ok = gold_toks.issubset(hyp_toks)
+        return ok, f"gold token subset check ({'passed' if ok else 'failed'}, {len(gold_toks)} tokens)"
+    overlap = len(gold_toks & hyp_toks) / len(gold_toks)
+    ok = overlap >= 0.7
+    return ok, f"token overlap {overlap:.2f} {'>=' if ok else '<'} 0.70 threshold"

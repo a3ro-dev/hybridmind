@@ -26,6 +26,8 @@ from statistics import mean
 import httpx
 
 import eval_common
+import eval_ledger
+from engine.query_router import route_query
 
 BASE_URL = "http://127.0.0.1:8000"
 DATA_DIR = Path("memorybench/data/benchmarks/longmemeval")
@@ -77,12 +79,22 @@ def load_questions(split: str = "s", n: int = 20, question_type_filter: str | No
         qt = item.get("question_type", "unknown")
         if question_type_filter and qt != question_type_filter:
             continue
+        # Best-effort gold evidence ids: LongMemEval doesn't guarantee a
+        # dedicated field, so fall back across the names seen in released
+        # variants of the dataset before giving up with an empty list.
+        evidence_ids = (
+            item.get("evidence")
+            or item.get("answer_session_ids")
+            or item.get("haystack_session_ids")
+            or []
+        )
         questions.append({
             "question_id": item["question_id"],
             "question": item["question"],
             "answer": str(item.get("answer", "")).strip(),
             "question_type": qt,
             "question_date": item.get("question_date", ""),
+            "evidence_ids": [str(e) for e in evidence_ids],
         })
         if len(questions) >= n:
             break
@@ -128,13 +140,27 @@ def run_eval(
     correct_sum = 0.0
     by_type: dict = {}
 
+    ledger_config = {
+        "benchmark": "longmemeval",
+        "vector_weight": vector_weight,
+        "graph_weight": graph_weight,
+        "bm25_boost": bm25_boost,
+        "overlap_threshold": overlap_threshold,
+        "rerank_pool": rerank_pool,
+        "top_k": top_k,
+        "with_answers": with_answers,
+        "answer_model": answer_model or eval_common.DEFAULT_ANSWER_MODEL,
+    }
+    ledger = eval_ledger.LedgerWriter("longmemeval", ledger_config)
+    pool_top_k = max(top_k, rerank_pool, max(eval_ledger.DEFAULT_K_LIST))
+
     for q in questions:
         try:
             resp = client.post(
                 f"{base_url}/search/hybrid",
                 json={
                     "query_text": q["question"],
-                    "top_k": top_k,
+                    "top_k": pool_top_k,
                     "min_score": 0.0,
                     "vector_weight": vector_weight,
                     "graph_weight": graph_weight,
@@ -167,11 +193,26 @@ def run_eval(
                 mrr += 1.0 / rank
                 break
 
+        hypothesis, judged_correct, judge_rationale = "", False, "not evaluated (retrieval-only run, pass --with-answers)"
         if with_answers:
             snippets = [r.get("text", "") for r in results[:10] if r.get("text")]
             hypothesis = eval_common.llm_answer(q["question"], snippets, model=answer_model)
-            correct = eval_common.judge_correct(hypothesis, q["answer"])
-            correct_sum += 1.0 if correct else 0.0
+            judged_correct, judge_rationale = eval_common.judge_correct_with_rationale(hypothesis, q["answer"])
+            correct_sum += 1.0 if judged_correct else 0.0
+
+        pool_metrics = eval_ledger.compute_pool_metrics(
+            results, lambda r: is_relevant(r.get("text", ""), q["answer"])
+        )
+        ledger.write(
+            question_id=q["question_id"],
+            question_type=route_query(q["question"])["type"],
+            gold_evidence_ids=q.get("evidence_ids", []),
+            pool_metrics=pool_metrics,
+            raw_llm_answer=hypothesis,
+            judged_correct=judged_correct,
+            judge_rationale=judge_rationale,
+            prompt_version=eval_common.QA_PROMPT_VERSION,
+        )
 
         # By question type
         qt = q.get("question_type", "unknown")

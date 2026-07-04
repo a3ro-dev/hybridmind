@@ -14,6 +14,7 @@ Optional filters:
   --n 5        samples per category (default 5)
 """
 import argparse
+import hashlib
 import itertools
 import json
 import sys
@@ -24,6 +25,8 @@ from pathlib import Path
 from statistics import mean
 
 import eval_common
+import eval_ledger
+from engine.query_router import route_query
 
 BASE_URL = "http://127.0.0.1:8000"
 LOCOMO_PATH = Path("memorybench/data/benchmarks/locomo/locomo10.json")
@@ -65,8 +68,10 @@ def load_questions(samples_per_category: int = 5, category_filter: str | None = 
                 continue
             counts[cat] = counts.get(cat, 0) + 1
             ans = qa.get("answer") or qa.get("adversarial_answer", "")
+            question_text = qa["question"]
             questions.append({
-                "question": qa["question"],
+                "question_id": qa.get("question_id") or hashlib.sha1(question_text.encode()).hexdigest()[:12],
+                "question": question_text,
                 "answer": str(ans).strip(),
                 "category": cat,
                 "evidence": qa.get("evidence", []),
@@ -113,6 +118,21 @@ def run_eval(
     all_correct: list = []
     results_by_category: dict = {}
 
+    ledger_config = {
+        "benchmark": "locomo",
+        "vector_weight": vector_weight,
+        "graph_weight": graph_weight,
+        "bm25_boost": bm25_boost,
+        "overlap_threshold": overlap_threshold,
+        "rerank_pool": rerank_pool,
+        "top_k": top_k,
+        "with_answers": with_answers,
+        "answer_model": answer_model or eval_common.DEFAULT_ANSWER_MODEL,
+    }
+    ledger = eval_ledger.LedgerWriter("locomo", ledger_config)
+    # Request enough candidates that the full pre-rerank pool is visible for ledger metrics.
+    pool_top_k = max(top_k, rerank_pool, max(eval_ledger.DEFAULT_K_LIST))
+
     for i, q in enumerate(questions):
         question = q["question"]
         answer = q["answer"]
@@ -125,7 +145,7 @@ def run_eval(
         try:
             resp = client.post("/search/hybrid", json={
                 "query_text": question,
-                "top_k": top_k,
+                "top_k": pool_top_k,
                 "min_score": 0.0,
                 "vector_weight": vector_weight,
                 "graph_weight": graph_weight,
@@ -163,13 +183,28 @@ def run_eval(
                 break
         all_mrr.append(mrr)
 
+        hypothesis, judged_correct, judge_rationale = "", False, "not evaluated (retrieval-only run, pass --with-answers)"
         if with_answers:
             snippets = [r.get("text", "") for r in res_list[:10] if r.get("text")]
             hypothesis = eval_common.llm_answer(question, snippets, model=answer_model)
-            correct = eval_common.judge_correct(hypothesis, answer)
-            all_correct.append(1.0 if correct else 0.0)
+            judged_correct, judge_rationale = eval_common.judge_correct_with_rationale(hypothesis, answer)
+            all_correct.append(1.0 if judged_correct else 0.0)
             if verbose:
-                print(f"  QA answer: {hypothesis[:100]!r} -> {'CORRECT' if correct else 'WRONG'}")
+                print(f"  QA answer: {hypothesis[:100]!r} -> {'CORRECT' if judged_correct else 'WRONG'}")
+
+        pool_metrics = eval_ledger.compute_pool_metrics(
+            res_list, lambda r: is_relevant(r.get("text", ""), answer)
+        )
+        ledger.write(
+            question_id=q["question_id"],
+            question_type=route_query(question)["type"],
+            gold_evidence_ids=[str(e) for e in q.get("evidence", [])],
+            pool_metrics=pool_metrics,
+            raw_llm_answer=hypothesis,
+            judged_correct=judged_correct,
+            judge_rationale=judge_rationale,
+            prompt_version=eval_common.QA_PROMPT_VERSION,
+        )
 
         if verbose:
             print(f"  Hit@1={all_hits_1[-1]:.0%} Hit@5={all_hits_5[-1]:.0%} Hit@10={all_hits_10[-1]:.0%} MRR={mrr:.3f}")

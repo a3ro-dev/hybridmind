@@ -23,6 +23,8 @@ from pathlib import Path
 import httpx
 
 import eval_common
+import eval_ledger
+from engine.query_router import route_query
 
 BASE_URL = "http://127.0.0.1:8000"
 DATA_DIR = Path("benchmarks/data/musique")
@@ -152,6 +154,20 @@ def run_eval(
     recall_full = 0.0
     by_hops: dict = {}
 
+    ledger_config = {
+        "benchmark": "musique",
+        "vector_weight": vector_weight,
+        "graph_weight": graph_weight,
+        "bm25_boost": bm25_boost,
+        "overlap_threshold": overlap_threshold,
+        "rerank_pool": rerank_pool,
+        "top_k": top_k,
+        "with_answers": with_answers,
+        "answer_model": answer_model or eval_common.DEFAULT_ANSWER_MODEL,
+    }
+    ledger = eval_ledger.LedgerWriter("musique", ledger_config)
+    pool_top_k = max(top_k, rerank_pool, max(eval_ledger.DEFAULT_K_LIST))
+
     for q in questions:
         supporting_ids = q["supporting_ids"]
 
@@ -160,7 +176,7 @@ def run_eval(
                 f"{base_url}/search/hybrid",
                 json={
                     "query_text": q["question"],
-                    "top_k": top_k,
+                    "top_k": pool_top_k,
                     "min_score": 0.0,
                     "vector_weight": vector_weight,
                     "graph_weight": graph_weight,
@@ -202,11 +218,30 @@ def run_eval(
         if supporting_ids:
             recall_full += int(supporting_ids.issubset(retrieved_ids))
 
+        hypothesis, judged_correct, judge_rationale = "", False, "not evaluated (retrieval-only run, pass --with-answers)"
         if with_answers:
             snippets = [r.get("text", "") for r in results[:10] if r.get("text")]
             hypothesis = eval_common.llm_answer(q["question"], snippets, model=answer_model)
-            correct = eval_common.judge_correct(hypothesis, q["answer"])
-            correct_sum += 1.0 if correct else 0.0
+            judged_correct, judge_rationale = eval_common.judge_correct_with_rationale(hypothesis, q["answer"])
+            correct_sum += 1.0 if judged_correct else 0.0
+
+        def _relevant(r, supporting_ids=supporting_ids, gold_answer=q["answer"]):
+            meta = r.get("metadata", {})
+            if supporting_ids and is_relevant_by_id(meta, supporting_ids):
+                return True
+            return is_relevant_by_text(r.get("text", ""), gold_answer)
+
+        pool_metrics = eval_ledger.compute_pool_metrics(results, _relevant)
+        ledger.write(
+            question_id=q["question_id"],
+            question_type=route_query(q["question"])["type"],
+            gold_evidence_ids=sorted(supporting_ids),
+            pool_metrics=pool_metrics,
+            raw_llm_answer=hypothesis,
+            judged_correct=judged_correct,
+            judge_rationale=judge_rationale,
+            prompt_version=eval_common.QA_PROMPT_VERSION,
+        )
 
         hk = q.get("n_hops") or "?"
         by_hops.setdefault(hk, {"n": 0, "hit5": 0, "mrr": 0})
