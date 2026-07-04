@@ -12,11 +12,20 @@ HybridMind is an engineering system that correctly applies known hybrid retrieva
 
 **Fusion defaults**. RRF (Reciprocal Rank Fusion, k=60) with per-signal weights (`vector_weight`, `graph_weight`) is the default fusion mode, replacing the previous fixed-linear formula. RRF requires zero per-corpus tuning — it works across LoCoMo, LongMemEval, and MuSiQue without weight sweeps. The original linear fusion (`vector_weight × V + graph_weight × G` with BM25 overlap gate) remains selectable via `fusion_mode="linear"` for back-compat and A/B comparison.
 
-**Pre-trained cross-encoder reranker**. `BAAI/bge-reranker-v2-m3` re-ranks the top-25 fusion pool with 70% fusion / 30% cross-encoder normalized blending. Both the fusion combined score and the cross-encoder score are independently normalized to [0,1] before blending, preventing the pure-text reranker from deleting graph-discovered candidates on multi-hop queries.
+**Pre-trained cross-encoder reranker**. `mixedbread-ai/mxbai-rerank-large-v2` re-ranks the top-25 fusion pool with 70% fusion / 30% cross-encoder normalized blending. Both the fusion combined score and the cross-encoder score are independently normalized to [0,1] before blending, preventing the pure-text reranker from deleting graph-discovered candidates on multi-hop queries. This model offers ~84% Hit@1 vs 77% for bge-reranker-v2-m3, with 8x lower latency.
 
-**Default embedding model**: `BAAI/bge-m3` (1024-dim). Falls back to `all-mpnet-base-v2` (768-dim) via `HYBRIDMIND_EMBEDDING_MODEL` for CPU-only deploys. Full FlagEmbedding native sparse + ColBERT vectors available with `pip install FlagEmbedding>=1.2.10`.
+**Flexible embedding backends** (auto-selected in priority order):
+1. **TEI (Text Embeddings Inference)** — self-hosted HuggingFace TEI endpoint via `RUNPOD_TEI_EMBEDDING_URL` (e.g., Qwen3-Embedding-8B on RunPod, native 4096-dim, no MRL truncation). Returns dense embeddings with automatic L2 normalization.
+2. **OpenAI-compatible remote** — `HC_EMBEDDING_URL` (Hack Club AI proxy) or `RUNPOD_EMBEDDING_URL` for remote vLLM endpoints with Matryoshka Representation Learning (MRL) truncation to `HYBRIDMIND_EMBEDDING_DIMENSION` (default 1024).
+3. **Local embeddings** — `BAAI/bge-m3` (1024-dim, default) with native sparse vectors and ColBERT support. Falls back to `all-mpnet-base-v2` (768-dim) on CPU-only deploys.
 
-**Ingest-Time Neighborhood Averaging** (off by default since Phase 2). Stored vectors are L2-normalized after blending the text embedding with the mean of the top-5 vector neighbors: **0.7·e_raw + 0.3·e_neighbors** ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), Embedding Engine). Configurable via `HYBRIDMIND_USE_GRAPH_CONDITIONED_EMBEDDINGS`. This is a practical, non-training variant of GraphSAGE-style aggregation. Formulation and caveats: [docs/ALGORITHM.md](docs/ALGORITHM.md) §3.
+**LLM backends**:
+- **Self-hosted RunPod vLLM** (`engine/runpod_llm.py`): When `RUNPOD_LLM_ENDPOINT_ID` is set, fact extraction and consolidation use Qwen3.5-9b (or configured model) on your own RunPod Serverless pod. Disables thinking mode by default (Qwen3.5's extended reasoning burns output tokens).
+- **Hack Club AI proxy** (fallback): OpenAI-compatible `/v1/chat/completions` endpoint for inference.
+
+**Default embedding model**: `BAAI/bge-m3` locally, or Qwen3-Embedding-8B (4096-dim) via TEI. Full FlagEmbedding native sparse + ColBERT vectors available with `pip install FlagEmbedding>=1.2.10`.
+
+**Ingest-Time Neighborhood Averaging** (configurable via `HYBRIDMIND_USE_GRAPH_CONDITIONED_EMBEDDINGS`). Stored vectors are L2-normalized after blending the text embedding with the mean of the top-5 vector neighbors: **0.7·e_raw + 0.3·e_neighbors** ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), Embedding Engine). This is a practical, non-training variant of GraphSAGE-style aggregation. Formulation and caveats: [docs/ALGORITHM.md](docs/ALGORITHM.md) §3.
 
 **Auto-edge inference** (`HYBRIDMIND_AUTO_EDGES_ENABLED=true`): cosine-threshold similarity edges and entity co-occurrence edges created automatically at ingest time across all three ingest paths (nodes, bulk, session-facts).
 
@@ -30,7 +39,32 @@ Full scoring definition, architecture diagram, and data-flow: [docs/ALGORITHM.md
 
 ## Architecture
 
-Layered stack: FastAPI / Pydantic v2 → embedding engine (bge-m3 / all-mpnet), BM25 index, vector/graph/colbert query engines, hybrid ranker with RRF fusion + cross-encoder reranker → SQLite (WAL), FAISS `IndexHNSWFlat`, NetworkX `DiGraph`, ColBERT `.npz` store → atomic `.mind` persistence (manifest with SHA256 checksums, DB, vectors, graph, BM25 pickle). GPU auto-device via centralized `engine/device.py` (cuda > mps > cpu). All settings configurable via `HYBRIDMIND_*` environment variables. ASCII diagram and data-flow: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Layered stack:
+```
+FastAPI / Pydantic v2
+  ↓
+Embedding Pipeline (priority: TEI → OpenAI-compat → local bge-m3 / all-mpnet)
+BM25 Index (bm25s backend, 100x faster than pure Python)
+Vector/Graph/ColBERT Query Engines
+Hybrid Ranker with RRF Fusion + Cross-Encoder Reranker
+  ↓
+Persistent Storage:
+  - SQLite (WAL mode) for nodes, edges, metadata
+  - FAISS IndexHNSWFlat for vector search
+  - NetworkX DiGraph for graph traversal
+  - ColBERT .npz store (opt-in research)
+  ↓
+Atomic .mind Format (manifest with SHA256 checksums, 3-backup rotation)
+```
+
+GPU auto-device selection via centralized `engine/device.py` (cuda > mps > cpu). All settings configurable via `HYBRIDMIND_*` environment variables.
+
+**LLM Integration Layer**:
+- Fact extraction and consolidation automatically use RunPod vLLM (when configured) for faster, self-hosted inference.
+- Falls back to Hack Club AI proxy if RunPod is not configured.
+- Full async pipeline with structured JSON output + retry logic.
+
+ASCII diagram and data-flow: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Quick start
 
@@ -45,6 +79,24 @@ pip install -r requirements.txt
 ```
 
 All settings are configurable via `HYBRIDMIND_*` environment variables. See [config.py](config.py) for the full list.
+
+### Running with self-hosted embeddings (RunPod TEI)
+
+```bash
+export RUNPOD_API_KEY="your-runpod-api-key"
+export RUNPOD_TEI_EMBEDDING_URL="https://<endpoint-id>.api.runpod.ai"
+export HYBRIDMIND_EMBEDDING_DIMENSION=4096
+python -m uvicorn main:app --host 127.0.0.1 --port 8000
+```
+
+### Running with self-hosted LLM (RunPod vLLM)
+
+```bash
+export RUNPOD_API_KEY="your-runpod-api-key"
+export RUNPOD_LLM_ENDPOINT_ID="your-endpoint-id"
+export RUNPOD_LLM_MODEL="qwen/qwen3.5-9b"  # or any vLLM-registered model
+python -m uvicorn main:app --host 127.0.0.1 --port 8000
+```
 
 **Python SDK** ([sdk/memory.py](sdk/memory.py)):
 
@@ -131,7 +183,7 @@ The key improvement from Phase 2: signal-weighted RRF preserves `graph_weight`/`
 
 **Auto-edge inference** (config-gated, off by default): cosine-threshold and entity co-occurrence edges wired into all three ingest paths (`/nodes`, `/bulk/nodes`, `/ingest/session-facts`). Typed walk-weight map (`models/edge.py:EDGE_TYPE_WALK_WEIGHTS`) provides per-edge-type proximity contribution.
 
-**LoCoMo Benchmark** ([docs/LOCOMO_BENCHMARK_REPORT.md](docs/LOCOMO_BENCHMARK_REPORT.md)): Peak 48% accuracy (Qwen3.5 397B), 60% Hit@10. Single-hop factual recall is 0% — conclusively isolated as an LLM extraction failure, not a retrieval failure. MemoryBench QA answer phase now includes span-extraction retry for abstention.
+**LoCoMo Benchmark** ([docs/LOCOMO_BENCHMARK_REPORT.md](docs/LOCOMO_BENCHMARK_REPORT.md)): Peak 48% accuracy (Qwen3.5 397B), 60% Hit@10. Single-hop factual recall was 0% in Phase 3 — isolated as an LLM extraction failure, not a retrieval failure. MemoryBench QA now includes span-extraction retry for abstention.
 
 **Multi-Domain Evaluation** ([docs/MULTI_DOMAIN_EVAL.md](docs/MULTI_DOMAIN_EVAL.md)): 7,510 nodes across 5 domains (Wikipedia, Stack Exchange, PubMed, AG News, CUAD Legal). Key finding: cross-domain-only edges at ≤5% density are structurally insufficient for hybrid scoring; intra-domain edges are necessary for non-zero graph signal.
 
@@ -144,15 +196,34 @@ The key improvement from Phase 2: signal-weighted RRF preserves `graph_weight`/`
 
 Run benchmarks with: `./scripts/run_all_benchmarks.sh`
 
+## Configuration Environment Variables
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `RUNPOD_TEI_EMBEDDING_URL` | (unset) | Base URL for self-hosted HF TEI embedding endpoint (e.g., Qwen3-Embedding-8B) |
+| `RUNPOD_LLM_ENDPOINT_ID` | (unset) | RunPod Serverless endpoint ID for vLLM inference |
+| `RUNPOD_LLM_MODEL` | `qwen/qwen3.5-9b` | Model to use on RunPod vLLM endpoint |
+| `RUNPOD_API_KEY` | (unset) | RunPod API key (Bearer token) for both TEI and vLLM |
+| `HC_EMBEDDING_URL` | (unset) | Hack Club AI proxy base URL for embeddings |
+| `HC_API_KEY` | (unset) | Hack Club AI API key |
+| `HYBRIDMIND_EMBEDDING_DIMENSION` | 4096 | Output dimension for TEI; 1024 for local bge-m3 or MRL-truncated OpenAI endpoints |
+| `HYBRIDMIND_USE_GRAPH_CONDITIONED_EMBEDDINGS` | true | Enable ingest-time neighborhood averaging (0.7·e_raw + 0.3·e_neighbors) |
+| `HYBRIDMIND_AUTO_EDGES_ENABLED` | false | Enable automatic edge creation on ingest |
+| `HYBRIDMIND_COLBERT_ENABLED` | false | Enable ColBERT MaxSim re-ranking (requires FlagEmbedding) |
+| `HYBRIDMIND_GNN_ENABLED` | false | Enable GNN reranker (requires torch-geometric) |
+| `HYBRIDMIND_FUSION_MODE` | `rrf` | Fusion strategy: `rrf` (Reciprocal Rank Fusion) or `linear` |
+| `HYBRIDMIND_EMBEDDING_MODEL` | `BAAI/bge-m3` | Local fallback embedding model |
+
 ## Reviewer-Grade Limitations
 
 1. **Graph Sparsity Failure**: The graph component is functionally useless if explicit cross-domain edges do not exist. Cross-domain-only edges at ≤5% per-node density produce structurally zero graph scores. Hybrid search defaults to vector-only if no anchors are found.
-2. **Domain-Separation from Embeddings**: `all-mpnet-base-v2` struggles to differentiate certain document types (e.g. Stack Exchange QA vs Wikipedia paragraphs). bge-m3 (1024-dim, default since Phase 1) shows improved domain separation but still exhibits contamination on hard negatives.
+2. **Domain-Separation from Embeddings**: `all-mpnet-base-v2` struggles to differentiate certain document types (e.g. Stack Exchange QA vs Wikipedia paragraphs). bge-m3 (1024-dim) shows improved domain separation but still exhibits contamination on hard negatives. Qwen3-Embedding-8B (when using TEI) offers superior domain separation with MTEB 70.58.
 3. **BM25 Exact Overlap Limits**: BM25 excels at keyword matching but fails to label semantic relevance that lacks exact keyword overlap.
-4. **Single-Hop LLM Extraction**: On the LoCoMo benchmark, single-hop factual recall is 0% — caused by downstream LLM parsing failures (returning `Answer: None`), not by retrieval failures. Hit@10 for single-hop retrieval is 60%. Phase 4 added structured-output extraction (`json_schema`) + retry with rephrased prompts for ingest, and span-extraction retry for QA.
-5. **Ingest Scalability**: bge-m3 on CPU is ~200ms/embedding (~5 req/s). GPU or SentenceTransformer fallback improves this but remains single-threaded Python. This is a local-agent tool, not an enterprise search backend.
+4. **Single-Hop LLM Extraction**: On the LoCoMo benchmark, single-hop factual recall was 0% in Phase 3 — caused by downstream LLM parsing failures (returning `Answer: None`), not by retrieval failures. Hit@10 for single-hop retrieval was 60%. Phase 4 added structured-output extraction (`json_schema`) + retry with rephrased prompts for ingest, and span-extraction retry for QA.
+5. **Ingest Scalability**: bge-m3 on CPU is ~200ms/embedding (~5 req/s). GPU, SentenceTransformer fallback, or TEI (Qwen3 on RunPod) improves this but remains single-threaded Python. This is a local-agent tool, not an enterprise search backend.
 6. **Scalability Ceiling**: FAISS `IndexHNSWFlat` provides O(log n) approximate search, with a practical ceiling of ~8,000–10,000 nodes for sub-50ms p95 latency. Beyond that, tuning HNSW parameters or moving to a dedicated vector DB would be needed.
 7. **ColBERT storage cost**: Per-token vectors (~100-200KB/node) are opt-in and stored as `.npz` files in `<mind>/colbert/`. Practical only for small corpora without a dedicated vector DB.
+8. **TEI Dimension Mismatch**: Switching between TEI (4096-dim Qwen3) and local bge-m3 (1024-dim) requires re-running `scripts/reindex_embeddings.py` to avoid FAISS index dimension mismatches.
 
 ## Citation
 

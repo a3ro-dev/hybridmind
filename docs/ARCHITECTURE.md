@@ -51,12 +51,58 @@ HybridMind is a local-native hybrid vector + graph database designed for AI agen
 ## Component Deep Dives
 
 ### Embedding Engine
-- **Default model**: `BAAI/bge-m3` (1024-dim). Falls back to `all-mpnet-base-v2` (768-dim) via `HYBRIDMIND_EMBEDDING_MODEL`.
-- **FlagEmbedding native**: When `FlagEmbedding>=1.2.10` is installed, bge-m3 provides dense (1024) + sparse (lexical weights) + ColBERT (per-token) vectors natively. Without FlagEmbedding, SentenceTransformer backend provides dense-only.
-- **Neighborhood Averaging** (`HYBRIDMIND_USE_GRAPH_CONDITIONED_EMBEDDINGS`): At node ingest, the embedding is conditioned on its semantic neighborhood:
+
+**Backend Selection (Priority Order)**:
+
+1. **TEI (Text Embeddings Inference)** — self-hosted HuggingFace TEI endpoint
+   - **Config**: `RUNPOD_TEI_EMBEDDING_URL` (base URL), `RUNPOD_API_KEY` (Bearer token)
+   - **Model**: Qwen3-Embedding-8B (4096-dim native, no MRL truncation) or any HF model deployed on TEI
+   - **Protocol**: Raw TEI `/embed` endpoint (not OpenAI-compatible); returns `List[List[float]]` directly
+   - **Normalization**: Automatic L2 normalization at response time
+   - **Fallback**: Local bge-m3 on HTTP errors or timeout
+   - **Use case**: GPU-rich deployments (RunPod A100) with large embedding throughput needs
+
+2. **RemoteEmbeddingEngine** — OpenAI-compatible remote embeddings
+   - **Config**: `HC_EMBEDDING_URL` (Hack Club AI), `RUNPOD_EMBEDDING_URL` (legacy RunPod vLLM with OpenAI plugin)
+   - **Models**: Any OpenAI-compatible `/v1/embeddings` endpoint
+   - **Matryoshka Learning**: Supports MRL truncation to `HYBRIDMIND_EMBEDDING_DIMENSION` (default 1024)
+   - **Fallback**: Local bge-m3 on HTTP errors
+   - **Use case**: Cloud-hosted embeddings with per-corpus tuning
+
+3. **Local EmbeddingEngine** — on-device embedding models
+   - **Default model**: `BAAI/bge-m3` (1024-dim). Falls back to `all-mpnet-base-v2` (768-dim) via `HYBRIDMIND_EMBEDDING_MODEL`.
+   - **FlagEmbedding native**: When `FlagEmbedding>=1.2.10` is installed, bge-m3 provides dense (1024) + sparse (lexical weights) + ColBERT (per-token) vectors natively. Without FlagEmbedding, SentenceTransformer backend provides dense-only.
+   - **Use case**: CPU-only deployments or offline operation
+
+**Neighborhood Averaging** (`HYBRIDMIND_USE_GRAPH_CONDITIONED_EMBEDDINGS`): At node ingest, the embedding is conditioned on its semantic neighborhood:
   `final_embedding = normalize(0.7 * own_embedding + 0.3 * mean_neighbor_embeddings)`
   Off by default since Phase 2 to prioritize clean semantic baselines. Use the contrastive fine-tuning script (`scripts/train_contrastive.py`) for a trained alternative.
-- **Thread Safety**: The model is serialized under the Python GIL. High-concurrency throughput is limited to single-threaded execution.
+
+**Thread Safety**: The embedding model is serialized under the Python GIL. High-concurrency throughput is limited to single-threaded execution. For high-throughput scenarios, use TEI or a remote embedding service.
+
+### LLM Inference Engine
+
+**Backend Selection (Priority Order)**:
+
+1. **RunPod vLLM** — self-hosted serverless vLLM endpoint (`engine/runpod_llm.py`)
+   - **Config**: `RUNPOD_LLM_ENDPOINT_ID` (Serverless endpoint ID), `RUNPOD_API_KEY` (Bearer token), `RUNPOD_LLM_MODEL` (default: `qwen/qwen3.5-9b`)
+   - **Protocol**: Job-queue based: `/run` submits, `/status/{id}` polls until COMPLETED/FAILED
+   - **Response format**: Structured JSON output via `response_format` parameter (with automatic schema handling)
+   - **Thinking mode**: Disabled by default for Qwen3.5 (which defaults to extended reasoning that burns output tokens)
+   - **Polling**: 2-second intervals, configurable timeout (default 120s)
+   - **Use case**: Fact extraction, consolidation, and inference with control over model/hardware
+   - **Used by**: `engine/fact_extractor.py`, `engine/consolidation.py`
+
+2. **Hack Club AI proxy** — fallback OpenAI-compatible endpoint
+   - **Config**: Determined by `HC_EMBEDDING_URL` or legacy patterns in `engine/fact_extractor.py`
+   - **Use case**: When RunPod is not configured; existing deployments keep working without changes
+   - **Fallback**: Both engines gracefully fall back to this path if RunPod is unconfigured
+
+**Fact Extraction Pipeline**:
+1. Extract facts from raw text via LLM structured output
+2. Parse JSON schema with retry on format errors
+3. Create nodes + auto-edges (if enabled)
+4. Consolidate contradictions via graph queries + LLM rephrasing
 
 ### Device Resolution
 All model loads (embedding, reranker, ColBERT, GNN) call `engine/device.py:resolve_device()`:
@@ -71,7 +117,7 @@ All model loads (embedding, reranker, ColBERT, GNN) call `engine/device.py:resol
 
 **Linear fallback**: `fusion_mode="linear"` preserves the original weighted-sum formula with BM25 overlap gating — selectable per-request for A/B comparison.
 
-**Cross-encoder reranker**: `BAAI/bge-reranker-v2-m3` re-ranks top-25 fusion pool. Before blending, both the fusion combined score and the cross-encoder score are independently normalized to [0,1]. Final: `0.7 * normalized_fusion + 0.3 * normalized_reranker`. This prevents the pure-text reranker from deleting graph-discovered candidates on multi-hop queries.
+**Cross-encoder reranker**: `mixedbread-ai/mxbai-rerank-large-v2` re-ranks top-25 fusion pool. This model offers ~84% Hit@1 vs 77% for bge-reranker-v2-m3, with 8x lower latency (~55ms vs ~120ms). Before blending, both the fusion combined score and the cross-encoder score are independently normalized to [0,1]. Final: `0.7 * normalized_fusion + 0.3 * normalized_reranker`. This prevents the pure-text reranker from deleting graph-discovered candidates on multi-hop queries.
 
 **FusionScorer MLP** (opt-in): 2-layer MLP (~200 params) with heuristic init that approximates RRF. When trained via `scripts/train_fusion_mlp.py`, loads from config `HYBRIDMIND_FUSION_MODEL=<checkpoint.npz>`.
 
@@ -177,9 +223,12 @@ The Python SDK (`HybridMemory`) provides high-level abstractions:
 ## Design Decisions and Trade-offs
 - **RRF over fixed linear weights**: Zero per-corpus tuning. Works across diverse benchmarks without weight sweeps.
 - **Normalized reranker blending**: Prevents the pure-text cross-encoder from deleting graph-discovered candidates on multi-hop queries.
+- **Flexible embedding backends**: TEI (4096-dim Qwen3) for GPU-rich setups, OpenAI-compat with MRL for tuning, local bge-m3 (1024-dim) for CPU-only. Dimension mismatches are caught explicitly; reindexing is required when switching backends.
 - **Local-First Architecture**: SQLite/NetworkX/FAISS over remote DBs to minimize latency within agent reasoning loops.
 - **bge-m3 default**: 1024-dim provides richer semantic separation than 768-dim all-mpnet, at the cost of ~30% more RAM and slower CPU encoding.
+- **mxbai-rerank over bge-reranker**: 8x latency improvement (~55ms vs ~120ms) with slightly better Hit@1 (~84% vs 77%).
 - **Opt-in heavy modules**: ColBERT (~200KB/node) and GNN (~500MB model) are off by default with CPU fallbacks. The system stays local-native and test-suite-compatible.
+- **Self-hosted LLM inference**: RunPod vLLM enables fact extraction + consolidation with full control over model size, quantization, and hardware scaling without cloud lock-in.
 
 ## Scalability Ceiling
 - **Memory**: FAISS HNSW (n × 1024 × 4 bytes + HNSW graph) + NetworkX overhead. ~40MB for 10k nodes at 1024-dim.

@@ -2,7 +2,8 @@
 
 > Target: ≥90% LoCoMo, ≥85% LongMemEval-S, paper-worthy contributions.  
 > Hardware: RTX 4050 6GB (local), RunPod A100 (training).  
-> Baseline: 48% LoCoMo accuracy, 60% Hit@10, **0% single-hop** (harness bug).
+> Baseline: 48% LoCoMo accuracy, 60% Hit@10, **0% single-hop** (Phase 3 harness bug, fixed in Phase 4).
+> **Status (July 2026)**: Phase 4 complete — TEI embedding backend, RunPod vLLM inference engine, improved reranker (mxbai). Ready for Phase 5 (end-to-end eval on LoCoMo + LongMemEval).
 
 ---
 
@@ -265,11 +266,24 @@ for old_fact in existing:
 
 ---
 
-## PHASE 4 — Memory Lifecycle (EverMind-style, +5-8 pts)
+## PHASE 4 — Infrastructure & Scaling (~0 pts direct, enables Phases 5+ with 10-15 pts)
 
-EverMind at 93% uses: Conversations → MemCells → MemScenes (thematic consolidation). HybridMind has `fact_extractor.py` but no consolidation.
+**Completed (July 2026)**:
+- ✅ **TEI Embedding Backend** (`engine/embedding.py:TEIEmbeddingEngine`): Self-hosted HuggingFace TEI endpoint (Qwen3-Embedding-8B, 4096-dim, MTEB 70.58) with automatic fallback to local bge-m3. Deployed on RunPod A100 for benchmark runs.
+- ✅ **RunPod vLLM Inference** (`engine/runpod_llm.py`): Qwen3.5-9b on RunPod Serverless for fact extraction + consolidation. Job-queue protocol with polling, structured JSON output, thinking mode disabled by default.
+- ✅ **Improved Reranker** (`config.py`): Switched to `mixedbread-ai/mxbai-rerank-large-v2` (84% Hit@1 vs 77%, 8x lower latency). Apache 2.0 license.
+- ✅ **Enhanced Config** (`config.py`): Added `embedding_dimension=4096` default (for TEI), `sparse_retrieval_backend="bm25s"` (100x faster than pure Python), automatic fallback chains.
+- ✅ **Fact Extractor Refactor** (`engine/fact_extractor.py`): Now uses RunPod vLLM by default, with Hack Club AI fallback. Structured output + retry logic.
 
-### 4a. 3-Pool Architecture (AgentRunbook's #1 insight)
+**Rationale**: These are enablers, not direct accuracy boosters. They set up the infrastructure for Phase 4's consolidation engine to run efficiently at scale, and provide better embedding/LLM quality without requiring local GPU memory constraints.
+
+---
+
+## PHASE 4.5 — Memory Lifecycle (EverMind-style consolidation, +5-8 pts)
+
+EverMind at 93% uses: Conversations → MemCells → MemScenes (thematic consolidation). HybridMind has `fact_extractor.py` and now has RunPod LLM backend ready.
+
+### 4.5a. 3-Pool Architecture (AgentRunbook's #1 insight)
 
 ```python
 # models/memory_pool.py
@@ -292,7 +306,7 @@ def classify_memory_type(fact: str, context: str) -> MemoryPool:
 metadata["memory_pool"] = classify_memory_type(fact, context).value
 ```
 
-### 4b. Consolidation Pipeline
+### 4.5b. Consolidation Pipeline
 
 ```python
 # scripts/consolidate_memory.py — run periodically or via /admin/consolidate
@@ -321,7 +335,7 @@ def consolidate_sessions(db, min_facts=5, max_age_hours=24):
             db.create_edge(summary_node.id, fact.id, "summarizes", weight=1.0)
 ```
 
-### 4c. Importance-Based Retention
+### 4.5c. Importance-Based Retention
 
 $$I(n) = \alpha \cdot \text{recency}(n) + \beta \cdot \text{frequency}(n) + \gamma \cdot \text{centrality}(n)$$
 
@@ -342,7 +356,7 @@ for node in db.get_all_nodes():
 
 ---
 
-## PHASE 5 — Community Detection (GraphRAG-style)
+## PHASE 5 — Community Detection (GraphRAG-style, +8-12 pts)
 
 Enables answering abstract/thematic queries (currently 0 support for this).
 
