@@ -183,11 +183,15 @@ def run_eval(
                 break
         all_mrr.append(mrr)
 
+        qtype = route_query(question)["type"]
         hypothesis, judged_correct, judge_rationale = "", False, "not evaluated (retrieval-only run, pass --with-answers)"
+        prompt_version = ""
         if with_answers:
             snippets = [r.get("text", "") for r in res_list[:10] if r.get("text")]
-            hypothesis = eval_common.llm_answer(question, snippets, model=answer_model)
-            judged_correct, judge_rationale = eval_common.judge_correct_with_rationale(hypothesis, answer)
+            hypothesis, prompt_version = eval_common.answer_question(
+                question, snippets, question_type=qtype, model=answer_model
+            )
+            judged_correct, judge_rationale = eval_common.judge_correct_normalized(hypothesis, answer)
             all_correct.append(1.0 if judged_correct else 0.0)
             if verbose:
                 print(f"  QA answer: {hypothesis[:100]!r} -> {'CORRECT' if judged_correct else 'WRONG'}")
@@ -197,13 +201,13 @@ def run_eval(
         )
         ledger.write(
             question_id=q["question_id"],
-            question_type=route_query(question)["type"],
+            question_type=qtype,
             gold_evidence_ids=[str(e) for e in q.get("evidence", [])],
             pool_metrics=pool_metrics,
             raw_llm_answer=hypothesis,
             judged_correct=judged_correct,
             judge_rationale=judge_rationale,
-            prompt_version=eval_common.QA_PROMPT_VERSION,
+            prompt_version=prompt_version,
         )
 
         if verbose:

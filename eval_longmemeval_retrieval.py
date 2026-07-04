@@ -193,11 +193,15 @@ def run_eval(
                 mrr += 1.0 / rank
                 break
 
+        qtype = route_query(q["question"])["type"]
         hypothesis, judged_correct, judge_rationale = "", False, "not evaluated (retrieval-only run, pass --with-answers)"
+        prompt_version = ""
         if with_answers:
             snippets = [r.get("text", "") for r in results[:10] if r.get("text")]
-            hypothesis = eval_common.llm_answer(q["question"], snippets, model=answer_model)
-            judged_correct, judge_rationale = eval_common.judge_correct_with_rationale(hypothesis, q["answer"])
+            hypothesis, prompt_version = eval_common.answer_question(
+                q["question"], snippets, question_type=qtype, question_date=q.get("question_date", ""), model=answer_model
+            )
+            judged_correct, judge_rationale = eval_common.judge_correct_normalized(hypothesis, q["answer"])
             correct_sum += 1.0 if judged_correct else 0.0
 
         pool_metrics = eval_ledger.compute_pool_metrics(
@@ -205,13 +209,13 @@ def run_eval(
         )
         ledger.write(
             question_id=q["question_id"],
-            question_type=route_query(q["question"])["type"],
+            question_type=qtype,
             gold_evidence_ids=q.get("evidence_ids", []),
             pool_metrics=pool_metrics,
             raw_llm_answer=hypothesis,
             judged_correct=judged_correct,
             judge_rationale=judge_rationale,
-            prompt_version=eval_common.QA_PROMPT_VERSION,
+            prompt_version=prompt_version,
         )
 
         # By question type
