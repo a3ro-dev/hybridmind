@@ -217,7 +217,7 @@ The Python SDK (`HybridMemory`) provides high-level abstractions:
 9. **RRF Fusion**: Dense and graph rank lists fused with signal weights. `vector_weight`/`graph_weight` multiply per-signal RRF contribution.
 10. **Deduplication**: Text-identical candidates removed, preferring highest vector score.
 11. **ColBERT MaxSim** (if enabled): Per-token query vectors matched against stored candidate colberts; 30% weight blend into combined score.
-12. **Cross-Encoder Reranking**: Top-25 pool re-ranked by `bge-reranker-v2-m3`. Both fusion and CE scores normalized to [0,1], blended 70/30.
+12. **Cross-Encoder Reranking**: Top-25 pool re-ranked by `mxbai-rerank-large-v2` (config.reranker_model). Both fusion and CE scores normalized to [0,1], blended 70/30.
 13. **Final Sort**: Sorted by combined_score descending, sliced to top_k.
 
 ## Design Decisions and Trade-offs

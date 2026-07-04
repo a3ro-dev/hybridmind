@@ -25,7 +25,13 @@ logger = logging.getLogger(__name__)
 
 from engine.device import resolve_device as _resolve_device
 
-_CROSS_MODEL = os.getenv("RERANK_CROSS_MODEL", "BAAI/bge-reranker-v2-m3")
+
+def _default_cross_model() -> str:
+    """Single source of truth for the cross-encoder model: config.settings.reranker_model."""
+    from config import settings
+    return settings.reranker_model
+
+
 _LLM_MODEL = os.getenv("RERANK_LLM_MODEL", "~google/gemini-flash-latest")
 
 
@@ -36,8 +42,8 @@ def _rerank_mode() -> str:
 class CrossEncoderReranker:
     """Local cross-encoder reranker (query, passage) -> relevance score."""
 
-    def __init__(self, model_name: str = _CROSS_MODEL, device: Optional[str] = None):
-        self.model_name = model_name
+    def __init__(self, model_name: Optional[str] = None, device: Optional[str] = None):
+        self.model_name = model_name or _default_cross_model()
         self._model = None
         self._device = device
 
@@ -194,13 +200,8 @@ def get_reranker():
         elif mode == "llm":
             r = LLMReranker()
         else:
-            # Honour HYBRIDMIND_RERANKER_MODEL > RERANK_CROSS_MODEL > default
-            try:
-                from config import settings
-                model_name = settings.reranker_model or _CROSS_MODEL
-            except Exception:
-                model_name = _CROSS_MODEL
-            r = CrossEncoderReranker(model_name=model_name)
+            # settings.reranker_model (HYBRIDMIND_RERANKER_MODEL) is the single source of truth.
+            r = CrossEncoderReranker(model_name=_default_cross_model())
         r._mode = mode
         _reranker = r
     return _reranker

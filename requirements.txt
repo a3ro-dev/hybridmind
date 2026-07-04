@@ -16,7 +16,8 @@ numpy>=1.24.0
 
 # Embeddings
 sentence-transformers>=2.2.2
-# bge-m3 and bge-reranker-v2-m3 backend (default models):
+# CrossEncoder reranker (default: mixedbread-ai/mxbai-rerank-large-v2, see config.reranker_model)
+# and bge-m3 local embedding fallback:
 FlagEmbedding>=1.2.10
 # PyTorch with CUDA support - install separately with:
 # pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121

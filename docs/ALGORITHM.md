@@ -56,7 +56,7 @@ Where $V_{eff}$ = cosine similarity + BM25 keyword overlap boost and $G_{eff}$ =
 ## 3. Cross-Encoder Reranker
 
 ### 3.1 Model
-`BAAI/bge-reranker-v2-m3` — a pre-trained cross-encoder that scores (query, passage) pairs. Loaded at startup with GPU auto-detect (`engine/device.py`). Selectable via `HYBRIDMIND_RERANKER_MODEL`.
+`mixedbread-ai/mxbai-rerank-large-v2` (default, see `config.reranker_model`) — a pre-trained cross-encoder that scores (query, passage) pairs. Loaded at startup with GPU auto-detect (`engine/device.py`). Selectable via `HYBRIDMIND_RERANKER_MODEL`.
 
 ### 3.2 Blending Strategy
 The cross-encoder re-ranks the top-25 fusion pool. **Both** the pre-rerank combined score and the cross-encoder raw scores are independently normalized to [0,1] before blending:
