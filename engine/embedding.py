@@ -33,6 +33,8 @@ import time
 from typing import Dict, List, Optional
 import numpy as np
 
+from engine.serverless_util import retry_transient, is_transient
+
 logger = logging.getLogger(__name__)
 
 _DEFAULT_MODEL = "BAAI/bge-m3"
@@ -449,19 +451,18 @@ class TEIEmbeddingEngine:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self._dimension = dimension
+        # read timeout generous enough to absorb a serverless cold start (8B
+        # model loading into VRAM); retry_transient adds backoff on top.
         self._client = httpx.Client(
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             limits=httpx.Limits(max_connections=8, max_keepalive_connections=4),
-            timeout=httpx.Timeout(connect=10.0, read=90.0, write=10.0, pool=10.0),
+            timeout=httpx.Timeout(connect=10.0, read=120.0, write=10.0, pool=10.0),
         )
-        self._fallback: Optional[EmbeddingEngine] = None
-        logger.info(f"TEIEmbeddingEngine: {self.base_url} dim={dimension}")
-
-    def _get_fallback(self) -> EmbeddingEngine:
-        if self._fallback is None:
-            logger.warning("TEI embedding: falling back to local bge-m3")
-            self._fallback = EmbeddingEngine(model_name=_DEFAULT_MODEL)
-        return self._fallback
+        # No local fallback by design: the corpus is indexed at this remote's
+        # dimension (4096), and any other model would emit a different dimension
+        # that silently corrupts every similarity score. A failed remote call
+        # raises loudly so the caller stops rather than poisons retrieval.
+        logger.info(f"TEIEmbeddingEngine: {self.base_url} dim={dimension} (no fallback)")
 
     @property
     def dimension(self) -> int:
@@ -471,28 +472,99 @@ class TEIEmbeddingEngine:
     def is_available(self) -> bool:
         return True
 
+    def health(self) -> bool:
+        """Cheap liveness probe — one real embed call, no retries. True if the
+        LB endpoint answers with a correctly-shaped vector right now."""
+        try:
+            resp = self._client.post(f"{self.base_url}/embed", json={"inputs": ["ping"]})
+            resp.raise_for_status()
+            vecs = np.array(resp.json(), dtype=np.float32)
+            return vecs.ndim == 2 and vecs.shape[1] == self._dimension
+        except Exception:
+            return False
+
+    def close(self) -> None:
+        """Release the HTTP connection pool. Idempotent."""
+        try:
+            self._client.close()
+        except Exception:
+            pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+
+    def __del__(self):
+        # Best-effort pool release if the singleton is GC'd without close().
+        self.close()
+
     def _normalize(self, vec: np.ndarray) -> np.ndarray:
         vec = np.asarray(vec, dtype=np.float32)
         norm = float(np.linalg.norm(vec))
         return (vec / norm).astype(np.float32) if norm > 0 else vec
 
-    def _call_api(self, texts: List[str]) -> Optional[np.ndarray]:
-        try:
+    def _call_api(self, texts: List[str]) -> np.ndarray:
+        """
+        Embed `texts` via the RunPod TEI load-balancer endpoint. Retries absorb
+        serverless cold start (worker waking / model load) and transient
+        saturation (all workers busy → 429/503). Raises RuntimeError if the
+        endpoint stays unreachable after retries, or if it returns a dimension
+        other than the configured one — never returns a wrong-shape substitute.
+        """
+        def _once() -> np.ndarray:
             resp = self._client.post(f"{self.base_url}/embed", json={"inputs": texts})
             resp.raise_for_status()
             vecs = np.array(resp.json(), dtype=np.float32)
+            if vecs.ndim != 2 or vecs.shape[1] != self._dimension:
+                raise RuntimeError(
+                    f"TEI endpoint returned {vecs.shape} vectors; expected "
+                    f"(*, {self._dimension}). Wrong model deployed at "
+                    f"{self.base_url}? Refusing to corrupt the index."
+                )
             norms = np.linalg.norm(vecs, axis=1, keepdims=True)
             norms = np.where(norms > 0, norms, 1)
             return vecs / norms
+
+        try:
+            return retry_transient(_once, label="TEI /embed")
         except Exception as e:
-            logger.error(f"TEI embedding API error: {e}")
-            return None
+            raise RuntimeError(
+                f"TEI embedding endpoint {self.base_url} unreachable after "
+                f"retries ({type(e).__name__}: {e}). No fallback by design — the "
+                f"corpus is {self._dimension}-dim. Bring the RunPod endpoint up "
+                f"(`python scripts/preflight.py`) before retrying."
+            ) from e
+
+    def warmup(self, timeout_s: float = 180.0) -> np.ndarray:
+        """
+        Force a cold serverless worker awake before real traffic. Retries longer
+        than a normal call so a scale-from-zero start doesn't false-fail. Raises
+        if the endpoint can't be reached within the budget.
+        """
+        deadline = time.monotonic() + timeout_s
+
+        def _probe() -> np.ndarray:
+            resp = self._client.post(f"{self.base_url}/embed", json={"inputs": ["warmup"]})
+            resp.raise_for_status()
+            return np.array(resp.json(), dtype=np.float32)[0]
+
+        attempt = 0
+        while True:
+            attempt += 1
+            try:
+                return _probe()
+            except Exception as e:
+                if not is_transient(e) or time.monotonic() >= deadline:
+                    raise
+                logger.warning("TEI warmup: waiting for worker (attempt %d): %s",
+                               attempt, type(e).__name__)
+                time.sleep(min(5.0, max(0.0, deadline - time.monotonic())))
 
     def embed(self, text: str, normalize: bool = True) -> np.ndarray:
-        result = self._call_api([text])
-        if result is not None:
-            return result[0]
-        return self._get_fallback().embed(text, normalize=normalize)
+        # _call_api raises on failure (no fallback); propagate it.
+        return self._call_api([text])[0]
 
     def embed_batch(self, texts: List[str], normalize: bool = True, batch_size: int = 32, show_progress: bool = False) -> np.ndarray:
         if not texts:
@@ -500,12 +572,7 @@ class TEIEmbeddingEngine:
         all_vecs = []
         for i in range(0, len(texts), batch_size):
             chunk = texts[i:i + batch_size]
-            result = self._call_api(chunk)
-            if result is not None:
-                all_vecs.append(result)
-            else:
-                fb = self._get_fallback().embed_batch(chunk, normalize=normalize, batch_size=batch_size)
-                all_vecs.append(fb)
+            all_vecs.append(self._call_api(chunk))
         return np.vstack(all_vecs).astype(np.float32)
 
     def embed_hybrid(self, texts: List[str], batch_size: int = 32, return_colbert: bool = False) -> Dict:

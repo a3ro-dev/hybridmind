@@ -139,17 +139,33 @@ async def lifespan(app: FastAPI):
     
     embedding_engine = db_manager.embedding_engine
     if embedding_engine.model is not None:
-        # Run warmup embedding to ensure model is fully loaded
-        warmup_vec = embedding_engine.embed("warmup query for model initialization")
-        _model_loaded = True
-        warmup_time = (time.perf_counter() - warmup_start) * 1000
-        logger.info(f"  Embedding model loaded in {warmup_time:.0f}ms")
+        # Warm up the embedder. For serverless remotes (TEIEmbeddingEngine),
+        # warmup() retries through a scale-from-zero cold start. This is
+        # BEST-EFFORT: if the endpoint is down/cold at boot we log loudly and
+        # continue rather than blocking or crashing startup — the first real
+        # embed call will still fail loudly (no fallback), so correctness is
+        # enforced at query time, not coupled to the endpoint's boot-time state.
+        warmup_vec = None
+        try:
+            if hasattr(embedding_engine, "warmup"):
+                warmup_budget = float(os.getenv("HYBRIDMIND_STARTUP_WARM_SECONDS", "45"))
+                warmup_vec = embedding_engine.warmup(timeout_s=warmup_budget)
+            else:
+                warmup_vec = embedding_engine.embed("warmup query for model initialization")
+            _model_loaded = True
+            warmup_time = (time.perf_counter() - warmup_start) * 1000
+            logger.info(f"  Embedding model loaded in {warmup_time:.0f}ms")
+        except Exception as e:
+            logger.error(
+                f"  Embedding endpoint not ready at startup ({type(e).__name__}: {e}). "
+                f"Continuing — the first real embed call will retry/fail loudly. "
+                f"Run `python scripts/preflight.py` before evals."
+            )
 
         # Step 2.1: Hard-fail on embedding/FAISS dimension mismatch.
         # A silent mismatch corrupts every similarity score in the index — never allow it.
-        actual_dim = int(warmup_vec.shape[-1])
-        index_dim = db_manager.vector_index.dimension
-        if actual_dim != index_dim:
+        # Only checkable when warmup actually returned a vector.
+        if warmup_vec is not None and (actual_dim := int(warmup_vec.shape[-1])) != (index_dim := db_manager.vector_index.dimension):
             raise RuntimeError(
                 f"Embedding/FAISS dimension mismatch: the resolved embedding backend "
                 f"({type(embedding_engine).__name__}) outputs {actual_dim}-dim vectors, "
