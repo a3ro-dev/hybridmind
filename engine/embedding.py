@@ -544,7 +544,7 @@ class TEIEmbeddingEngine:
 _embedding_engine = None
 
 
-def get_embedding_engine(model_name: str = _DEFAULT_MODEL):
+def get_embedding_engine(model_name: str = _DEFAULT_MODEL, device: Optional[str] = None):
     """
     Return the process-wide embedding engine singleton.
 
@@ -578,5 +578,5 @@ def get_embedding_engine(model_name: str = _DEFAULT_MODEL):
     if _embedding_engine is None or (
         isinstance(_embedding_engine, EmbeddingEngine) and _embedding_engine.model_name != model_name
     ):
-        _embedding_engine = EmbeddingEngine(model_name=model_name)
+        _embedding_engine = EmbeddingEngine(model_name=model_name, device=device)
     return _embedding_engine

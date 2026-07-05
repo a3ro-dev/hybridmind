@@ -91,40 +91,56 @@ def is_abstention(text: str) -> bool:
 
 
 def _call(payload: dict) -> str | None:
-    if not _HC_API_KEY:
-        return None
-    headers = {"Authorization": f"Bearer {_HC_API_KEY}", "Content-Type": "application/json"}
-    client = _get_client()
-    for attempt in range(_MAX_ATTEMPTS):
-        try:
-            resp = client.post(f"{_BASE_URL}/chat/completions", headers=headers, json=payload)
-            if resp.status_code in (429, 500, 502, 503, 504):
-                raise httpx.HTTPStatusError(
-                    f"retryable {resp.status_code}", request=resp.request, response=resp
-                )
-            resp.raise_for_status()
-            return resp.json()["choices"][0]["message"]["content"]
-        except httpx.HTTPStatusError as e:
-            status = e.response.status_code if e.response is not None else None
-            if status in (429, 500, 502, 503, 504) and attempt < _MAX_ATTEMPTS - 1:
-                _sleep_backoff(attempt, f"HTTP {status}")
-                continue
-            logger.error(f"eval_common HTTP error: {status}")
-            return None
-        except (
-            httpx.ConnectError, httpx.TimeoutException, httpx.RemoteProtocolError,
-            httpx.ReadError, httpx.WriteError, httpx.PoolTimeout,
-        ) as e:
-            if attempt < _MAX_ATTEMPTS - 1:
-                _sleep_backoff(attempt, f"{type(e).__name__}")
-                continue
-            logger.error(f"eval_common transient error after {_MAX_ATTEMPTS} attempts: {e}")
-            return None
-        except Exception as e:
-            logger.error(f"eval_common unexpected error: {e}")
-            return None
-    return None
+    """Try RunPod serverless LLM first (if configured); fall back to HC proxy."""
+    from engine.runpod_llm import chat_completion as rp_chat, is_configured as rp_configured
+    if rp_configured():
+        logger.info("eval_common: using RunPod serverless LLM")
+        req_model = payload.get("model")
+        if req_model == "openai/gpt-4o":
+            req_model = None
+        res = rp_chat(
+            messages=payload.get("messages", []),
+            max_tokens=payload.get("max_tokens", 512),
+            temperature=payload.get("temperature", 0.0),
+            model=req_model,
+            response_format=payload.get("response_format"),
+        )
+        if res is not None:
+            return res
 
+    if _HC_API_KEY:
+        headers = {"Authorization": f"Bearer {_HC_API_KEY}", "Content-Type": "application/json"}
+        client = _get_client()
+        for attempt in range(_MAX_ATTEMPTS):
+            try:
+                resp = client.post(f"{_BASE_URL}/chat/completions", headers=headers, json=payload)
+                if resp.status_code in (429, 500, 502, 503, 504):
+                    raise httpx.HTTPStatusError(
+                        f"retryable {resp.status_code}", request=resp.request, response=resp
+                    )
+                resp.raise_for_status()
+                return resp.json()["choices"][0]["message"]["content"]
+            except httpx.HTTPStatusError as e:
+                status = e.response.status_code if e.response is not None else None
+                if status in (429, 500, 502, 503, 504) and attempt < _MAX_ATTEMPTS - 1:
+                    _sleep_backoff(attempt, f"HTTP {status}")
+                    continue
+                logger.error(f"eval_common HTTP error: {status}")
+                break
+            except (
+                httpx.ConnectError, httpx.TimeoutException, httpx.RemoteProtocolError,
+                httpx.ReadError, httpx.WriteError, httpx.PoolTimeout,
+            ) as e:
+                if attempt < _MAX_ATTEMPTS - 1:
+                    _sleep_backoff(attempt, f"{type(e).__name__}")
+                    continue
+                logger.error(f"eval_common transient error after {_MAX_ATTEMPTS} attempts: {e}")
+                break
+            except Exception as e:
+                logger.error(f"eval_common unexpected error: {e}")
+                break
+
+    return None
 
 def llm_answer(question: str, snippets: list[str], question_date: str = "", model: str | None = None) -> str:
     """

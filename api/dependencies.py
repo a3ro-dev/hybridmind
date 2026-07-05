@@ -15,7 +15,7 @@ from storage.graph_index import GraphIndex
 from storage.mindfile import MindFile
 from storage.colbert_store import ColbertStore, colbert_enabled
 from engine.device import resolve_device
-from engine.embedding import EmbeddingEngine
+from engine.embedding import EmbeddingEngine, get_embedding_engine as get_embedding_backend
 from engine.vector_search import VectorSearchEngine
 from engine.graph_search import GraphSearchEngine
 from engine.hybrid_ranker import HybridRanker
@@ -84,7 +84,7 @@ class DatabaseManager:
         
         # Initialize embedding engine with resolved device
         _device = resolve_device(settings.device)
-        self.embedding_engine = EmbeddingEngine(
+        self.embedding_engine = get_embedding_backend(
             model_name=settings.embedding_model,
             device=_device,
         )
