@@ -95,3 +95,16 @@ phase3_run.log
 *.db-journal
 
 memorybench/
+
+# ── RunPod CLI binary ─────────────────────────────────────────────
+runpodctl.exe
+runpodctl
+
+# ── Server PID file ───────────────────────────────────────────────
+server.pid
+
+# ── Evaluation ledger JSONL files (large, generated) ─────────────
+benchmarks/results/ledger_*.jsonl
+
+# ── Data directory (database, vectors, faiss index) ───────────────
+data/

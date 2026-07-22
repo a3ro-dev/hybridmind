@@ -39,9 +39,9 @@ def is_transient(exc: Exception) -> bool:
 def retry_transient(
     fn: Callable[[], T],
     *,
-    attempts: int = 4,
+    attempts: int = 6,
     base_delay: float = 2.0,
-    max_delay: float = 30.0,
+    max_delay: float = 120.0,
     label: str = "serverless call",
 ) -> T:
     """

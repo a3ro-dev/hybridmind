@@ -240,16 +240,19 @@ async def lifespan(app: FastAPI):
     print(f"- Snapshot manifest: v{version} @ {timestamp}")
     print(f"- Checksum verification: {integrity_status}")
     print(f"- Graph-conditioned embeddings: {'ENABLED' if graph_embeddings_enabled else 'DISABLED'}")
-    
-    import os
+
+    runpod_endpoint = os.getenv("RUNPOD_LLM_ENDPOINT_ID")
     hc_key = os.getenv("HC_API_KEY")
     openai_key = os.getenv("OPENAI_API_KEY")
-    if hc_key:
+    if runpod_endpoint:
+        print(f"- Fact Extractor LLM: RunPod vLLM ({runpod_endpoint}) [Fallback: HackClub]")
+    elif hc_key:
         print(f"- Fact Extractor LLM: LOADED (Key starts with {hc_key[:8]}...)")
     elif openai_key:
         print(f"- Fact Extractor LLM: LOADED (Key starts with {openai_key[:8]}...)")
     else:
         print(f"- Fact Extractor LLM: FAILED (No API Key found)")
+
     print("\n")
     
     yield
@@ -1135,12 +1138,19 @@ async def ingest_session_facts(request: SessionFactsRequest):
 
 def start():
     import uvicorn
-    uvicorn.run(
-        "main:app",
-        host=settings.host,
-        port=settings.port,
-        reload=settings.debug
-    )
+    if settings.debug:
+        uvicorn.run(
+            "main:app",
+            host=settings.host,
+            port=settings.port,
+            reload=True
+        )
+    else:
+        uvicorn.run(
+            app,
+            host=settings.host,
+            port=settings.port
+        )
 
 
 if __name__ == "__main__":

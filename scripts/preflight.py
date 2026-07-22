@@ -48,16 +48,19 @@ def runpod_llm():
 
 def runpod_tei():
     base = os.getenv("RUNPOD_TEI_EMBEDDING_URL", "")
+    want = os.getenv("HYBRIDMIND_EMBEDDING_DIMENSION", "1024")
+    if not base:
+        return True, f"Local/remote fallback active, dim={want}"
     key = os.getenv("RUNPOD_API_KEY")
     # Serverless load-balancer endpoint: scales to zero, so the first call
     # after idle pays a cold-start tax (worker waking + 8B model load). That's
     # a state to wait through, not a failure — retry for up to ~3 min. This
     # also WARMS the endpoint so the eval's first real call isn't the cold one.
     h = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
-    want = os.getenv("HYBRIDMIND_EMBEDDING_DIMENSION", "4096")
     # Cold start + GPU scheduling can take minutes; tune via env for scarce-GPU days.
     budget = float(os.getenv("HYBRIDMIND_PREFLIGHT_WARM_SECONDS", "180"))
     deadline = time.monotonic() + budget
+
     attempt = 0
     while True:
         attempt += 1

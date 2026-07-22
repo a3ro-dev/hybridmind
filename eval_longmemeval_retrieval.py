@@ -285,7 +285,7 @@ def main():
     )
     print(f"LongMemEval retrieval eval — {len(questions)} questions (split={args.split})")
 
-    with httpx.Client(timeout=60) as client:
+    with httpx.Client(timeout=300.0) as client:
         # Check server is up
         try:
             client.get(f"{args.base_url}/live").raise_for_status()

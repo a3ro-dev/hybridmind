@@ -377,7 +377,7 @@ def main():
         print(f"  {cat}: {count}")
     print()
 
-    client = httpx.Client(base_url=BASE_URL, timeout=60.0)
+    client = httpx.Client(base_url=BASE_URL, timeout=300.0)
     try:
         if args.sweep:
             sweep(questions, client)

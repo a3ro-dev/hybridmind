@@ -122,6 +122,11 @@ def _call(payload: dict) -> str | None:
                 return resp.json()["choices"][0]["message"]["content"]
             except httpx.HTTPStatusError as e:
                 status = e.response.status_code if e.response is not None else None
+                if status == 400 and "response_format" in payload:
+                    logger.warning("eval_common: HTTP 400 with response_format, retrying without schema")
+                    payload_no_fmt = dict(payload)
+                    payload_no_fmt.pop("response_format", None)
+                    return _call(payload_no_fmt)
                 if status in (429, 500, 502, 503, 504) and attempt < _MAX_ATTEMPTS - 1:
                     _sleep_backoff(attempt, f"HTTP {status}")
                     continue

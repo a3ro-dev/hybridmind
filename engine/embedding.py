@@ -334,7 +334,7 @@ class RemoteEmbeddingEngine:
         self._client = httpx.Client(
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             limits=httpx.Limits(max_connections=8, max_keepalive_connections=4),
-            timeout=httpx.Timeout(connect=10.0, read=60.0, write=10.0, pool=10.0),
+            timeout=httpx.Timeout(connect=10.0, read=300.0, write=10.0, pool=10.0),
         )
         self._fallback: Optional[EmbeddingEngine] = None
         logger.info(f"RemoteEmbeddingEngine: {self.base_url} model={model} dim={dimension}")
@@ -360,18 +360,25 @@ class RemoteEmbeddingEngine:
 
     def _call_api(self, texts: List[str]) -> Optional[np.ndarray]:
         payload: dict = {"model": self.model_name, "input": texts, "dimensions": self._dimension}
-        try:
-            resp = self._client.post(f"{self.base_url}/embeddings", json=payload)
-            resp.raise_for_status()
-            data = resp.json()["data"]
-            data.sort(key=lambda x: x["index"])
-            vecs = np.array([d["embedding"] for d in data], dtype=np.float32)
-            norms = np.linalg.norm(vecs, axis=1, keepdims=True)
-            norms = np.where(norms > 0, norms, 1)
-            return vecs / norms
-        except Exception as e:
-            logger.error(f"RunPod embedding API error: {e}")
-            return None
+        max_retries = 10
+        for attempt in range(max_retries):
+            try:
+                resp = self._client.post(f"{self.base_url}/embeddings", json=payload)
+                resp.raise_for_status()
+                data = resp.json()["data"]
+                data.sort(key=lambda x: x["index"])
+                vecs = np.array([d["embedding"] for d in data], dtype=np.float32)
+                norms = np.linalg.norm(vecs, axis=1, keepdims=True)
+                norms = np.where(norms > 0, norms, 1)
+                return vecs / norms
+            except Exception as e:
+                logger.error(f"RemoteEmbeddingEngine API error (attempt {attempt+1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    import time
+                    time.sleep(2.0 * (attempt + 1))
+        if self._dimension == 4096:
+            raise RuntimeError(f"RemoteEmbeddingEngine 4096-dim API call failed after {max_retries} attempts: cannot fallback to 1024-dim model")
+        return None
 
     def embed(self, text: str, normalize: bool = True) -> np.ndarray:
         result = self._call_api([text])
@@ -456,7 +463,7 @@ class TEIEmbeddingEngine:
         self._client = httpx.Client(
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             limits=httpx.Limits(max_connections=8, max_keepalive_connections=4),
-            timeout=httpx.Timeout(connect=10.0, read=120.0, write=10.0, pool=10.0),
+            timeout=httpx.Timeout(connect=10.0, read=300.0, write=10.0, pool=10.0),
         )
         # No local fallback by design: the corpus is indexed at this remote's
         # dimension (4096), and any other model would emit a different dimension
@@ -546,7 +553,8 @@ class TEIEmbeddingEngine:
         deadline = time.monotonic() + timeout_s
 
         def _probe() -> np.ndarray:
-            resp = self._client.post(f"{self.base_url}/embed", json={"inputs": ["warmup"]})
+            t = min(15.0, max(2.0, deadline - time.monotonic()))
+            resp = self._client.post(f"{self.base_url}/embed", json={"inputs": ["warmup"]}, timeout=t)
             resp.raise_for_status()
             return np.array(resp.json(), dtype=np.float32)[0]
 

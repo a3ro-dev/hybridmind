@@ -9,13 +9,27 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 LOCOMO_PATH = Path("memorybench/data/benchmarks/locomo/locomo10.json")
 BASE_URL = "http://127.0.0.1:8000"
 
-def main():
-    client = httpx.Client(timeout=60)
+import time
 
+def post_with_retry(url: str, json_data: dict, max_retries: int = 5) -> httpx.Response:
+    for attempt in range(max_retries):
+        try:
+            with httpx.Client(timeout=300.0) as fresh_client:
+                resp = fresh_client.post(url, json=json_data)
+                if resp.status_code in (200, 201):
+                    return resp
+                print(f"  [Attempt {attempt+1}] HTTP {resp.status_code}: {resp.text[:100]}", flush=True)
+        except Exception as e:
+            print(f"  [Attempt {attempt+1}] Connection error: {e}", flush=True)
+        time.sleep(1.0 * (attempt + 1))
+    raise RuntimeError(f"Failed POST to {url} after {max_retries} retries")
+
+def main():
     try:
-        resp = client.get(f"{BASE_URL}/health")
-        resp.raise_for_status()
-        print("HybridMind is healthy")
+        with httpx.Client(timeout=30.0) as c:
+            resp = c.get(f"{BASE_URL}/health")
+            resp.raise_for_status()
+            print("HybridMind is healthy")
     except Exception as e:
         print(f"HybridMind not reachable: {e}")
         sys.exit(1)
@@ -27,6 +41,14 @@ def main():
 
     for i, conv in enumerate(data):
         sample_id = conv.get("sample_id", f"locomo_{i}")
+        import sqlite3
+        with sqlite3.connect('data/hybridmind.mind/store.db') as conn:
+            existing = conn.execute("SELECT COUNT(*) FROM nodes WHERE json_extract(metadata, '$.sessionId') = ? OR json_extract(metadata, '$.session_id') = ?", (sample_id, sample_id)).fetchone()[0]
+        if existing > 0:
+            print(f"  [{i+1}/{len(data)}] session {sample_id}: already ingested ({existing} nodes), skipping...", flush=True)
+            total_nodes += existing
+            continue
+
         convo = conv.get("conversation", {})
 
         # Collect all turns across all sessions
@@ -61,7 +83,7 @@ def main():
             txt = turn["text"]
             text_with_meta = f"[DATE: {date_str}] [SPEAKER: {turn['speaker']}] {txt}" if date_str else f"[SPEAKER: {turn['speaker']}] {txt}"
             try:
-                resp = client.post(f"{BASE_URL}/nodes", json={
+                resp = post_with_retry(f"{BASE_URL}/nodes", {
                     "text": text_with_meta,
                     "metadata": {
                         "session_id": sample_id,
@@ -71,29 +93,27 @@ def main():
                         "timestamp": date_str,
                     }
                 })
-                if resp.status_code == 201:
-                    total_nodes += 1
+                total_nodes += 1
             except Exception as e:
                 print(f"  ERROR creating node: {e}")
 
+        print(f"  [{i+1}/{len(data)}] {sample_id}: ingested {len(all_turns)} turn nodes (total={total_nodes})", flush=True)
+
         # Ingest facts via session-facts endpoint
         try:
-            resp = client.post(f"{BASE_URL}/ingest/session-facts", json={
+            resp = post_with_retry(f"{BASE_URL}/ingest/session-facts", {
                 "session_id": sample_id,
                 "turns": all_turns,
                 "container_tag": "locomo",
             })
-            if resp.status_code == 200:
-                fj = resp.json()
-                nf = fj.get("facts_extracted", 0)
-                total_nodes += nf
-                print(f"  [{i+1}/{len(data)}] session {sample_id}: {len(all_turns)} turns, {nf} facts")
-            else:
-                print(f"  [{i+1}/{len(data)}] WARN: session-facts returned {resp.status_code}")
+            fj = resp.json()
+            nf = fj.get("facts_extracted", 0)
+            total_nodes += nf
+            print(f"  [{i+1}/{len(data)}] session {sample_id}: {len(all_turns)} turns, {nf} facts", flush=True)
         except Exception as e:
-            print(f"  [{i+1}/{len(data)}] ERROR session-facts: {e}")
+            print(f"  ERROR session-facts: {e}", flush=True)
 
-    print(f"\nIngestion complete: {total_nodes} nodes across {len(data)} sessions")
+    print(f"\nIngestion complete: {total_nodes} nodes across {len(data)} sessions", flush=True)
     print("Ready: python eval_locomo_retrieval.py")
 
 if __name__ == "__main__":

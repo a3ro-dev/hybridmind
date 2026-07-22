@@ -53,21 +53,31 @@ def decompose_query(
     (the eval harness does this since it wants the feature on regardless of
     the server-wide default).
     """
-    if enabled is None:
-        from config import settings
-        enabled = getattr(settings, "query_decomposition_enabled", False)
-    if not enabled or not is_configured():
+    if not enabled:
         return []
 
-    content = chat_completion(
-        messages=[
-            {"role": "system", "content": _DECOMPOSE_SYSTEM_PROMPT},
-            {"role": "user", "content": query_text},
-        ],
-        max_tokens=300,
-        temperature=0.0,
-        model=model,
-    )
+    content = None
+    if is_configured():
+        content = chat_completion(
+            messages=[
+                {"role": "system", "content": _DECOMPOSE_SYSTEM_PROMPT},
+                {"role": "user", "content": query_text},
+            ],
+            max_tokens=300,
+            temperature=0.0,
+            model=model,
+        )
+    if not content:
+        from eval_common import _call
+        content = _call({
+            "model": model or "qwen/qwen-2.5-72b-instruct",
+            "messages": [
+                {"role": "system", "content": _DECOMPOSE_SYSTEM_PROMPT},
+                {"role": "user", "content": query_text},
+            ],
+            "max_tokens": 300,
+            "temperature": 0.0,
+        })
     if not content:
         return []
 

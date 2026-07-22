@@ -307,7 +307,7 @@ def main():
     questions = load_questions(args.data_file, args.n, args.n_hops)
     print(f"MuSiQue multi-hop retrieval eval — {len(questions)} questions")
 
-    with httpx.Client(timeout=60) as client:
+    with httpx.Client(timeout=300.0) as client:
         try:
             client.get(f"{args.base_url}/live").raise_for_status()
         except Exception as e:

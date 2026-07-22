@@ -20,6 +20,9 @@ import logging
 import sys
 import time
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Allow running from repo root
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -69,7 +72,8 @@ def main():
         logger.info("Dry run — exiting without changes.")
         return
 
-    embedding_engine = EmbeddingEngine(
+    from engine.embedding import get_embedding_engine
+    embedding_engine = get_embedding_engine(
         model_name=settings.embedding_model,
         device=device,
     )
