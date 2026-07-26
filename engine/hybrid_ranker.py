@@ -124,34 +124,51 @@ class HybridRanker:
         # We also need a larger candidate pool if graph helps recall
         candidate_k = max(100, vector_k)
 
-        # Step 1: Run Vector and BM25 search
-        vector_results, _, _ = self.vector_engine.search(
-            query_text=query_text,
-            top_k=candidate_k,
-            min_score=0.0,
-            filter_metadata=filter_metadata
-        )
+        # Step 1: Run Vector and BM25 search (with sub-query decomposition for multi-hop queries)
+        sub_questions = []
+        try:
+            from engine.query_decomposition import decompose_query
+            sub_questions = decompose_query(query_text)
+        except Exception:
+            pass
+
+        queries_to_search = [query_text] + sub_questions
+        vector_results = []
+        seen_vec_ids = set()
+
+        for q in queries_to_search:
+            v_res, _, _ = self.vector_engine.search(
+                query_text=q,
+                top_k=candidate_k,
+                min_score=0.0,
+                filter_metadata=filter_metadata
+            )
+            for r in v_res:
+                if r["node_id"] not in seen_vec_ids:
+                    seen_vec_ids.add(r["node_id"])
+                    vector_results.append(r)
 
         bm25_results = []
         bm25_score_by_node: Dict[str, float] = {}
         if self.bm25_index:
-            # Always request many BM25 hits — the BM25 scorer already iterates all 50K documents,
-            # so the top_k parameter only affects the final sort-and-slice, not computation cost.
-            bm25_hits = self.bm25_index.search(query_text, top_k=5000)
-            bm25_score_by_node = {n_id: score for n_id, score in bm25_hits}
-            for n_id, score in bm25_hits:
-                node = self.vector_engine.sqlite_store.get_node(n_id)
-                if node:
-                    if filter_metadata and not self.vector_engine._matches_filter(node["metadata"], filter_metadata):
-                        continue
-                    bm25_results.append({
-                        "node_id": n_id,
-                        "text": node["text"],
-                        "metadata": node["metadata"],
-                        "bm25_score": score
-                    })
-                    if len(bm25_results) >= candidate_k * 3:
-                        break
+            for q in queries_to_search:
+                bm25_hits = self.bm25_index.search(q, top_k=5000)
+                for n_id, score in bm25_hits:
+                    if n_id not in bm25_score_by_node or score > bm25_score_by_node[n_id]:
+                        bm25_score_by_node[n_id] = score
+                    node = self.vector_engine.sqlite_store.get_node(n_id)
+                    if node:
+                        if filter_metadata and not self.vector_engine._matches_filter(node["metadata"], filter_metadata):
+                            continue
+                        if n_id not in {r["node_id"] for r in bm25_results}:
+                            bm25_results.append({
+                                "node_id": n_id,
+                                "text": node["text"],
+                                "metadata": node["metadata"],
+                                "bm25_score": score
+                            })
+                        if len(bm25_results) >= candidate_k * 3:
+                            break
 
         # Step 2: Combine vector and BM25 into a baseline V score.
         # Vector score is cosine similarity (0 to 1). We should boost it if BM25 matches.
