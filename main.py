@@ -245,7 +245,7 @@ async def lifespan(app: FastAPI):
     hc_key = os.getenv("HC_API_KEY")
     openai_key = os.getenv("OPENAI_API_KEY")
     if runpod_endpoint:
-        print(f"- Fact Extractor LLM: RunPod vLLM ({runpod_endpoint}) [Fallback: HackClub]")
+        print(f"- Fact Extractor LLM: RunPod vLLM ({runpod_endpoint})")
     elif hc_key:
         print(f"- Fact Extractor LLM: LOADED (Key starts with {hc_key[:8]}...)")
     elif openai_key:

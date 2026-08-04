@@ -317,15 +317,16 @@ class RemoteEmbeddingEngine:
     """
     Remote embedding backend via any OpenAI-compatible /v1/embeddings endpoint.
 
-    Configured with:
-      HC_EMBEDDING_URL   — base URL (Hack Club AI: https://ai.hackclub.com/proxy/v1)
-      HC_API_KEY         — bearer token
-      HYBRIDMIND_EMBEDDING_DIMENSION — MRL output dim (default: 1024)
+    NO LOCAL FALLBACK. If the API call fails, a RuntimeError is raised.
+    A wrong-dimension response also raises — we never silently corrupt the index.
 
-    Falls back to the local EmbeddingEngine on any HTTP error.
+    Configured with:
+      HC_EMBEDDING_URL   — base URL (e.g. https://ai.hackclub.com/proxy/v1)
+      HC_API_KEY         — bearer token
+      HYBRIDMIND_EMBEDDING_DIMENSION — expected output dim (must be 4096)
     """
 
-    def __init__(self, base_url: str, api_key: str, dimension: int = 1024, model: str = "qwen/qwen3-embedding-8b"):
+    def __init__(self, base_url: str, api_key: str, dimension: int = 4096, model: str = "qwen/qwen3-embedding-8b"):
         import httpx
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
@@ -336,14 +337,7 @@ class RemoteEmbeddingEngine:
             limits=httpx.Limits(max_connections=8, max_keepalive_connections=4),
             timeout=httpx.Timeout(connect=10.0, read=300.0, write=10.0, pool=10.0),
         )
-        self._fallback: Optional[EmbeddingEngine] = None
-        logger.info(f"RemoteEmbeddingEngine: {self.base_url} model={model} dim={dimension}")
-
-    def _get_fallback(self) -> EmbeddingEngine:
-        if self._fallback is None:
-            logger.warning("RunPod embedding: falling back to local bge-m3")
-            self._fallback = EmbeddingEngine(model_name=_DEFAULT_MODEL)
-        return self._fallback
+        logger.info(f"RemoteEmbeddingEngine: {self.base_url} model={model} dim={dimension} (no local fallback)")
 
     @property
     def dimension(self) -> int:
@@ -358,9 +352,14 @@ class RemoteEmbeddingEngine:
         norm = float(np.linalg.norm(vec))
         return (vec / norm).astype(np.float32) if norm > 0 else vec
 
-    def _call_api(self, texts: List[str]) -> Optional[np.ndarray]:
+    def _call_api(self, texts: List[str]) -> np.ndarray:
+        """
+        Call the remote /v1/embeddings endpoint with retries. Always raises
+        RuntimeError on failure — no local fallback, no dimension mismatch.
+        """
         payload: dict = {"model": self.model_name, "input": texts, "dimensions": self._dimension}
         max_retries = 10
+        last_exc: Exception = RuntimeError("no attempts made")
         for attempt in range(max_retries):
             try:
                 resp = self._client.post(f"{self.base_url}/embeddings", json=payload)
@@ -368,23 +367,27 @@ class RemoteEmbeddingEngine:
                 data = resp.json()["data"]
                 data.sort(key=lambda x: x["index"])
                 vecs = np.array([d["embedding"] for d in data], dtype=np.float32)
+                if vecs.ndim != 2 or vecs.shape[1] != self._dimension:
+                    raise RuntimeError(
+                        f"RemoteEmbeddingEngine: endpoint returned shape {vecs.shape}, "
+                        f"expected (*, {self._dimension}). Wrong model? Refusing to corrupt index."
+                    )
                 norms = np.linalg.norm(vecs, axis=1, keepdims=True)
                 norms = np.where(norms > 0, norms, 1)
                 return vecs / norms
             except Exception as e:
+                last_exc = e
                 logger.error(f"RemoteEmbeddingEngine API error (attempt {attempt+1}/{max_retries}): {e}")
                 if attempt < max_retries - 1:
                     import time
-                    time.sleep(2.0 * (attempt + 1))
-        if self._dimension == 4096:
-            raise RuntimeError(f"RemoteEmbeddingEngine 4096-dim API call failed after {max_retries} attempts: cannot fallback to 1024-dim model")
-        return None
+                    time.sleep(min(30.0, 2.0 * (attempt + 1)))
+        raise RuntimeError(
+            f"RemoteEmbeddingEngine {self._dimension}-dim API call failed after {max_retries} attempts. "
+            f"No local fallback — bring the endpoint up first. Last error: {last_exc}"
+        )
 
     def embed(self, text: str, normalize: bool = True) -> np.ndarray:
-        result = self._call_api([text])
-        if result is not None:
-            return result[0]
-        return self._get_fallback().embed(text, normalize=normalize)
+        return self._call_api([text])[0]
 
     def embed_batch(self, texts: List[str], normalize: bool = True, batch_size: int = 32, show_progress: bool = False) -> np.ndarray:
         if not texts:
@@ -392,16 +395,10 @@ class RemoteEmbeddingEngine:
         all_vecs = []
         for i in range(0, len(texts), batch_size):
             chunk = texts[i:i + batch_size]
-            result = self._call_api(chunk)
-            if result is not None:
-                all_vecs.append(result)
-            else:
-                fb = self._get_fallback().embed_batch(chunk, normalize=normalize, batch_size=batch_size)
-                all_vecs.append(fb)
+            all_vecs.append(self._call_api(chunk))  # raises on failure, no fallback
         return np.vstack(all_vecs).astype(np.float32)
 
     def embed_hybrid(self, texts: List[str], batch_size: int = 32, return_colbert: bool = False) -> Dict:
-        # RunPod endpoint returns dense only; sparse/colbert not available remotely
         dense = self.embed_batch(texts, normalize=True, batch_size=batch_size)
         return {"dense": dense, "sparse": None, "colbert": None}
 
@@ -624,9 +621,11 @@ def get_embedding_engine(model_name: str = _DEFAULT_MODEL, device: Optional[str]
     Return the process-wide embedding engine singleton.
 
     Priority:
-    1. TEIEmbeddingEngine if RUNPOD_TEI_EMBEDDING_URL is set (self-hosted TEI)
-    2. RemoteEmbeddingEngine if HC_EMBEDDING_URL or RUNPOD_EMBEDDING_URL is set
-    3. Local EmbeddingEngine (bge-m3 or specified model_name)
+    1. TEIEmbeddingEngine if RUNPOD_TEI_EMBEDDING_URL is set (self-hosted TEI, no fallback)
+    2. RemoteEmbeddingEngine if HC_EMBEDDING_URL or RUNPOD_EMBEDDING_URL is set (no fallback)
+    3. Local EmbeddingEngine — ONLY if HYBRIDMIND_EMBEDDING_DIMENSION != 4096.
+       If dimension is 4096 and no remote URL is configured, we raise immediately
+       rather than silently producing 1024-dim vectors that corrupt the FAISS index.
     """
     global _embedding_engine
 
@@ -645,10 +644,19 @@ def get_embedding_engine(model_name: str = _DEFAULT_MODEL, device: Optional[str]
     if remote_url:
         if not isinstance(_embedding_engine, RemoteEmbeddingEngine):
             api_key = os.getenv("HC_API_KEY") or os.getenv("RUNPOD_API_KEY", "")
-            dim = int(os.getenv("HYBRIDMIND_EMBEDDING_DIMENSION", "1024"))
+            dim = int(os.getenv("HYBRIDMIND_EMBEDDING_DIMENSION", "4096"))
             remote_model = os.getenv("HYBRIDMIND_REMOTE_EMBEDDING_MODEL", "qwen/qwen3-embedding-8b")
             _embedding_engine = RemoteEmbeddingEngine(base_url=remote_url, api_key=api_key, dimension=dim, model=remote_model)
         return _embedding_engine
+
+    # No remote configured — only allow local engine if dimension is NOT 4096.
+    configured_dim = int(os.getenv("HYBRIDMIND_EMBEDDING_DIMENSION", "1024"))
+    if configured_dim == 4096:
+        raise RuntimeError(
+            "HYBRIDMIND_EMBEDDING_DIMENSION=4096 but neither RUNPOD_TEI_EMBEDDING_URL nor "
+            "HC_EMBEDDING_URL is set. The local bge-m3 model is 1024-dim and would corrupt "
+            "the FAISS index. Set one of those env vars before starting the server."
+        )
 
     if _embedding_engine is None or (
         isinstance(_embedding_engine, EmbeddingEngine) and _embedding_engine.model_name != model_name

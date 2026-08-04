@@ -16,16 +16,14 @@ sys.path.insert(0, str(PROJECT_ROOT))
 os.environ.setdefault("HYBRIDMIND_DATABASE_PATH", "test_data/hybridmind_test.db")
 os.environ.setdefault("HYBRIDMIND_VECTOR_INDEX_PATH", "test_data/vector_test.index")
 os.environ.setdefault("HYBRIDMIND_GRAPH_INDEX_PATH", "test_data/graph_test.pkl")
-# Tests run offline and must NOT hit the RunPod/TEI or HackClub remotes. The
-# embedding backend has no runtime fallback anymore (a down remote raises), so
-# we explicitly force the LOCAL bge-m3 engine by clearing every remote-URL env
-# BEFORE importing main. load_dotenv(override=False) then leaves these empty
-# values in place, so get_embedding_engine() falls through to the local model.
+# Tests run fully offline and must NOT hit RunPod/TEI or HackClub remotes.
+# We clear all remote-URL env vars so get_embedding_engine() selects the local
+# bge-m3 model (1024-dim) for unit tests only. Production ALWAYS uses 4096-dim
+# via RunPod TEI \u2014 this 1024 value is test-only and never used at runtime.
 for _var in ("RUNPOD_TEI_EMBEDDING_URL", "HC_EMBEDDING_URL", "RUNPOD_EMBEDDING_URL"):
     os.environ[_var] = ""
-# Local bge-m3 is 1024-dim; match the FAISS index dimension so a fresh test
-# index isn't born mismatched (see main.py's startup dimension guard, Phase 6 A2).
-os.environ.setdefault("HYBRIDMIND_EMBEDDING_DIMENSION", "1024")
+# TESTS ONLY: local bge-m3 is 1024-dim. This must never appear in .env or production.
+os.environ["HYBRIDMIND_EMBEDDING_DIMENSION"] = "1024"
 
 from fastapi.testclient import TestClient
 from main import app

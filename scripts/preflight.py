@@ -29,11 +29,30 @@ def check(name, fn):
         return False
 
 
-def hc():
-    key = os.getenv("HC_API_KEY")
-    r = httpx.get("https://ai.hackclub.com/proxy/v1/models",
-                  headers={"Authorization": f"Bearer {key}"}, timeout=15)
-    return r.status_code == 200, f"HTTP {r.status_code}"
+def zai():
+    key = os.getenv("ZAI_API_KEY", "")
+    if not key:
+        return False, "ZAI_API_KEY is not set"
+    base = os.getenv("ZAI_BASE_URL", "https://open.bigmodel.cn/api/paas/v4").rstrip("/")
+    # A tiny deterministic completion verifies authentication and GLM-4.6
+    # availability instead of relying on an optional models endpoint.
+    r = httpx.post(
+        f"{base}/chat/completions",
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+        json={"model": os.getenv("HYBRIDMIND_QA_MODEL", "glm-4.6"), "messages": [{"role": "user", "content": "Reply OK."}], "max_tokens": 4, "temperature": 0},
+        timeout=45,
+    )
+    detail = ""
+    if r.status_code != 200:
+        detail = f": {r.text[:300]}"
+        try:
+            models = httpx.get(f"{base}/models", headers={"Authorization": f"Bearer {key}"}, timeout=20)
+            if models.status_code == 200:
+                ids = [str(item.get("id")) for item in models.json().get("data", [])[:20]]
+                detail += f"; available: {', '.join(ids)}"
+        except httpx.HTTPError:
+            pass
+    return r.status_code == 200, f"HTTP {r.status_code}{detail}"
 
 
 def runpod_llm():
@@ -48,9 +67,9 @@ def runpod_llm():
 
 def runpod_tei():
     base = os.getenv("RUNPOD_TEI_EMBEDDING_URL", "")
-    want = os.getenv("HYBRIDMIND_EMBEDDING_DIMENSION", "1024")
+    want = os.getenv("HYBRIDMIND_EMBEDDING_DIMENSION", "4096")
     if not base:
-        return True, f"Local/remote fallback active, dim={want}"
+        return False, f"RUNPOD_TEI_EMBEDDING_URL not set — no fallback, server will refuse to start with dim={want}"
     key = os.getenv("RUNPOD_API_KEY")
     # Serverless load-balancer endpoint: scales to zero, so the first call
     # after idle pays a cold-start tax (worker waking + 8B model load). That's
@@ -86,7 +105,7 @@ def runpod_tei():
 if __name__ == "__main__":
     print("=== HybridMind eval preflight ===")
     results = [
-        check("HackClub proxy (answering/judge)", hc),
+        check("Z.AI GLM-4.6 (answering/judge)", zai),
         check("RunPod LLM (decomposition)", runpod_llm),
         check("RunPod TEI embedding (retrieval)", runpod_tei),
     ]

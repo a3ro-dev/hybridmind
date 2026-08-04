@@ -87,7 +87,7 @@ class GNNReranker:
         device = self.device or "cpu"
         try:
             ckpt = torch.load(self.checkpoint_path, map_location=device)
-            in_dim = ckpt.get("in_dim", 1024)
+            in_dim = ckpt.get("in_dim", 4096)
             hidden_dim = ckpt.get("hidden_dim", self.hidden_dim)
             out_dim = ckpt.get("out_dim", hidden_dim)
             model = GraphSAGE(in_dim, hidden_dim, out_dim, self.num_layers).to(device)
@@ -154,7 +154,7 @@ class GNNReranker:
         # no stored embedding (e.g. pure-graph-expansion candidates) fall back to a
         # zero vector — the GraphSAGE aggregation still lets their neighbors' real
         # features propagate in via message passing.
-        feat_dim = len(query_embedding) if hasattr(query_embedding, "__len__") else 1024
+        feat_dim = len(query_embedding) if hasattr(query_embedding, "__len__") else 4096
         x = torch.zeros(len(node_ids), feat_dim, dtype=torch.float32)
         if sqlite_store is not None:
             for i, nid in enumerate(node_ids):

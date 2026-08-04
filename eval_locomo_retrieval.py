@@ -17,6 +17,7 @@ import argparse
 import hashlib
 import itertools
 import json
+import os
 import sys
 import time
 import re
@@ -28,7 +29,7 @@ import eval_common
 import eval_ledger
 from engine.query_router import route_query
 
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = os.getenv("HYBRIDMIND_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
 LOCOMO_PATH = Path("memorybench/data/benchmarks/locomo/locomo10.json")
 
 CATEGORY_MAP = {1: "single-hop", 2: "temporal", 3: "multi-hop", 4: "world-knowledge", 5: "adversarial"}
@@ -67,7 +68,7 @@ def load_questions(samples_per_category: int = 5, category_filter: str | None = 
             cat = CATEGORY_MAP.get(qa.get("category", 0), "unknown")
             if category_filter and cat != category_filter:
                 continue
-            if counts.get(cat, 0) >= samples_per_category:
+            if samples_per_category > 0 and counts.get(cat, 0) >= samples_per_category:
                 continue
             counts[cat] = counts.get(cat, 0) + 1
             ans = qa.get("answer") or qa.get("adversarial_answer", "")
@@ -143,8 +144,10 @@ def run_eval(
         category = q["category"]
 
         if verbose:
-            print(f"[{i+1}/{len(questions)}] [{category}] {question[:80]}...")
-            print(f"  Answer: {answer[:80]}...")
+            safe_q = question[:80].encode("ascii", "backslashreplace").decode("ascii")
+            safe_a = answer[:80].encode("ascii", "backslashreplace").decode("ascii")
+            print(f"[{i+1}/{len(questions)}] [{category}] {safe_q}...")
+            print(f"  Answer: {safe_a}...")
 
         qtype = route_query(question)["type"]
 

@@ -9,9 +9,9 @@ fixed there via a rephrase-and-extract retry.
 
 The eval_*.py scripts in this repo are retrieval-only (no answering LLM at
 all), so they were immune to that bug but also couldn't report answer
-accuracy. This module adds that capability directly, reusing the same
-HackClub-proxy + structured-JSON + retry pattern as engine/fact_extractor.py,
-with the same defensive rephrase-retry so the bug class can't recur here.
+accuracy. This module adds that capability directly, using Z.AI's
+OpenAI-compatible API with the same defensive rephrase-retry so the bug class
+can't recur here.
 """
 import json
 import logging
@@ -28,9 +28,9 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-_HC_API_KEY = os.getenv("HC_API_KEY", "")
-_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://ai.hackclub.com/proxy/v1").rstrip("/")
-DEFAULT_ANSWER_MODEL = os.getenv("HYBRIDMIND_QA_MODEL", "openai/gpt-4o")
+_ZAI_API_KEY = os.getenv("ZAI_API_KEY", "").strip()
+_ZAI_BASE_URL = os.getenv("ZAI_BASE_URL", "https://open.bigmodel.cn/api/paas/v4").rstrip("/")
+DEFAULT_ANSWER_MODEL = os.getenv("HYBRIDMIND_QA_MODEL", "glm-4.6")
 
 # Phase 6.1 (docs/PHASE_6_REALISTIC.md section 3): set to "true" to fall back to
 # the pre-6.1 single-shot answering prompt (no citation, no multi-hop
@@ -91,12 +91,36 @@ def is_abstention(text: str) -> bool:
 
 
 def _call(payload: dict) -> str | None:
-    """Try RunPod serverless LLM first (if configured); fall back to HC proxy."""
+    """Call Z.AI for evaluation QA; use RunPod only as an optional fallback."""
+    if _ZAI_API_KEY:
+        headers = {"Authorization": f"Bearer {_ZAI_API_KEY}", "Content-Type": "application/json"}
+        client = _get_client()
+        payload_zai = dict(payload)
+        # GLM-4.6 is the canonical LoCoMo answering and judging model. Z.AI may
+        # not support OpenAI's JSON schema extension, so use the prompt's JSON
+        # contract and retain the parser/retry below.
+        payload_zai["model"] = os.getenv("HYBRIDMIND_QA_MODEL", "glm-4.6")
+        payload_zai.pop("response_format", None)
+        for attempt in range(_MAX_ATTEMPTS):
+            try:
+                resp = client.post(f"{_ZAI_BASE_URL}/chat/completions", headers=headers, json=payload_zai)
+                if resp.status_code in (429, 500, 502, 503, 504):
+                    raise httpx.HTTPStatusError("retryable Z.AI response", request=resp.request, response=resp)
+                resp.raise_for_status()
+                return resp.json()["choices"][0]["message"]["content"]
+            except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.ConnectError, httpx.ReadError) as e:
+                if attempt < _MAX_ATTEMPTS - 1:
+                    _sleep_backoff(attempt, f"Z.AI {type(e).__name__}")
+                    continue
+                logger.error("eval_common: Z.AI failed after %s attempts: %s", _MAX_ATTEMPTS, e)
+
+    # RunPod remains useful for self-hosted deployments, but it is not the
+    # benchmark judge and never masks a missing Z.AI configuration.
     from engine.runpod_llm import chat_completion as rp_chat, is_configured as rp_configured
     if rp_configured():
         logger.info("eval_common: using RunPod serverless LLM")
         req_model = payload.get("model")
-        if req_model == "openai/gpt-4o":
+        if req_model == "glm-4.6":
             req_model = None
         res = rp_chat(
             messages=payload.get("messages", []),
@@ -108,43 +132,6 @@ def _call(payload: dict) -> str | None:
         if res is not None:
             return res
 
-    if _HC_API_KEY:
-        headers = {"Authorization": f"Bearer {_HC_API_KEY}", "Content-Type": "application/json"}
-        client = _get_client()
-        for attempt in range(_MAX_ATTEMPTS):
-            try:
-                resp = client.post(f"{_BASE_URL}/chat/completions", headers=headers, json=payload)
-                if resp.status_code in (429, 500, 502, 503, 504):
-                    raise httpx.HTTPStatusError(
-                        f"retryable {resp.status_code}", request=resp.request, response=resp
-                    )
-                resp.raise_for_status()
-                return resp.json()["choices"][0]["message"]["content"]
-            except httpx.HTTPStatusError as e:
-                status = e.response.status_code if e.response is not None else None
-                if status == 400 and "response_format" in payload:
-                    logger.warning("eval_common: HTTP 400 with response_format, retrying without schema")
-                    payload_no_fmt = dict(payload)
-                    payload_no_fmt.pop("response_format", None)
-                    return _call(payload_no_fmt)
-                if status in (429, 500, 502, 503, 504) and attempt < _MAX_ATTEMPTS - 1:
-                    _sleep_backoff(attempt, f"HTTP {status}")
-                    continue
-                logger.error(f"eval_common HTTP error: {status}")
-                break
-            except (
-                httpx.ConnectError, httpx.TimeoutException, httpx.RemoteProtocolError,
-                httpx.ReadError, httpx.WriteError, httpx.PoolTimeout,
-            ) as e:
-                if attempt < _MAX_ATTEMPTS - 1:
-                    _sleep_backoff(attempt, f"{type(e).__name__}")
-                    continue
-                logger.error(f"eval_common transient error after {_MAX_ATTEMPTS} attempts: {e}")
-                break
-            except Exception as e:
-                logger.error(f"eval_common unexpected error: {e}")
-                break
-
     return None
 
 def llm_answer(question: str, snippets: list[str], question_date: str = "", model: str | None = None) -> str:
@@ -154,10 +141,10 @@ def llm_answer(question: str, snippets: list[str], question_date: str = "", mode
     constraint) if the first pass abstains — this is the fix for the
     "Answer: None despite correct context" failure mode.
 
-    Returns "" if no answer could be produced (including when HC_API_KEY unset).
+    Returns "" if no answer could be produced (including when ZAI_API_KEY is unset).
     """
     model = model or DEFAULT_ANSWER_MODEL
-    if not snippets or not _HC_API_KEY:
+    if not snippets or (not _ZAI_API_KEY and not __import__("engine.runpod_llm", fromlist=["is_configured"]).is_configured()):
         return ""
     context = "\n".join(f"[{i + 1}] {s}" for i, s in enumerate(snippets[:10]))
     date_line = f"Question date: {question_date}\n" if question_date else ""
@@ -234,7 +221,7 @@ def llm_answer_citation(question: str, snippets: list[str], question_date: str =
     answers invented without grounding in the provided context.
     """
     model = model or DEFAULT_ANSWER_MODEL
-    if not snippets or not _HC_API_KEY:
+    if not snippets or not _ZAI_API_KEY:
         return ""
     context = "\n".join(f"[{i + 1}] {s}" for i, s in enumerate(snippets[:10]))
     date_line = f"Question date: {question_date}\n" if question_date else ""
@@ -297,7 +284,7 @@ def llm_answer_multihop(question: str, snippets: list[str], question_date: str =
     answer directly from a flat snippet list.
     """
     model = model or DEFAULT_ANSWER_MODEL
-    if not snippets or not _HC_API_KEY:
+    if not snippets or not _ZAI_API_KEY:
         return ""
     context = "\n".join(f"[{i + 1}] {s}" for i, s in enumerate(snippets[:10]))
     date_line = f"Question date: {question_date}\n" if question_date else ""

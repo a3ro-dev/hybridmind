@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/bulk", tags=["Bulk Operations"])
 
 # Default API key for OSM API
-DEFAULT_OSM_API_KEY = "osm_dkrYgl3rXWDEbmVbDmdn6jKenn8m0KXm5XiMHHBk"
+DEFAULT_OSM_API_KEY = os.getenv("OSM_API_KEY", "")
 
 
 # ==================== Request/Response Models ====================

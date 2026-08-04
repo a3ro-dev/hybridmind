@@ -5,7 +5,7 @@ Version: 2.0 (Phase 6 Complete)
 Date: July 2026  
 Project: HybridMind  
 Team: Solo / Core Engineering  
-Stack: Python / FastAPI / FAISS / NetworkX / SQLite / bm25s / TEI / vLLM  
+Stack: Python / FastAPI / FAISS / NetworkX / SQLite / bm25s / RunPod TEI / Z.AI GLM-4.6  
 
 ---
 
@@ -34,6 +34,8 @@ When working within this repository, all AI agents and developers must strictly 
 2. **Single Source of Truth**:
    - `config.py` (`HYBRIDMIND_*` environment variables) is the authoritative source for configuration.
    - Cross-encoder reranker model is strictly loaded via `settings.reranker_model` (`mixedbread-ai/mxbai-rerank-large-v2`).
+   - Z.AI is the only hosted LLM provider: `ZAI_API_KEY`, `ZAI_BASE_URL`, and `HYBRIDMIND_QA_MODEL=glm-4.6`. Do not add or restore HackClub proxy settings.
+   - RunPod TEI and vLLM must be warmed and verified with `python scripts/preflight.py` before an evaluation; never silently fall back from a 4096-dim index.
 3. **Performance & Security**:
    - Code must prioritize low latency and thread-safety.
    - Input paths and endpoints must enforce validation and checksum verification.
@@ -54,6 +56,7 @@ HybridMind is a local-native hybrid database combining vector embeddings, graph-
 - **RRF Fusion**: Reciprocal Rank Fusion ($k=60$) combining vector, graph, and sparse signals without per-corpus tuning.
 - **Cross-Encoder Reranking**: `mixedbread-ai/mxbai-rerank-large-v2` re-ranks top fusion candidates with normalized score blending.
 - **Query Decomposition**: Multi-hop question decomposition via RunPod vLLM (`engine/query_decomposition.py`).
+- **Evaluation QA/Judge**: Z.AI OpenAI-compatible API using `glm-4.6`; it is the canonical LoCoMo answer/judge provider.
 - **Resilient Serverless Architecture**: TEI embedding integration with no local fallback when dimension is set to 4096, 300s timeout, and exponential backoff retry.
 - **Measurement Ledger & Stats**: Bit-identical determinism logging (`eval_ledger.py`) and bootstrap 95% CI / paired permutation tests (`eval_stats.py`).
 - **Atomic Persistence**: `.mind` directory package containing SQLite database (WAL mode), FAISS vector index, NetworkX graph pickle, BM25 index, and SHA-256 verified manifests with 3-backup rotation.
@@ -68,6 +71,7 @@ HybridMind is a local-native hybrid database combining vector embeddings, graph-
 | Lexical Engine | bm25s (PyStemmer) | 0.2.0+ |
 | Default Local Embedding | BAAI/bge-m3 | 1024-dim |
 | Remote Serverless Embedding | TEI (Qwen3-Embedding-8B) | 4096-dim |
+| Evaluation LLM / Judge | Z.AI | glm-4.6 |
 | Cross-Encoder Reranker | mixedbread-ai/mxbai-rerank-large-v2 | Top-25 RRF pool |
 | Storage | SQLite (WAL mode) | 3.x |
 | CLI | Typer + Rich | `cli/main.py` & `cli/agent.py` |
@@ -149,9 +153,10 @@ Atomic snapshots create timestamped bundles with 3-backup automatic rotation.
 
 ## 6. ENGINE LAYER & SERVERLESS HANDLING
 
-- **TEI Integration**: Self-hosted HuggingFace TEI endpoint via `RUNPOD_TEI_EMBEDDING_URL`. Configured with a 300-second read timeout to handle cold starts cleanly.
+- **TEI Integration**: Self-hosted HuggingFace TEI endpoint via `RUNPOD_TEI_EMBEDDING_URL`. Configured with a 300-second read timeout to handle cold starts cleanly; preflight actively warms it and validates the 4096-vector response.
 - **Serverless Retry**: `engine/serverless_util.py` provides `retry_transient()` executing 6 attempts with exponential backoff up to 120 seconds.
 - **Query Decomposition**: `engine/query_decomposition.py` decomposes multi-hop queries into sub-questions via LLM with single-sub-question and novel-entity guards.
+- **LoCoMo run order**: run `scripts/preflight.py`, start the API, ingest the sessions, run a small `--n 1 --with-answers` sanity check, then run `--n 0 --with-answers --decompose-multihop`. Preserve the generated ledger.
 
 ---
 

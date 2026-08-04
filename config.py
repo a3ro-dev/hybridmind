@@ -40,13 +40,11 @@ class Settings(BaseSettings):
     use_faiss_gpu: bool = False  # opt-in; Linux/Docker only (no Windows wheel)
 
     # Embedding: self-hosted RunPod TEI (Qwen3-Embedding-8B, native 4096-dim)
-    # is now the primary backend when RUNPOD_TEI_EMBEDDING_URL is set (see
-    # engine/embedding.py). embedding_model/embedding_dimension below are the
-    # *local fallback* config — bge-m3 is always 1024-dim regardless of this
-    # setting, so if the TEI endpoint is down and local fallback kicks in,
-    # vectors will mismatch a 4096-dim FAISS index. Re-run
-    # scripts/reindex_embeddings.py after changing either backend's dimension.
-    embedding_model: str = "BAAI/bge-m3"
+    # is the primary and ONLY backend when HYBRIDMIND_EMBEDDING_DIMENSION=4096.
+    # There is NO local fallback — if neither RUNPOD_TEI_EMBEDDING_URL nor
+    # HC_EMBEDDING_URL is set and dimension=4096, the server will refuse to start
+    # rather than silently emit 1024-dim vectors that corrupt the FAISS index.
+    embedding_model: str = "BAAI/bge-m3"  # used ONLY if embedding_dimension != 4096
     embedding_dimension: int = 4096
     use_graph_conditioned_embeddings: bool = True
     embedding_timeout_seconds: int = 30

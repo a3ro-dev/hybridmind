@@ -107,7 +107,10 @@ Answer:`
 
   async initialize(config: ProviderConfig): Promise<void> {
     if (config.baseUrl) this.baseUrl = config.baseUrl as string
-    const res = await fetch(`${this.baseUrl}/health`)
+    // The detailed health endpoint performs a real remote embedding and can
+    // stall during a serverless cold start. Readiness verifies the live API
+    // without turning provider initialization into an embedding request.
+    const res = await fetch(`${this.baseUrl}/ready`)
     if (!res.ok) throw new Error(`HybridMind not healthy at ${this.baseUrl}: ${res.status}`)
     logger.info(`Initialized HybridMind provider at ${this.baseUrl}`)
   }
