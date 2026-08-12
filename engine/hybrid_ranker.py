@@ -15,18 +15,24 @@ from engine.vector_search import VectorSearchEngine
 from engine.graph_search import GraphSearchEngine
 from engine.fusion import rrf_fuse, get_fusion_mode, get_rrf_k
 from engine.query_router import route_query
+from engine.salience import compute_salience
+from engine.temporal import extract_time_range, temporal_relevance, validity_relevance
+from models.edge import EDGE_TYPE_WALK_WEIGHTS
 
 logger = logging.getLogger(__name__)
 
-# Per-query-type weight maps. Overrides caller-supplied defaults when routing is active.
-# Tuned for LoCoMo benchmark question types.
-_QUERY_TYPE_WEIGHTS: Dict[str, Dict[str, float]] = {
-    #              vector   graph   bm25
-    "temporal":  {"vector_weight": 0.30, "graph_weight": 0.50, "bm25_boost_weight": 0.20},
-    "multihop":  {"vector_weight": 0.20, "graph_weight": 0.70, "bm25_boost_weight": 0.10},
-    "entity":    {"vector_weight": 0.35, "graph_weight": 0.25, "bm25_boost_weight": 0.40},
-    "default":   {"vector_weight": 0.50, "graph_weight": 0.15, "bm25_boost_weight": 0.35},
-}
+_SEARCH_MODES = {"hybrid", "vector_only", "sparse_only", "vector_sparse", "graph_only"}
+
+
+def _query_type_weights(query_type: str) -> Dict[str, float]:
+    from config import settings
+    prefix = query_type if query_type in {"temporal", "multihop", "entity"} else "default"
+    return {
+        "vector_weight": getattr(settings, f"route_{prefix}_vector_weight"),
+        "graph_weight": getattr(settings, f"route_{prefix}_graph_weight"),
+        "bm25_boost_weight": getattr(settings, f"route_{prefix}_sparse_weight"),
+        "time_weight": getattr(settings, "route_temporal_time_weight", 0.0) if prefix == "temporal" else 0.0,
+    }
 
 
 class HybridRanker:
@@ -108,8 +114,18 @@ class HybridRanker:
         overlap_threshold: float = 0.15,
         fusion_mode: Optional[str] = None,
         include_images: bool = False,
+        route_weights: bool = True,
+        track_access: Optional[bool] = None,
     ) -> Tuple[List[Dict[str, Any]], float, int]:
         start_time = time.perf_counter()
+        if search_mode not in _SEARCH_MODES:
+            raise ValueError(f"Unsupported search_mode {search_mode!r}; expected one of {sorted(_SEARCH_MODES)}")
+        if search_mode == "graph_only" and not anchor_nodes:
+            raise ValueError("graph_only search requires at least one anchor node")
+
+        use_dense = search_mode in {"hybrid", "vector_only", "vector_sparse"}
+        use_sparse = search_mode in {"hybrid", "sparse_only", "vector_sparse"}
+        use_graph = search_mode in {"hybrid", "graph_only"}
 
         # ── Query-type-aware weight routing ────────────────────────────────
         # Classify the query and apply per-type weights (overrides defaults).
@@ -117,16 +133,28 @@ class HybridRanker:
         # but in practice the API uses defaults, so routing fires for all
         # standard /search/hybrid calls.
         query_type = "default"
+        time_weight = 0.0
+        route = {"type": "default", "metadata_filter": None}
         if self.query_routing_enabled:
             try:
                 route = route_query(query_text)
                 query_type = route.get("type", "default")
-                overrides = _QUERY_TYPE_WEIGHTS.get(query_type, _QUERY_TYPE_WEIGHTS["default"])
-                vector_weight = overrides["vector_weight"]
-                graph_weight = overrides["graph_weight"]
-                bm25_boost_weight = overrides["bm25_boost_weight"]
+                overrides = _query_type_weights(query_type)
+                if route_weights:
+                    vector_weight = overrides["vector_weight"]
+                    graph_weight = overrides["graph_weight"]
+                    bm25_boost_weight = overrides["bm25_boost_weight"]
+                    time_weight = overrides["time_weight"]
             except Exception as _e:
                 logger.debug(f"Query routing failed (using defaults): {_e}")
+        if not use_dense:
+            vector_weight = 0.0
+        if not use_sparse:
+            bm25_boost_weight = 0.0
+        if not use_graph:
+            graph_weight = 0.0
+        if query_type != "temporal":
+            time_weight = 0.0
 
         # We need candidate generation. We will pull top_k * 5 vector results and bm25 results.
         vector_k = top_k * 5 if deduplicate else top_k * 3
@@ -138,34 +166,43 @@ class HybridRanker:
 
         # Step 1: Run Vector and BM25 search (with sub-query decomposition for multi-hop queries)
         sub_questions = []
-        try:
-            from engine.query_decomposition import decompose_query
-            sub_questions = decompose_query(query_text)
-        except Exception:
-            pass
+        if query_type == "multihop":
+            try:
+                from config import settings as _cfg
+                from engine.query_decomposition import decompose_query
+                sub_questions = decompose_query(
+                    query_text,
+                    model=_cfg.query_decomposition_model,
+                    enabled=_cfg.query_decomposition_enabled,
+                )
+            except Exception as exc:
+                logger.debug(f"Query decomposition skipped ({exc})")
 
         queries_to_search = [query_text] + sub_questions
         vector_results = []
         seen_vec_ids = set()
 
-        for q in queries_to_search:
-            v_res, _, _ = self.vector_engine.search(
-                query_text=q,
-                top_k=candidate_k,
-                min_score=0.0,
-                filter_metadata=filter_metadata
-            )
-            for r in v_res:
-                if r["node_id"] not in seen_vec_ids:
-                    seen_vec_ids.add(r["node_id"])
-                    vector_results.append(r)
+        if use_dense:
+            for q in queries_to_search:
+                v_res, _, _ = self.vector_engine.search(
+                    query_text=q,
+                    top_k=candidate_k,
+                    min_score=0.0,
+                    filter_metadata=filter_metadata
+                )
+                for r in v_res:
+                    if r["node_id"] not in seen_vec_ids:
+                        seen_vec_ids.add(r["node_id"])
+                        vector_results.append(r)
 
         bm25_results = []
         bm25_score_by_node: Dict[str, float] = {}
-        if self.bm25_index:
+        if self.bm25_index and use_sparse:
             for q in queries_to_search:
                 bm25_hits = self.bm25_index.search(q, top_k=5000)
                 for n_id, score in bm25_hits:
+                    if not self.vector_engine.sqlite_store.is_node_retrievable(n_id):
+                        continue
                     if n_id not in bm25_score_by_node or score > bm25_score_by_node[n_id]:
                         bm25_score_by_node[n_id] = score
                     node = self.vector_engine.sqlite_store.get_node(n_id)
@@ -185,7 +222,7 @@ class HybridRanker:
         # Step 2: Combine vector and BM25 into a baseline V score.
         # Vector score is cosine similarity (0 to 1). We should boost it if BM25 matches.
         def bm25_overlap(query: str, text: str) -> float:
-            if not self.bm25_index:
+            if not self.bm25_index or not use_sparse:
                 return 0.0
             q_terms = set(self.bm25_index.tokenize(query))
             t_terms = set(self.bm25_index.tokenize(text))
@@ -231,6 +268,34 @@ class HybridRanker:
                 raw_vector_scores[nid] = 0.0  # no real vector/cosine score for BM25-only hits
                 raw_bm25_scores[nid] = res.get("bm25_score", bm25_score_by_node.get(nid, 0.0))
                 scores[nid] = synthetic_base + boost
+
+        # Graph-only candidates are generated strictly from explicit anchors;
+        # no hidden dense seed is introduced into this ablation condition.
+        if search_mode == "graph_only":
+            for anchor in anchor_nodes or []:
+                anchor_node = self.vector_engine.sqlite_store.get_node(anchor)
+                if anchor_node:
+                    node_data[anchor] = {
+                        "node_id": anchor,
+                        "text": anchor_node["text"],
+                        "metadata": anchor_node["metadata"],
+                        "vector_score": 0.0,
+                    }
+                    scores[anchor] = 0.0
+                    raw_vector_scores[anchor] = 0.0
+                    raw_bm25_scores[anchor] = 0.0
+                traversed, _, _ = self.graph_engine.traverse(anchor, depth=max_depth)
+                for item in traversed:
+                    nid = item["node_id"]
+                    node_data[nid] = {
+                        "node_id": nid,
+                        "text": item["text"],
+                        "metadata": item["metadata"],
+                        "vector_score": 0.0,
+                    }
+                    scores[nid] = 0.0
+                    raw_vector_scores[nid] = 0.0
+                    raw_bm25_scores[nid] = 0.0
 
         # Step 3: SGMem Chunk Rollup to Parent
         rolled_up_scores = {}
@@ -292,7 +357,7 @@ class HybridRanker:
         # Optional graph-aware candidate expansion path:
         # Before we compute graph scores, add graph neighbors of anchor nodes to candidate pool
         # This allows graph structure to affect recall
-        if anchor_nodes and not self.disable_graph_expansion:
+        if anchor_nodes and use_graph and not self.disable_graph_expansion:
             reference_nodes = anchor_nodes
         else:
             reference_nodes = candidate_ids[:3]
@@ -301,7 +366,7 @@ class HybridRanker:
         # zero-score candidates depend on Python hash iteration order.
         expanded_candidates = list(candidate_ids)
         expanded_candidate_ids = set(candidate_ids)
-        if not self.disable_graph_expansion:
+        if use_graph and not self.disable_graph_expansion:
             for ref in reference_nodes:
                 # Traversal
                 try:
@@ -309,6 +374,8 @@ class HybridRanker:
                     neighbors, _, _ = self.graph_engine.traverse(start_id=ref, depth=max_depth)
                     for n in neighbors:
                         neighbor_id = n["node_id"]
+                        if not self.vector_engine.sqlite_store.is_node_retrievable(neighbor_id):
+                            continue
                         if neighbor_id not in expanded_candidate_ids:
                             expanded_candidate_ids.add(neighbor_id)
                             expanded_candidates.append(neighbor_id)
@@ -338,13 +405,37 @@ class HybridRanker:
         candidate_ids = [nid for nid in expanded_candidates if nid in rolled_up_nodes]
 
         # Step 4: Compute Graph Scores (with optional temporal decay)
-        graph_scores = self.graph_engine.compute_proximity_scores(
-            node_ids=candidate_ids,
-            reference_nodes=reference_nodes,
-            max_depth=max_depth,
-            temporal_decay=self.temporal_decay_enabled,
-            half_life_days=self.temporal_decay_half_life_days,
+        graph_scores = (
+            self.graph_engine.compute_proximity_scores(
+                node_ids=candidate_ids,
+                reference_nodes=reference_nodes,
+                max_depth=max_depth,
+                edge_type_weights=EDGE_TYPE_WALK_WEIGHTS,
+                temporal_decay=self.temporal_decay_enabled,
+                half_life_days=self.temporal_decay_half_life_days,
+            )
+            if use_graph
+            else {nid: 0.0 for nid in candidate_ids}
         )
+
+        from config import settings as _cfg
+        target_time = extract_time_range(query_text) if _cfg.query_time_expansion_enabled else None
+        time_scores: Dict[str, float] = {}
+        salience_scores: Dict[str, float] = {}
+        validity_scores: Dict[str, float] = {}
+        for nid in candidate_ids:
+            node = self.vector_engine.sqlite_store.get_node(nid)
+            time_scores[nid] = temporal_relevance(
+                (node or {}).get("event_time") or rolled_up_nodes[nid]["metadata"].get("date"),
+                target_time,
+                half_life_days=self.temporal_decay_half_life_days,
+            )
+            salience_scores[nid] = (
+                compute_salience(node, self.graph_engine.graph_index, _cfg)
+                if _cfg.salience_enabled and node is not None
+                else 0.0
+            )
+            validity_scores[nid] = validity_relevance(node or {}, target_time)
 
         # Step 5: Late Fusion Scoring
         fusion_mode = fusion_mode or get_fusion_mode()
@@ -379,17 +470,29 @@ class HybridRanker:
                 ],
                 key=lambda x: -x[1],
             )
+            time_list = sorted(
+                [(nid, time_scores[nid]) for nid in candidate_ids if time_scores[nid] > 0.0],
+                key=lambda x: -x[1],
+            )
             rrf_scores = rrf_fuse(
-                {"dense": dense_list, "graph": graph_list, "sparse": sparse_list},
+                {"dense": dense_list, "graph": graph_list, "sparse": sparse_list, "time": time_list},
                 k=get_rrf_k(),
-                signal_weights={"dense": vector_weight, "graph": graph_weight, "sparse": bm25_boost_weight},
+                signal_weights={
+                    "dense": vector_weight,
+                    "graph": graph_weight,
+                    "sparse": bm25_boost_weight,
+                    "time": time_weight,
+                },
             )
             hybrid_results = []
             for nid in candidate_ids:
                 v_score = rolled_up_raw_scores.get(nid, 0.0)
                 g_score = graph_scores.get(nid, 0.0)
                 b_score = rolled_up_raw_bm25_scores.get(nid, 0.0)
-                combined_score = rrf_scores.get(nid, 0.0)
+                salience = salience_scores.get(nid, 0.0)
+                combined_score = rrf_scores.get(nid, 0.0) * validity_scores[nid] * (
+                    1.0 + (_cfg.salience_weight * salience if _cfg.salience_enabled else 0.0)
+                )
                 hybrid_results.append({
                     "node_id": nid,
                     "text": rolled_up_nodes[nid]["text"],
@@ -399,17 +502,23 @@ class HybridRanker:
                     "vector_score": rolled_up_scores.get(nid, v_score),
                     "raw_vector_score": v_score,
                     "bm25_score": b_score,
+                    "time_score": time_scores.get(nid, 0.0),
+                    "salience_score": salience,
                     "graph_score": g_score,
                     "graph_gate": 1.0,
                     "effective_graph_score": round(g_score, 4),
                     "combined_score": combined_score,
-                    "reasoning": f"RRF(dense={v_score:.4f}, sparse={b_score:.4f}, graph={g_score:.4f}, qtype={query_type})",
+                    "reasoning": f"RRF(dense={v_score:.4f}, sparse={b_score:.4f}, graph={g_score:.4f}, time={time_scores.get(nid, 0.0):.4f}, salience={salience:.4f}, qtype={query_type})",
                     "fusion_mode": "rrf",
                     "query_type": query_type,
                 })
-        else:
+        elif fusion_mode == "linear":
             # Linear fusion (original CRS algorithm) with relevance gate — kept for back-compat
             hybrid_results = []
+            max_bm25 = max(
+                (rolled_up_raw_bm25_scores.get(nid, 0.0) for nid in candidate_ids),
+                default=0.0,
+            )
             for nid in candidate_ids:
                 v_score = rolled_up_scores[nid]
                 g_score = graph_scores.get(nid, 0.0)
@@ -422,19 +531,77 @@ class HybridRanker:
                     gate = min(1.0, overlap / overlap_threshold) if overlap_threshold > 0.0 else 1.0
                 effective_g_score = g_score * gate
 
-                combined_score = (vector_weight * v_score) + (graph_weight * effective_g_score)
+                combined_score = (
+                    (vector_weight * v_score)
+                    + (
+                        bm25_boost_weight
+                        * (
+                            rolled_up_raw_bm25_scores.get(nid, 0.0) / max_bm25
+                            if max_bm25 > 0.0
+                            else 0.0
+                        )
+                    )
+                    + (graph_weight * effective_g_score)
+                    + (time_weight * time_scores.get(nid, 0.0))
+                ) * validity_scores[nid]
                 hybrid_results.append({
                     "node_id": nid,
                     "text": rolled_up_nodes[nid]["text"],
                     "metadata": rolled_up_nodes[nid]["metadata"],
                     "vector_score": v_score,
                     "graph_score": g_score,
+                    "bm25_score": rolled_up_raw_bm25_scores.get(nid, 0.0),
+                    "time_score": time_scores.get(nid, 0.0),
+                    "salience_score": salience_scores.get(nid, 0.0),
                     "graph_gate": round(gate, 4),
                     "effective_graph_score": round(effective_g_score, 4),
                     "combined_score": combined_score,
                     "reasoning": f"Score = {vector_weight}*{v_score:.4f} + {graph_weight}*{effective_g_score:.4f} (gate={gate:.2f})",
                     "fusion_mode": "linear",
                 })
+        elif fusion_mode == "mlp":
+            from engine.fusion import _build_feature_vector, get_fusion_scorer
+
+            dense_rank = {nid: rank for rank, (nid, _) in enumerate(sorted(
+                ((nid, rolled_up_raw_scores.get(nid, 0.0)) for nid in candidate_ids),
+                key=lambda item: -item[1],
+            ), 1)}
+            sparse_rank = {nid: rank for rank, (nid, _) in enumerate(sorted(
+                ((nid, rolled_up_raw_bm25_scores.get(nid, 0.0)) for nid in candidate_ids),
+                key=lambda item: -item[1],
+            ), 1)}
+            graph_rank = {nid: rank for rank, (nid, _) in enumerate(sorted(
+                graph_scores.items(), key=lambda item: -item[1]
+            ), 1)}
+            scorer = get_fusion_scorer()
+            hybrid_results = []
+            for nid in candidate_ids:
+                features = _build_feature_vector(
+                    rolled_up_raw_scores.get(nid, 0.0),
+                    rolled_up_raw_bm25_scores.get(nid, 0.0),
+                    graph_scores.get(nid, 0.0),
+                    dense_rank[nid], sparse_rank[nid], graph_rank[nid],
+                    len(candidate_ids), query_type=query_type,
+                )
+                score = scorer.score(features) * validity_scores[nid]
+                hybrid_results.append({
+                    "node_id": nid,
+                    "text": rolled_up_nodes[nid]["text"],
+                    "metadata": rolled_up_nodes[nid]["metadata"],
+                    "vector_score": rolled_up_scores.get(nid, 0.0),
+                    "bm25_score": rolled_up_raw_bm25_scores.get(nid, 0.0),
+                    "graph_score": graph_scores.get(nid, 0.0),
+                    "time_score": time_scores.get(nid, 0.0),
+                    "salience_score": salience_scores.get(nid, 0.0),
+                    "graph_gate": 1.0,
+                    "effective_graph_score": graph_scores.get(nid, 0.0),
+                    "combined_score": score,
+                    "reasoning": f"MLP fusion(qtype={query_type})",
+                    "fusion_mode": "mlp",
+                    "query_type": query_type,
+                })
+        else:
+            raise ValueError("fusion_mode must be one of: rrf, linear, mlp")
 
         if deduplicate:
             seen_texts: Set[str] = set()
@@ -517,6 +684,12 @@ class HybridRanker:
                 top_k=None,
             )
         hybrid_results = rerank_candidates[:top_k]
+
+        should_track_access = _cfg.access_tracking_enabled if track_access is None else track_access
+        if should_track_access and hybrid_results:
+            self.vector_engine.sqlite_store.record_access(
+                [result["node_id"] for result in hybrid_results]
+            )
 
         # Visual search candidates merge (Phase 7)
         if include_images:

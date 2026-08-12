@@ -7,9 +7,8 @@ mean-pooled query embeddings, not a tuning problem. Decomposing a
 multihop-routed query into sub-questions via the RunPod LLM and retrieving
 per sub-question lets each hop's retrieval anchor on its own cluster.
 
-Off by default (see `enabled` param / settings.query_decomposition_enabled);
-callers (currently only the eval_*.py retrieval path — this is NOT wired into
-the live hybrid_ranker.search()) opt in explicitly.
+Off by default (see `enabled` param / settings.query_decomposition_enabled).
+Both the live hybrid ranker and evaluation retrieval path opt in explicitly.
 """
 from __future__ import annotations
 

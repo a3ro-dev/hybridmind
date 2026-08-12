@@ -157,6 +157,8 @@ def _build_feature_vector(
     total_candidates: int,
     query_type: str = "factoid",
 ) -> np.ndarray:
+    if query_type == "default":
+        query_type = "factoid"
     qt_vec = np.zeros(len(_QUERY_TYPES), dtype=np.float32)
     if query_type in _QUERY_TYPES:
         qt_vec[_QUERY_TYPES.index(query_type)] = 1.0

@@ -177,6 +177,11 @@ async def hybrid_search(
         "rerank_pool": request.rerank_pool,
         "bm25_boost_weight": request.bm25_boost_weight,
         "overlap_threshold": request.overlap_threshold,
+        "fusion_mode": request.fusion_mode,
+        "include_images": request.include_images,
+        "search_mode": request.search_mode,
+        "route_weights": request.route_weights,
+        "track_access": request.track_access,
     }
 
     cached = cache.get("hybrid", cache_params)
@@ -200,6 +205,9 @@ async def hybrid_search(
         overlap_threshold=request.overlap_threshold,
         fusion_mode=request.fusion_mode,
         include_images=request.include_images,
+        search_mode=request.search_mode,
+        route_weights=request.route_weights,
+        track_access=request.track_access,
     )
 
     search_results = [
@@ -213,6 +221,9 @@ async def hybrid_search(
             effective_graph_score=r.get("effective_graph_score"),
             combined_score=r["combined_score"],
             rerank_score=r.get("rerank_score"),
+            bm25_score=r.get("bm25_score"),
+            time_score=r.get("time_score"),
+            salience_score=r.get("salience_score"),
             reasoning=r["reasoning"]
         )
         for r in results

@@ -72,6 +72,8 @@ class VectorSearchEngine:
         results = []
         seen_texts: set = set()
         for node_id, score in candidates:
+            if not self.sqlite_store.is_node_retrievable(node_id):
+                continue
             node = self.sqlite_store.get_node(node_id)
             if node is None:
                 continue

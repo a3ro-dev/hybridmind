@@ -1,7 +1,7 @@
 """Search-related Pydantic models."""
 
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from config import settings
 
@@ -35,6 +35,19 @@ class HybridSearchRequest(BaseModel):
     overlap_threshold: float = Field(default=0.15, ge=0.0, le=1.0, description="BM25 overlap fraction below which graph score is ramped down")
     fusion_mode: Optional[str] = Field(default=None, description="Override config fusion_mode: 'rrf' or 'linear'")
     include_images: bool = Field(default=False, description="Include relevant visual memory images ranked by ColQwen2.5 MaxSim")
+    search_mode: str = Field(
+        default="hybrid",
+        pattern="^(hybrid|vector_only|sparse_only|vector_sparse|graph_only)$",
+        description="Controlled retrieval mode for production queries and ablations",
+    )
+    route_weights: bool = Field(default=True, description="Apply query-type routing weights")
+    track_access: Optional[bool] = Field(default=None, description="Override config access tracking for this request")
+
+    @model_validator(mode="after")
+    def graph_only_requires_anchor(self):
+        if self.search_mode == "graph_only" and not self.anchor_nodes:
+            raise ValueError("graph_only search requires at least one anchor node")
+        return self
 
 
 class SearchResult(BaseModel):
@@ -47,6 +60,9 @@ class SearchResult(BaseModel):
     effective_graph_score: Optional[float] = None
     combined_score: Optional[float] = None
     rerank_score: Optional[float] = None
+    bm25_score: Optional[float] = None
+    time_score: Optional[float] = None
+    salience_score: Optional[float] = None
     depth: Optional[int] = None
     path: Optional[List[str]] = None
     reasoning: Optional[str] = None

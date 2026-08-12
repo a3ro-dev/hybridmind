@@ -69,6 +69,8 @@ class GraphSearchEngine:
         # Fetch node details and build results
         results = []
         for node_id, dist, path in traversal_results:
+            if not self.sqlite_store.is_node_retrievable(node_id):
+                continue
             node = self.sqlite_store.get_node(node_id)
             if node is None:
                 continue
@@ -132,7 +134,7 @@ class GraphSearchEngine:
             
             # Fetch neighbor details
             neighbor_node = self.sqlite_store.get_node(neighbor_id)
-            if neighbor_node:
+            if neighbor_node and self.sqlite_store.is_node_retrievable(neighbor_id):
                 neighbors.append({
                     "node_id": neighbor_id,
                     "text": neighbor_node["text"],
@@ -176,6 +178,7 @@ class GraphSearchEngine:
                     reference_nodes,
                     max_depth,
                     half_life_days=half_life_days,
+                    edge_type_weights=edge_type_weights,
                 )
             elif edge_type_weights:
                 score = self.graph_index.compute_weighted_proximity_score(
@@ -307,4 +310,3 @@ class GraphSearchEngine:
         for node in nodes:
             if not self.graph_index.has_node(node["id"]):
                 self.graph_index.add_node(node["id"])
-
