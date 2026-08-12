@@ -43,6 +43,31 @@ def parse_args():
     p.add_argument("--overlap-threshold",type=float, default=0.15)
     p.add_argument("--rerank-pool",      type=int,   default=25)
     p.add_argument("--top-k",            type=int,   default=15)
+    p.add_argument(
+        "--search-mode",
+        choices=["hybrid", "vector_only", "sparse_only", "vector_sparse", "graph_only"],
+        default="hybrid",
+        help="Controlled retrieval mode used by scripts/ablation_matrix.py",
+    )
+    p.add_argument(
+        "--route-weights",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Allow query routing to override explicit weights (disable for ablations)",
+    )
+    p.add_argument(
+        "--track-access",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Mutate access-frequency state during retrieval (off for deterministic runs)",
+    )
+    p.add_argument(
+        "--graph-anchor-strategy",
+        choices=["explicit", "vector_top1"],
+        default="explicit",
+        help="For graph_only, use --anchor-node-id or a separately recorded vector top-1 seed",
+    )
+    p.add_argument("--anchor-node-id", action="append", default=[])
     p.add_argument("--category",         type=str,   default=None,
                    help="Filter to one category: single-hop, multi-hop, temporal, world-knowledge, adversarial")
     p.add_argument("--n",                type=int,   default=5,
@@ -52,7 +77,7 @@ def parse_args():
     p.add_argument("--with-answers",     action="store_true",
                    help="Also run LLM QA-answering + accuracy scoring on top of retrieval")
     p.add_argument("--answer-model",     type=str,   default=None,
-                   help="Override the answering model (default: HYBRIDMIND_QA_MODEL env or openai/gpt-5)")
+                   help="Override the Z.AI answering model (default: HYBRIDMIND_QA_MODEL or glm-4.6)")
     p.add_argument("--decompose-multihop", dest="decompose_multihop", action="store_true", default=True,
                    help="6.2.2: decompose multihop-routed queries into sub-questions (default on for eval)")
     p.add_argument("--no-decompose-multihop", dest="decompose_multihop", action="store_false")
@@ -118,6 +143,11 @@ def run_eval(
     with_answers: bool = False,
     answer_model: str | None = None,
     decompose_multihop: bool = True,
+    search_mode: str = "hybrid",
+    route_weights: bool = True,
+    track_access: bool = False,
+    graph_anchor_strategy: str = "explicit",
+    anchor_node_ids: list[str] | None = None,
 ) -> dict:
     all_hits_1, all_hits_5, all_hits_10, all_mrr, all_prec_5, all_prec_10 = [], [], [], [], [], []
     all_correct: list = []
@@ -133,6 +163,11 @@ def run_eval(
         "top_k": top_k,
         "with_answers": with_answers,
         "answer_model": answer_model or eval_common.DEFAULT_ANSWER_MODEL,
+        "search_mode": search_mode,
+        "route_weights": route_weights,
+        "track_access": track_access,
+        "graph_anchor_strategy": graph_anchor_strategy,
+        "anchor_node_ids": list(anchor_node_ids or []),
     }
     ledger = eval_ledger.LedgerWriter("locomo", ledger_config)
     # Request enough candidates that the full pre-rerank pool is visible for ledger metrics.
@@ -152,7 +187,31 @@ def run_eval(
         qtype = route_query(question)["type"]
 
         def _post(q_text: str) -> list:
-            resp = client.post("/search/hybrid", json={
+            anchors = list(anchor_node_ids or [])
+            if search_mode == "graph_only" and not anchors and graph_anchor_strategy == "vector_top1":
+                seed = client.post("/search/hybrid", json={
+                    "query_text": q_text,
+                    "top_k": 1,
+                    "min_score": 0.0,
+                    "vector_weight": 1.0,
+                    "graph_weight": 0.0,
+                    "bm25_boost_weight": 0.0,
+                    "rerank_pool": 1,
+                    "search_mode": "vector_only",
+                    "route_weights": False,
+                    "track_access": False,
+                })
+                seed.raise_for_status()
+                seed_results = seed.json().get("results", [])
+                if seed_results:
+                    anchors = [seed_results[0]["node_id"]]
+            if search_mode == "graph_only" and not anchors:
+                raise ValueError(
+                    "graph_only requires --anchor-node-id or "
+                    "--graph-anchor-strategy vector_top1"
+                )
+
+            payload = {
                 "query_text": q_text,
                 "top_k": pool_top_k,
                 "min_score": 0.0,
@@ -161,7 +220,13 @@ def run_eval(
                 "bm25_boost_weight": bm25_boost,
                 "overlap_threshold": overlap_threshold,
                 "rerank_pool": rerank_pool,
-            })
+                "search_mode": search_mode,
+                "route_weights": route_weights,
+                "track_access": track_access,
+            }
+            if anchors:
+                payload["anchor_node_ids"] = anchors
+            resp = client.post("/search/hybrid", json=payload)
             resp.raise_for_status()
             return resp.json().get("results", [])
 
@@ -397,6 +462,11 @@ def main():
                 decompose_multihop=args.decompose_multihop,
                 with_answers=args.with_answers,
                 answer_model=args.answer_model,
+                search_mode=args.search_mode,
+                route_weights=args.route_weights,
+                track_access=args.track_access,
+                graph_anchor_strategy=args.graph_anchor_strategy,
+                anchor_node_ids=args.anchor_node_id,
             )
             if summary:
                 print_summary(summary, label="RETRIEVAL EVALUATION RESULTS")

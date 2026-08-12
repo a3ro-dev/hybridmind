@@ -6,27 +6,53 @@ Based on Test Case Markers.
 import pytest
 import os
 import sys
+import shutil
+import tempfile
 from pathlib import Path
 
 # Add project root to Python path
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-# Set test environment
-os.environ.setdefault("HYBRIDMIND_DATABASE_PATH", "test_data/hybridmind_test.db")
-os.environ.setdefault("HYBRIDMIND_VECTOR_INDEX_PATH", "test_data/vector_test.index")
-os.environ.setdefault("HYBRIDMIND_GRAPH_INDEX_PATH", "test_data/graph_test.pkl")
-# Tests run fully offline and must NOT hit RunPod/TEI or HackClub remotes.
-# We clear all remote-URL env vars so get_embedding_engine() selects the local
-# bge-m3 model (1024-dim) for unit tests only. Production ALWAYS uses 4096-dim
-# via RunPod TEI \u2014 this 1024 value is test-only and never used at runtime.
+# Set an isolated .mind root before importing the application. The runtime uses
+# mind_file_path as its authoritative storage root; overriding only the legacy
+# component paths would make tests open and rebuild the real corpus.
+_TEST_DIR = tempfile.mkdtemp(prefix="hybridmind_tests_")
+_TEST_MIND = Path(_TEST_DIR) / "hybridmind_test.mind"
+os.environ["HYBRIDMIND_MIND_FILE_PATH"] = str(_TEST_MIND)
+os.environ["HYBRIDMIND_DATABASE_PATH"] = str(_TEST_MIND / "store.db")
+os.environ["HYBRIDMIND_VECTOR_INDEX_PATH"] = str(_TEST_MIND / "vectors")
+os.environ["HYBRIDMIND_GRAPH_INDEX_PATH"] = str(_TEST_MIND / "graph.nx")
+# Tests run fully offline and must not hit remote endpoints. They inject a
+# deterministic 4096-dimensional test double below; this is test dependency
+# injection, not a runtime embedding fallback.
 for _var in ("RUNPOD_TEI_EMBEDDING_URL", "HC_EMBEDDING_URL", "RUNPOD_EMBEDDING_URL"):
     os.environ[_var] = ""
-# TESTS ONLY: local bge-m3 is 1024-dim. This must never appear in .env or production.
-os.environ["HYBRIDMIND_EMBEDDING_DIMENSION"] = "1024"
+# Tests preserve the production dimension invariant and inject an offline
+# deterministic engine below; they never select a smaller local model.
+os.environ["HYBRIDMIND_EMBEDDING_DIMENSION"] = "4096"
+os.environ["RERANK_MODE"] = "off"
+os.environ["HYBRIDMIND_AUTO_EDGES_ENABLED"] = "false"
+os.environ["HYBRIDMIND_TEMPORAL_EDGES_ENABLED"] = "false"
+os.environ["HYBRIDMIND_TEMPORAL_DECAY_ENABLED"] = "false"
+os.environ["HYBRIDMIND_SALIENCE_ENABLED"] = "false"
+os.environ["HYBRIDMIND_QUERY_DECOMPOSITION_ENABLED"] = "false"
+os.environ["FACT_EXTRACTION_ENABLED"] = "false"
+
+from tests.embedding_double import Deterministic4096EmbeddingEngine
+import engine.embedding as _embedding_module
+
+_TEST_EMBEDDER = Deterministic4096EmbeddingEngine()
+_embedding_module.get_embedding_engine = lambda *args, **kwargs: _TEST_EMBEDDER
 
 from fastapi.testclient import TestClient
 from main import app
+
+
+@pytest.fixture(scope="session", autouse=True)
+def isolated_test_store():
+    yield
+    shutil.rmtree(_TEST_DIR, ignore_errors=True)
 
 
 @pytest.fixture(scope="module")
