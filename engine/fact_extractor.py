@@ -2,58 +2,24 @@
 Ingest-time fact extraction.
 Called once per session during ingest. Never at query time.
 
-Primary backend: self-hosted RunPod vLLM (engine/runpod_llm.py), when
-RUNPOD_LLM_ENDPOINT_ID is configured. Falls back to the Hack Club proxy
-otherwise, so existing deployments without RunPod keep working unchanged.
-
-Uses a shared pooled httpx client + bounded retry with exponential backoff and
-jitter, so transient HC proxy drops ("socket connection was closed
-unexpectedly", connection resets, 429/5xx) don't abort a benchmark run.
+Provider policy, credentials, pooling, and retries are centralized in
+``engine.llm_client``. The research proxy is unavailable unless its explicit
+configuration opt-in is enabled.
 """
 import json
 import logging
-import os
-import random
-import time
 from typing import Optional
-from dotenv import load_dotenv
 
-import httpx
-
-from engine import runpod_llm
-
-load_dotenv()
+from config import settings
+from engine import llm_client
 
 logger = logging.getLogger(__name__)
-
-_HC_API_KEY = os.getenv("HC_API_KEY", "")
-_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://ai.hackclub.com/proxy/v1").rstrip("/")
-_MODEL = os.getenv("HYBRIDMIND_FACT_MODEL", "qwen/qwen3.5-9b")
-
-# Retry configuration
-_MAX_ATTEMPTS = 4
-_BACKOFF_BASE = 1.5  # seconds
-_BACKOFF_CAP = 30.0  # seconds
-
-# Shared pooled client — a single connection pool reduces the socket churn that
-# contributes to the HC proxy dropping connections under sustained load.
-_CLIENT: httpx.Client | None = None
-
-
-def _get_client() -> httpx.Client:
-    global _CLIENT
-    if _CLIENT is None:
-        _CLIENT = httpx.Client(
-            limits=httpx.Limits(max_connections=4, max_keepalive_connections=2),
-            timeout=httpx.Timeout(connect=10.0, read=120.0, write=30.0, pool=30.0),
-        )
-    return _CLIENT
 
 _SYSTEM_PROMPT = """\
 You are a precise fact extraction engine. Given a conversation, extract EVERY discrete, answerable fact.
 
 Return a JSON array where each element is:
-{"fact": "<one clear, self-contained sentence>", "entities": ["name1", "name2"], "date": "<YYYY-MM-DD or empty>"}
+{"fact": "<one clear, self-contained sentence>", "entities": ["name1", "name2"], "date": "<ISO-8601 date or empty>", "memory_kind": "world|experience|observation|opinion", "confidence": 0.0, "caused_by": ["<exact fact sentence from this output>"]}
 
 RULES:
 1. Extract ALL facts: names, ages, relationships, dates, locations, jobs, hobbies, preferences, plans, events, health info, family details, education, achievements, emotions, numeric values
@@ -61,10 +27,13 @@ RULES:
 3. Resolve relative dates (e.g. "last Friday" → actual date if known)
 4. Include minor details — they may be queried later
 5. Extract 5-20 facts per conversation session
-6. Return ONLY a valid JSON array, no markdown, no explanation, no code fences
+6. Tag external facts as world, first-person events as experience, direct perceptions as observation, and preferences/beliefs as opinion
+7. Confidence measures extraction certainty, not importance
+8. Add caused_by only for explicit cause/effect statements and reference exact fact strings from this output
+9. Return ONLY a valid JSON array, no markdown, no explanation, no code fences
 
 Example output:
-[{"fact": "Alice works as a software engineer at Google", "entities": ["Alice", "Google"], "date": ""}, {"fact": "Alice moved to San Francisco in 2023", "entities": ["Alice", "San Francisco"], "date": "2023-01-01"}]
+[{"fact": "Alice works as a software engineer at Google", "entities": ["Alice", "Google"], "date": "", "memory_kind": "world", "confidence": 0.95, "caused_by": []}, {"fact": "Alice moved to San Francisco in 2023", "entities": ["Alice", "San Francisco"], "date": "2023-01-01", "memory_kind": "experience", "confidence": 0.9, "caused_by": []}]
 """
 
 
@@ -72,9 +41,7 @@ def extract_facts_from_session(turns: list[dict]) -> list[dict]:
     """
     Extract discrete facts from a list of conversation turns.
 
-    Controlled by FACT_EXTRACTION_ENABLED env var (default: "false").
-    When disabled, returns [] immediately. When enabled, uses Claude Haiku
-    via HackClub proxy to extract structured facts.
+    Controlled by ``settings.fact_extraction_enabled`` (default false).
 
     Args:
         turns: List of dicts with keys: speaker (str), text (str), date (str)
@@ -84,14 +51,14 @@ def extract_facts_from_session(turns: list[dict]) -> list[dict]:
         Returns [] on any failure — caller must handle gracefully.
     """
     # Quick check: fact extraction must be explicitly enabled
-    if os.getenv("FACT_EXTRACTION_ENABLED", "").lower() not in ("1", "true", "yes"):
+    if not settings.fact_extraction_enabled:
         return []
 
     if not turns:
         return []
 
-    if not runpod_llm.is_configured() and not _HC_API_KEY:
-        logger.warning("Neither RunPod nor HC_API_KEY configured — fact extraction disabled")
+    if not llm_client.is_configured():
+        logger.warning("No policy-allowed LLM is configured — fact extraction disabled")
         return []
 
     # Build the conversation text with date and speaker context
@@ -123,8 +90,11 @@ def extract_facts_from_session(turns: list[dict]) -> list[dict]:
                             "fact": {"type": "string"},
                             "entities": {"type": "array", "items": {"type": "string"}},
                             "date": {"type": "string"},
+                            "memory_kind": {"type": "string", "enum": ["world", "experience", "observation", "opinion"]},
+                            "confidence": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                            "caused_by": {"type": "array", "items": {"type": "string"}},
                         },
-                        "required": ["fact", "entities", "date"],
+                        "required": ["fact", "entities", "date", "memory_kind", "confidence", "caused_by"],
                     },
                 }
             },
@@ -157,7 +127,7 @@ def extract_facts_from_session(turns: list[dict]) -> list[dict]:
                 "content": (
                     "You extract facts from conversations. "
                     "Return a JSON array of at least 3 short facts. "
-                    'Format: [{"fact":"...","entities":[],"date":""}]. '
+                    'Format: [{"fact":"...","entities":[],"date":"","memory_kind":"world","confidence":0.9}]. '
                     "Return ONLY the JSON array."
                 ),
             },
@@ -176,81 +146,14 @@ def _call_llm(
     max_tokens: int,
     response_format: Optional[dict] = None,
 ) -> Optional[str]:
-    """
-    Call the configured LLM backend: self-hosted RunPod vLLM first (if
-    configured), falling back to the Hack Club proxy. Returns raw content
-    string, or None if both backends fail/are unavailable.
-    """
-    if runpod_llm.is_configured():
-        content = runpod_llm.chat_completion(
-            messages, max_tokens=max_tokens, temperature=0.0, response_format=response_format,
-        )
-        if content is not None:
-            return content
-        logger.warning("fact_extractor: RunPod LLM unavailable/failed, falling back to HC proxy")
-
-    if not _HC_API_KEY:
-        logger.warning("fact_extractor: HC_API_KEY not set and RunPod unavailable — cannot extract facts")
-        return None
-
-    payload = {
-        "model": _MODEL,
-        "messages": messages,
-        "max_tokens": max_tokens,
-        "temperature": 0.0,
-    }
-    if "qwen" in _MODEL.lower():
-        # Hack Club's proxy exposes Qwen thinking separately. Without this,
-        # short structured calls can exhaust max_tokens and return content=null.
-        payload["reasoning_effort"] = "none"
-    if response_format:
-        payload["response_format"] = response_format
-    headers = {
-        "Authorization": f"Bearer {_HC_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    client = _get_client()
-
-    for attempt in range(_MAX_ATTEMPTS):
-        try:
-            response = client.post(f"{_BASE_URL}/chat/completions", headers=headers, json=payload)
-            if response.status_code in (429, 500, 502, 503, 504):
-                raise httpx.HTTPStatusError(
-                    f"retryable status {response.status_code}",
-                    request=response.request,
-                    response=response,
-                )
-            response.raise_for_status()
-            return response.json()["choices"][0]["message"]["content"]
-
-        except httpx.HTTPStatusError as e:
-            status = e.response.status_code if e.response is not None else None
-            if status in (429, 500, 502, 503, 504) and attempt < _MAX_ATTEMPTS - 1:
-                _sleep_backoff(attempt, f"HTTP {status}")
-                continue
-            body = e.response.text[:500] if e.response is not None else ""
-            logger.error(f"fact_extractor HTTP error: {status} {body}")
-            return None
-        except (
-            httpx.ConnectError,
-            httpx.TimeoutException,
-            httpx.RemoteProtocolError,
-            httpx.ReadError,
-            httpx.WriteError,
-            httpx.PoolTimeout,
-        ) as e:
-            if attempt < _MAX_ATTEMPTS - 1:
-                _sleep_backoff(attempt, f"{type(e).__name__}: {e}")
-                continue
-            logger.error(
-                f"fact_extractor transient error to {_BASE_URL} after "
-                f"{_MAX_ATTEMPTS} attempts ({type(e).__name__}): {e}"
-            )
-            return None
-        except Exception as e:
-            logger.error(f"fact_extractor unexpected error ({type(e).__name__}): {e}")
-            return None
-    return None
+    """Call the centralized provider policy and return raw content, if available."""
+    return llm_client.chat_completion(
+        messages,
+        max_tokens=max_tokens,
+        temperature=0.0,
+        model=settings.fact_model,
+        response_format=response_format,
+    )
 
 
 def _parse_facts_content(content: str) -> list[dict]:
@@ -291,6 +194,9 @@ def _parse_facts_content(content: str) -> list[dict]:
                 "fact": fact_text,
                 "entities": item.get("entities", []) if isinstance(item.get("entities"), list) else [],
                 "date": str(item.get("date", "")).strip(),
+                "memory_kind": str(item.get("memory_kind", "world")).strip().lower(),
+                "confidence": max(0.0, min(1.0, float(item.get("confidence", 1.0)))),
+                "caused_by": item.get("caused_by", []) if isinstance(item.get("caused_by"), list) else [],
             })
         return cleaned
 
@@ -299,12 +205,3 @@ def _parse_facts_content(content: str) -> list[dict]:
     except Exception as e:
         logger.error(f"fact_extractor unexpected error ({type(e).__name__}): {e}")
     return []
-
-
-def _sleep_backoff(attempt: int, reason: str) -> None:
-    """Exponential backoff with jitter between retries."""
-    delay = min(_BACKOFF_CAP, _BACKOFF_BASE * (2 ** attempt) * (0.5 + random.random()))
-    logger.warning(
-        f"fact_extractor: retry {attempt + 1}/{_MAX_ATTEMPTS} after {delay:.1f}s ({reason})"
-    )
-    time.sleep(delay)

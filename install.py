@@ -66,12 +66,15 @@ def setup_env():
     env_file = PROJECT_ROOT / ".env"
     
     default_content = """# HybridMind Config
-OSM_API_KEY=your_osm_api_key_here
-HC_API_KEY=your_hackclub_ai_key_here
-OPENAI_API_KEY=your_openai_api_key_here
-OPENAI_BASE_URL="https://ai.hackclub.com/proxy/v1"
-HC_EMBEDDING_URL=https://ai.hackclub.com/proxy/v1
-FACT_EXTRACTION_ENABLED=true
+ZAI_API_KEY=
+ZAI_BASE_URL=https://open.bigmodel.cn/api/paas/v4
+RUNPOD_TEI_EMBEDDING_URL=
+RUNPOD_API_KEY=
+RUNPOD_LLM_ENDPOINT_ID=
+HYBRIDMIND_EMBEDDING_DIMENSION=4096
+HYBRIDMIND_ALLOW_RESEARCH_PROXY=false
+HC_API_KEY=
+FACT_EXTRACTION_ENABLED=false
 HYBRIDMIND_AUTO_EDGES_ENABLED=true
 HYBRIDMIND_AUTO_EDGE_COSINE_THRESHOLD=0.70
 HYBRIDMIND_AUTO_EDGE_MAX_PER_NODE=10

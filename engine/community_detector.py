@@ -119,10 +119,12 @@ def run_community_detection(db_manager) -> Dict[str, Any]:
 
         # Create community summary node
         try:
-            import numpy as np
+            from engine.embedding import validate_embedding_4096
             summary_id = str(uuid.uuid4())
-            embedding = db_manager.embedding_engine.embed(summary_text)
-            embedding = np.asarray(embedding, dtype=np.float32)
+            embedding = validate_embedding_4096(
+                db_manager.embedding_engine.embed(summary_text),
+                label="community summary embedding",
+            )
 
             store.create_node(
                 node_id=summary_id,
@@ -139,6 +141,7 @@ def run_community_detection(db_manager) -> Dict[str, Any]:
             )
             db_manager.vector_index.add(summary_id, embedding)
             db_manager.graph_index.add_node(summary_id)
+            db_manager.bm25_index.add(summary_id, summary_text)
 
             # Link community summary → member nodes via belongs_to
             for member_id in member_ids:

@@ -4,7 +4,8 @@ CLI script: consolidate old session memories into summary nodes.
 Usage:
   python scripts/consolidate_memory.py [--min-facts 5] [--max-age-hours 24]
 
-Requires HybridMind server dependencies in venv and valid HC_API_KEY in .env.
+Requires HybridMind server dependencies and a provider allowed by config.py.
+Hack Club is used only when HYBRIDMIND_ALLOW_RESEARCH_PROXY=true.
 """
 import argparse
 import logging

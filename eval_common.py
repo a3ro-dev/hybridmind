@@ -16,35 +16,21 @@ can't recur here.
 import json
 import logging
 import os
-import random
 import re
-import time
 from pathlib import Path
 
-import httpx
-from dotenv import load_dotenv
-
-load_dotenv()
+from config import settings
+from engine import llm_client
 
 logger = logging.getLogger(__name__)
 
-_ZAI_API_KEY = os.getenv("ZAI_API_KEY", "").strip()
-_ZAI_BASE_URL = os.getenv("ZAI_BASE_URL", "https://open.bigmodel.cn/api/paas/v4").rstrip("/")
-_HC_API_KEY = os.getenv("HC_API_KEY", "").strip()
-_OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://ai.hackclub.com/proxy/v1").rstrip("/")
-DEFAULT_ANSWER_MODEL = os.getenv("HYBRIDMIND_QA_MODEL", "glm-4.6")
+DEFAULT_ANSWER_MODEL = settings.qa_model
 
 # Phase 6.1 (docs/PHASE_6_REALISTIC.md section 3): set to "true" to fall back to
 # the pre-6.1 single-shot answering prompt (no citation, no multi-hop
 # iteration, no answer normalization before judging), so the two behaviors
 # can be A/B'd against each other via the ledger.
 LEGACY_ANSWERING = os.getenv("HYBRIDMIND_EVAL_LEGACY_ANSWERING", "false").strip().lower() == "true"
-
-_MAX_ATTEMPTS = 3
-_BACKOFF_BASE = 1.5
-_BACKOFF_CAP = 20.0
-
-_CLIENT: httpx.Client | None = None
 
 _STOPWORDS = {"the", "a", "an", "in", "on", "at", "to", "for", "of", "is", "was", "it", "and", "or", "but"}
 
@@ -71,110 +57,31 @@ _ANSWER_SCHEMA = {
 }
 
 
-def _get_client() -> httpx.Client:
-    global _CLIENT
-    if _CLIENT is None:
-        _CLIENT = httpx.Client(
-            limits=httpx.Limits(max_connections=4, max_keepalive_connections=2),
-            timeout=httpx.Timeout(connect=10.0, read=60.0, write=30.0, pool=30.0),
-        )
-    return _CLIENT
-
-
-def _sleep_backoff(attempt: int, reason: str) -> None:
-    delay = min(_BACKOFF_CAP, _BACKOFF_BASE * (2 ** attempt) * (0.5 + random.random()))
-    logger.warning(f"eval_common: retry {attempt + 1}/{_MAX_ATTEMPTS} after {delay:.1f}s ({reason})")
-    time.sleep(delay)
-
-
 def is_abstention(text: str) -> bool:
     text = (text or "").strip()
     return (not text) or bool(_ABSTENTION_RE.match(text))
 
 
 def _is_llm_available(model: str | None = None) -> bool:
-    requested = (model or DEFAULT_ANSWER_MODEL).lower()
-    if "qwen" in requested and _HC_API_KEY:
-        return True
-    if _ZAI_API_KEY:
-        return True
-    from engine.runpod_llm import is_configured
-    return is_configured()
+    # The explicit research opt-in selects the free proxy for evals so a failed
+    # research call cannot unexpectedly spend the Z.AI budget. Production mode
+    # remains pinned to canonical Z.AI.
+    preferred = "research_proxy" if settings.allow_research_proxy else "zai"
+    return llm_client.is_configured(preferred, allow_fallback=False)
 
 
 def _call(payload: dict) -> str | None:
-    """Call the selected evaluation LLM with bounded retries."""
-    requested_model = str(payload.get("model") or DEFAULT_ANSWER_MODEL)
-
-    if "qwen" in requested_model.lower() and _HC_API_KEY:
-        headers = {"Authorization": f"Bearer {_HC_API_KEY}", "Content-Type": "application/json"}
-        proxy_payload = dict(payload)
-        proxy_payload["reasoning_effort"] = "none"
-        client = _get_client()
-        for attempt in range(_MAX_ATTEMPTS):
-            try:
-                resp = client.post(
-                    f"{_OPENAI_BASE_URL}/chat/completions",
-                    headers=headers,
-                    json=proxy_payload,
-                )
-                if resp.status_code in (429, 500, 502, 503, 504):
-                    raise httpx.HTTPStatusError(
-                        "retryable Hack Club response", request=resp.request, response=resp
-                    )
-                resp.raise_for_status()
-                return resp.json()["choices"][0]["message"]["content"]
-            except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.ConnectError, httpx.ReadError) as e:
-                status = e.response.status_code if isinstance(e, httpx.HTTPStatusError) and e.response is not None else None
-                if status == 400 and "response_format" in proxy_payload:
-                    proxy_payload.pop("response_format", None)
-                    continue
-                if attempt < _MAX_ATTEMPTS - 1:
-                    _sleep_backoff(attempt, f"Hack Club {type(e).__name__}")
-                    continue
-                logger.error("eval_common: Hack Club failed after %s attempts: %s", _MAX_ATTEMPTS, e)
-
-    if _ZAI_API_KEY:
-        headers = {"Authorization": f"Bearer {_ZAI_API_KEY}", "Content-Type": "application/json"}
-        client = _get_client()
-        payload_zai = dict(payload)
-        # GLM-4.6 is the canonical LoCoMo answering and judging model. Z.AI may
-        # not support OpenAI's JSON schema extension, so use the prompt's JSON
-        # contract and retain the parser/retry below.
-        payload_zai["model"] = os.getenv("HYBRIDMIND_QA_MODEL", "glm-4.6")
-        payload_zai.pop("response_format", None)
-        for attempt in range(_MAX_ATTEMPTS):
-            try:
-                resp = client.post(f"{_ZAI_BASE_URL}/chat/completions", headers=headers, json=payload_zai)
-                if resp.status_code in (429, 500, 502, 503, 504):
-                    raise httpx.HTTPStatusError("retryable Z.AI response", request=resp.request, response=resp)
-                resp.raise_for_status()
-                return resp.json()["choices"][0]["message"]["content"]
-            except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.ConnectError, httpx.ReadError) as e:
-                if attempt < _MAX_ATTEMPTS - 1:
-                    _sleep_backoff(attempt, f"Z.AI {type(e).__name__}")
-                    continue
-                logger.error("eval_common: Z.AI failed after %s attempts: %s", _MAX_ATTEMPTS, e)
-
-    # RunPod remains useful for self-hosted deployments, but it is not the
-    # benchmark judge and never masks a missing Z.AI configuration.
-    from engine.runpod_llm import chat_completion as rp_chat, is_configured as rp_configured
-    if rp_configured():
-        logger.info("eval_common: using RunPod serverless LLM")
-        req_model = payload.get("model")
-        if req_model == "glm-4.6":
-            req_model = None
-        res = rp_chat(
-            messages=payload.get("messages", []),
-            max_tokens=payload.get("max_tokens", 512),
-            temperature=payload.get("temperature", 0.0),
-            model=req_model,
-            response_format=payload.get("response_format"),
-        )
-        if res is not None:
-            return res
-
-    return None
+    """Call canonical Z.AI, or the explicitly selected research-only proxy."""
+    preferred = "research_proxy" if settings.allow_research_proxy else "zai"
+    return llm_client.chat_completion(
+        payload.get("messages", []),
+        max_tokens=payload.get("max_tokens", 512),
+        temperature=payload.get("temperature", 0.0),
+        model=settings.qa_model,
+        response_format=payload.get("response_format"),
+        preferred=preferred,
+        allow_fallback=False,
+    )
 
 def llm_answer(question: str, snippets: list[str], question_date: str = "", model: str | None = None) -> str:
     """

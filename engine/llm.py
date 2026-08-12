@@ -1,17 +1,17 @@
 """
 LLM Engine for processing unstructured data.
 
-Uses HackClub OpenAI-compatible proxy with claude-haiku-latest for intelligent
-extraction of entities, relationships, and metadata from text.
+Uses the centralized HybridMind LLM provider policy for intelligent extraction
+of entities, relationships, and metadata from text.
 Called ONLY at ingest time — never at query time.
 """
 
 import json
-import os
 from typing import Optional
 from dataclasses import dataclass
 
-from openai import OpenAI
+from config import settings
+from engine import llm_client
 
 
 @dataclass
@@ -30,40 +30,40 @@ class LLMEngine:
     """
     LLM-powered engine for processing unstructured data.
 
-    Uses HackClub OpenAI-compatible proxy (claude-haiku-latest) for fact
-    extraction at ingest time. Zero LLM calls at query time.
+    Uses Z.AI or self-hosted RunPod for extraction at ingest time. The research
+    proxy is usable only through the repository-wide explicit opt-in.
     """
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "anthropic/claude-haiku-latest",
-        base_url: str = "https://ai.hackclub.com"
+        model: Optional[str] = None,
+        base_url: Optional[str] = None,
     ):
         """
         Initialize the LLM engine.
 
         Args:
-            api_key: HackClub API key (defaults to HACKCLUB_API_KEY env var,
-                     fallback to HC_API_KEY, then OPENAI_API_KEY)
-            model: Model to use (default: anthropic/claude-haiku-latest)
-            base_url: HackClub proxy base URL
+            api_key: Deprecated and ignored compatibility argument. Provider
+                credentials come from Settings.
+            model: Deprecated compatibility argument. Provider models come
+                from Settings.
+            base_url: Deprecated and ignored compatibility argument. Provider
+                URLs come from Settings.
         """
-        self.api_key = (
-            api_key
-            or os.getenv("HACKCLUB_API_KEY")
-            or os.getenv("HC_API_KEY")
-            or os.getenv("OPENAI_API_KEY")
-        )
-        if not self.api_key:
-            raise ValueError(
-                "API key required. Set HACKCLUB_API_KEY env var or pass api_key"
-            )
+        if not llm_client.is_configured():
+            raise ValueError("No policy-allowed LLM provider is configured")
+        self.model = settings.fact_model
 
-        self.model = model
-        self.client = OpenAI(
-            api_key=self.api_key,
-            base_url=base_url
+    def _complete(self, messages: list[dict], *, temperature: float, max_tokens: int) -> str:
+        content = llm_client.chat_completion(
+            messages,
+            model=self.model,
+            temperature=temperature,
+            max_tokens=max_tokens,
         )
+        if content is None:
+            raise RuntimeError("All policy-allowed LLM providers failed")
+        return content.strip()
 
     def extract_metadata(self, text: str) -> ExtractedData:
         """
@@ -98,9 +98,8 @@ Return a JSON object with these fields:
 Be thorough but concise. Extract ALL named entities and their relationships.
 Return ONLY valid JSON, no markdown or explanation."""
 
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[
+        content = self._complete(
+            [
                 {
                     "role": "system",
                     "content": "You are a precise data extraction assistant. Extract structured information from text and return valid JSON only."
@@ -113,8 +112,6 @@ Return ONLY valid JSON, no markdown or explanation."""
             temperature=0.1,
             max_tokens=2000
         )
-
-        content = response.choices[0].message.content.strip()
 
         # Clean up response (remove markdown if present)
         if content.startswith("```"):
@@ -196,9 +193,8 @@ Guidelines:
 
 Return ONLY valid JSON."""
 
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[
+        content = self._complete(
+            [
                 {
                     "role": "system",
                     "content": "You are a knowledge extraction system. Convert unstructured text into structured knowledge graphs. Return only valid JSON."
@@ -211,8 +207,6 @@ Return ONLY valid JSON."""
             temperature=0.1,
             max_tokens=4000
         )
-
-        content = response.choices[0].message.content.strip()
 
         # Clean up response
         if content.startswith("```"):
@@ -255,9 +249,8 @@ Return a JSON array:
 
 Return ONLY valid JSON."""
 
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[
+        content = self._complete(
+            [
                 {
                     "role": "system",
                     "content": "You are a text processing assistant. Divide text into meaningful semantic chunks."
@@ -270,8 +263,6 @@ Return ONLY valid JSON."""
             temperature=0.1,
             max_tokens=4000
         )
-
-        content = response.choices[0].message.content.strip()
 
         if content.startswith("```"):
             lines = content.split("\n")
@@ -307,14 +298,11 @@ Return ONLY valid JSON."""
                 "content": message
             })
 
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
+        return self._complete(
+            messages,
             temperature=0.7,
             max_tokens=1000
         )
-
-        return response.choices[0].message.content
 
 
 # Singleton instance

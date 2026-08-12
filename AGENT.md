@@ -34,8 +34,8 @@ When working within this repository, all AI agents and developers must strictly 
 2. **Single Source of Truth**:
    - `config.py` (`HYBRIDMIND_*` environment variables) is the authoritative source for configuration.
    - Cross-encoder reranker model is strictly loaded via `settings.reranker_model` (`mixedbread-ai/mxbai-rerank-large-v2`).
-   - Z.AI is the only hosted LLM provider: `ZAI_API_KEY`, `ZAI_BASE_URL`, and `HYBRIDMIND_QA_MODEL=glm-4.6`. Do not add or restore HackClub proxy settings.
-   - RunPod TEI and vLLM must be warmed and verified with `python scripts/preflight.py` before an evaluation; never silently fall back from a 4096-dim index.
+   - Z.AI is the canonical production hosted LLM provider: `ZAI_API_KEY`, `ZAI_BASE_URL`, and `HYBRIDMIND_QA_MODEL=glm-4.6`. RunPod vLLM is the self-hosted path. The Hack Club proxy is research/testing-only and requires explicit `HYBRIDMIND_ALLOW_RESEARCH_PROXY=true`; it must never be a silent production or paid-provider fallback.
+   - RunPod TEI and vLLM must be warmed and verified with `python scripts/preflight.py` before an evaluation. All embeddings and indexes are exactly 4096-dimensional; no lower-dimensional, local, padded, projected, or mixed-index fallback is permitted.
 3. **Performance & Security**:
    - Code must prioritize low latency and thread-safety.
    - Input paths and endpoints must enforce validation and checksum verification.
@@ -69,7 +69,7 @@ HybridMind is a local-native hybrid database combining vector embeddings, graph-
 | Vector Index | FAISS (IndexHNSWFlat) | 1.7.4+ |
 | Graph Engine | NetworkX | 3.2.1+ |
 | Lexical Engine | bm25s (PyStemmer) | 0.2.0+ |
-| Default Local Embedding | BAAI/bge-m3 | 1024-dim |
+| Embedding Contract | Remote Qwen3-Embedding-8B | Exactly 4096-dim |
 | Remote Serverless Embedding | TEI (Qwen3-Embedding-8B) | 4096-dim |
 | Evaluation LLM / Judge | Z.AI | glm-4.6 |
 | Cross-Encoder Reranker | mixedbread-ai/mxbai-rerank-large-v2 | Top-25 RRF pool |
@@ -91,8 +91,8 @@ HybridMind is a local-native hybrid database combining vector embeddings, graph-
 |                              Engine Layer                               |
 |  +------------------+  +------------------+  +------------------------+ |
 |  | Embedding Engine |  |  Query Engines   |  |   Hybrid Ranker       | |
-|  | (TEI 4096-dim /  |  | (Vector / Graph /|  |  (RRF Fusion +         | |
-|  |  bge-m3 1024-dim)|  |  BM25 / MultiHop)|  |   mxbai Cross-Encoder) | |
+|  | (Remote backend, |  | (Vector / Graph /|  |  (RRF Fusion +         | |
+|  |  exact 4096-dim) |  |  BM25 / MultiHop)|  |   mxbai Cross-Encoder) | |
 |  +------------------+  +------------------+  +------------------------+ |
 |  +------------------+  +------------------+  +------------------------+ |
 |  | Query Decomp.    |  | Fact Extractor   |  | Serverless Retry       | |

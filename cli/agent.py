@@ -4,7 +4,6 @@ import os
 import sys
 from typing import Any, Dict, List
 
-import openai
 from rich.console import Console
 from rich.table import Table
 
@@ -52,8 +51,15 @@ def build_system_prompt(session_mems: List[Dict[str, Any]], cross_mems: List[Dic
 
 
 def main():
+    from config import settings
+    from engine.llm_client import chat_completion, provider_chain
+
     parser = argparse.ArgumentParser(description="HybridMind CLI Agent")
-    parser.add_argument("--model", default="x-ai/grok-4.3", help="LLM model name")
+    parser.add_argument(
+        "--model",
+        default=None,
+        help="Z.AI model override; RunPod/research models come from config.py",
+    )
     parser.add_argument("--memory-url", default="http://localhost:8000", help="HybridMind base URL")
     parser.add_argument("--top-k", type=int, default=5, help="Number of memories to recall per turn")
     parser.add_argument("--no-memory", action="store_true", help="Disable HybridMind entirely")
@@ -61,13 +67,17 @@ def main():
     args = parser.parse_args()
 
     console = Console()
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        console.print("[bold red]Error: OPENAI_API_KEY environment variable not set.[/bold red]")
+    providers = provider_chain()
+    if not providers:
+        console.print("[bold red]Error: no policy-allowed LLM provider is configured.[/bold red]")
         sys.exit(1)
-
-    base_url = os.environ.get("OPENAI_BASE_URL", "https://ai.hackclub.com/proxy/v1")
-    client = openai.OpenAI(api_key=api_key, base_url=base_url)
+    provider = providers[0]
+    if provider == "runpod":
+        display_model = settings.runpod_llm_model
+    elif provider == "research_proxy":
+        display_model = settings.research_proxy_model
+    else:
+        display_model = args.model or settings.qa_model
 
     memory = None
     session_id = None
@@ -92,7 +102,7 @@ def main():
             console.print("[bold green]HybridMind CLI Agent[/bold green]")
             console.print(f"Session: {session_id}")
             console.print(f"Memory: {node_count} nodes, {edge_count} edges")
-            console.print(f"Model: {args.model}")
+            console.print(f"Model: {display_model} via {provider}")
             console.print("Type /help for commands.\n")
 
         except Exception as e:
@@ -101,7 +111,7 @@ def main():
             memory = None
     else:
         console.print("[bold green]HybridMind CLI Agent (Memory Disabled)[/bold green]")
-        console.print(f"Model: {args.model}")
+        console.print(f"Model: {display_model} via {provider}")
         console.print("Type /help for commands.\n")
 
     while True:
@@ -232,18 +242,15 @@ def main():
         curr_messages = [{"role": "system", "content": system_prompt}] + messages + [{"role": "user", "content": user_input}]
 
         try:
-            stream = client.chat.completions.create(
+            assistant_response = chat_completion(
+                curr_messages,
                 model=args.model,
-                messages=curr_messages,
-                stream=True,
+                max_tokens=1024,
+                temperature=0.2,
             )
-
-            assistant_response = ""
-            for chunk in stream:
-                delta = chunk.choices[0].delta.content or ""
-                print(delta, end="", flush=True)
-                assistant_response += delta
-            print()
+            if not assistant_response:
+                raise RuntimeError("configured LLM providers returned no response")
+            print(assistant_response)
 
             messages.append({"role": "user", "content": user_input})
             messages.append({"role": "assistant", "content": assistant_response})

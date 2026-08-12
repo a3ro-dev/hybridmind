@@ -6,41 +6,29 @@ RunPod Serverless is job-queue based: POST /run submits a job and returns
 immediately with a job id; the actual result is fetched by polling
 /status/{id} until it reaches COMPLETED or FAILED.
 
-Env vars:
-  RUNPOD_API_KEY          — RunPod account API key (Bearer token)
-  RUNPOD_LLM_ENDPOINT_ID  — Serverless endpoint id (e.g. "e4vphzghmbvt7j")
-  RUNPOD_LLM_MODEL        — model id as registered by vLLM (default: qwen/qwen3.5-9b)
+Configuration is loaded exclusively through ``config.settings``.
 
 Important: Qwen3.5 defaults to an extended "thinking" mode that burns output
 tokens on a reasoning trace and leaves `content` null/truncated unless
 disabled. This client always sets chat_template_kwargs.enable_thinking=False
 unless the caller explicitly opts in.
 
-Used by engine/fact_extractor.py and engine/consolidation.py as the primary
-LLM backend when configured; both fall back to the Hack Club proxy path
-when RUNPOD_LLM_ENDPOINT_ID is unset, so existing deployments keep working.
+Used through ``engine.llm_client`` so fallback policy remains centralized.
 """
 from __future__ import annotations
 
 import atexit
 import logging
-import os
+import threading
 import time
 from typing import List, Optional
 
 import httpx
-from dotenv import load_dotenv
 
+from config import settings
 from engine.serverless_util import retry_transient
 
-load_dotenv()
-
 logger = logging.getLogger(__name__)
-
-_API_KEY = os.getenv("RUNPOD_API_KEY", "")
-_ENDPOINT_ID = os.getenv("RUNPOD_LLM_ENDPOINT_ID", "")
-_MODEL = os.getenv("RUNPOD_LLM_MODEL", "qwen/qwen3.5-9b")
-_BASE_URL = f"https://api.runpod.ai/v2/{_ENDPOINT_ID}" if _ENDPOINT_ID else ""
 
 _POLL_INTERVAL_S = 2.0
 # Budget spans queue wait + cold start (worker waking, model load) + generation.
@@ -48,20 +36,31 @@ _POLL_INTERVAL_S = 2.0
 _DEFAULT_TIMEOUT_S = 240.0
 
 _client: Optional[httpx.Client] = None
+_client_lock = threading.Lock()
 
 
 def _get_client() -> httpx.Client:
     global _client
     if _client is None:
-        _client = httpx.Client(
-            headers={"Authorization": f"Bearer {_API_KEY}", "Content-Type": "application/json"},
-            timeout=httpx.Timeout(connect=10.0, read=30.0, write=10.0, pool=10.0),
-        )
+        with _client_lock:
+            if _client is None:
+                _client = httpx.Client(
+                    headers={
+                        "Authorization": f"Bearer {settings.runpod_api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    timeout=httpx.Timeout(connect=10.0, read=30.0, write=10.0, pool=10.0),
+                )
     return _client
 
 
 def is_configured() -> bool:
-    return bool(_API_KEY and _ENDPOINT_ID)
+    return bool(settings.runpod_api_key.strip() and settings.runpod_llm_endpoint_id.strip())
+
+
+def _base_url() -> str:
+    endpoint_id = settings.runpod_llm_endpoint_id.strip()
+    return f"https://api.runpod.ai/v2/{endpoint_id}" if endpoint_id else ""
 
 
 def chat_completion(
@@ -83,7 +82,7 @@ def chat_completion(
         return None
 
     openai_input: dict = {
-        "model": model or _MODEL,
+        "model": model or settings.runpod_llm_model,
         "messages": messages,
         "max_tokens": max_tokens,
         "temperature": temperature,
@@ -96,7 +95,7 @@ def chat_completion(
 
     def _submit() -> str:
         submit = client.post(
-            f"{_BASE_URL}/run",
+            f"{_base_url()}/run",
             json={"input": {"openai_route": "/v1/chat/completions", "openai_input": openai_input}},
         )
         submit.raise_for_status()
@@ -116,7 +115,7 @@ def chat_completion(
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
         try:
-            status_resp = client.get(f"{_BASE_URL}/status/{job_id}")
+            status_resp = client.get(f"{_base_url()}/status/{job_id}")
             status_resp.raise_for_status()
             data = status_resp.json()
         except Exception as e:
@@ -171,7 +170,7 @@ def cancel(job_id: str) -> bool:
     if not is_configured() or not job_id:
         return False
     try:
-        r = _get_client().post(f"{_BASE_URL}/cancel/{job_id}", timeout=15)
+        r = _get_client().post(f"{_base_url()}/cancel/{job_id}", timeout=15)
         ok = r.status_code < 400
         if not ok:
             logger.warning(f"runpod_llm: cancel {job_id} returned HTTP {r.status_code}")
@@ -190,7 +189,7 @@ def health() -> Optional[dict]:
     if not is_configured():
         return None
     try:
-        r = _get_client().get(f"{_BASE_URL}/health", timeout=15)
+        r = _get_client().get(f"{_base_url()}/health", timeout=15)
         r.raise_for_status()
         return r.json()
     except Exception as e:
@@ -201,12 +200,13 @@ def health() -> Optional[dict]:
 def close() -> None:
     """Release the shared HTTP client (connection pool). Idempotent."""
     global _client
-    if _client is not None:
-        try:
-            _client.close()
-        except Exception:
-            pass
-        _client = None
+    with _client_lock:
+        if _client is not None:
+            try:
+                _client.close()
+            except Exception:
+                pass
+            _client = None
 
 
 atexit.register(close)

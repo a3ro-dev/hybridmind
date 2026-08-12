@@ -2,111 +2,46 @@
 Memory consolidation and importance scoring for HybridMind.
 
 Provides:
-- llm_summarize(): multi-fact → single summary string via HC LLM proxy
+- llm_summarize(): multi-fact → single summary string via centralized LLM policy
 - consolidate_sessions(): batch consolidation of old sessions into summary nodes
 - importance_score(): composite score for memory lifecycle pruning
 
 Design:
 - All operations are idempotent (double-run safe).
 - Pruning is soft-delete only (sets deleted_at, never removes rows).
-- Primary LLM backend: self-hosted RunPod vLLM (engine/runpod_llm.py), when
-  configured. Falls back to the Hack Club proxy + retry pattern otherwise
-  (same as fact_extractor.py).
+- Production hosted inference is Z.AI; RunPod vLLM is supported as a
+  self-hosted backend. The research proxy requires explicit opt-in.
 """
 from __future__ import annotations
 
 import json
 import logging
 import math
-import os
-import random
 import re
-import time
 import uuid
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-import httpx
-from dotenv import load_dotenv
-
-from engine import runpod_llm
-
-load_dotenv()
+from config import settings
+from engine import llm_client
 
 logger = logging.getLogger(__name__)
 
-_HC_API_KEY = os.getenv("HC_API_KEY", "")
-_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://ai.hackclub.com/proxy/v1").rstrip("/")
-_DEFAULT_MODEL = os.getenv("HYBRIDMIND_CONSOLIDATION_MODEL", "openai/gpt-4o-mini")
-
-_MAX_ATTEMPTS = 3
-_BACKOFF_BASE = 1.5
-_BACKOFF_CAP = 20.0
-
-_CLIENT: Optional[httpx.Client] = None
-
-
-def _get_client() -> httpx.Client:
-    global _CLIENT
-    if _CLIENT is None:
-        _CLIENT = httpx.Client(
-            limits=httpx.Limits(max_connections=4, max_keepalive_connections=2),
-            timeout=httpx.Timeout(connect=10.0, read=90.0, write=30.0, pool=30.0),
-        )
-    return _CLIENT
-
-
-def _sleep_backoff(attempt: int, reason: str) -> None:
-    delay = min(_BACKOFF_CAP, _BACKOFF_BASE * (2 ** attempt) * (0.5 + random.random()))
-    logger.warning(f"consolidation: retry {attempt+1}/{_MAX_ATTEMPTS} in {delay:.1f}s ({reason})")
-    time.sleep(delay)
-
-
 def _call_llm(messages: list, max_tokens: int = 512, model: Optional[str] = None) -> Optional[str]:
-    """
-    Call the configured LLM backend: self-hosted RunPod vLLM first (if
-    configured), falling back to the Hack Club proxy + retry/backoff.
-    Returns content or None if both are unavailable/fail.
-    """
-    if runpod_llm.is_configured():
-        content = runpod_llm.chat_completion(messages, max_tokens=max_tokens, temperature=0.3, model=model)
-        if content is not None:
-            return content
-        logger.warning("consolidation: RunPod LLM unavailable/failed, falling back to HC proxy")
-
-    if not _HC_API_KEY:
-        return None
-    model = model or _DEFAULT_MODEL
-    headers = {"Authorization": f"Bearer {_HC_API_KEY}", "Content-Type": "application/json"}
-    payload = {"model": model, "messages": messages, "max_tokens": max_tokens, "temperature": 0.3}
-    client = _get_client()
-    for attempt in range(_MAX_ATTEMPTS):
-        try:
-            resp = client.post(f"{_BASE_URL}/chat/completions", headers=headers, json=payload)
-            if resp.status_code in (429, 500, 502, 503, 504):
-                if attempt < _MAX_ATTEMPTS - 1:
-                    _sleep_backoff(attempt, f"HTTP {resp.status_code}")
-                    continue
-                return None
-            resp.raise_for_status()
-            return resp.json()["choices"][0]["message"]["content"]
-        except (httpx.TimeoutException, httpx.ConnectError, httpx.RemoteProtocolError) as e:
-            if attempt < _MAX_ATTEMPTS - 1:
-                _sleep_backoff(attempt, type(e).__name__)
-                continue
-            logger.error(f"consolidation: LLM call failed after {_MAX_ATTEMPTS} attempts: {e}")
-            return None
-        except Exception as e:
-            logger.error(f"consolidation: unexpected LLM error: {e}")
-            return None
-    return None
+    """Call the centralized provider policy."""
+    return llm_client.chat_completion(
+        messages,
+        max_tokens=max_tokens,
+        temperature=0.3,
+        model=settings.consolidation_model,
+    )
 
 
 def llm_summarize(facts: List[str], model: Optional[str] = None) -> str:
     """
     Summarize a list of fact strings into a single concise paragraph.
 
-    Returns empty string if LLM is unavailable (no HC_API_KEY or network fail).
+    Returns a deterministic joined summary if no LLM is available.
     Falls back to joining with semicolons so callers always get something usable.
     """
     if not facts:
@@ -136,6 +71,7 @@ def consolidate_sessions(
     min_facts: int = 5,
     max_age_hours: int = 24,
     model: Optional[str] = None,
+    archive_sources: bool = False,
 ) -> Dict[str, Any]:
     """
     Group extracted_fact nodes by session, summarize old sessions.
@@ -176,6 +112,7 @@ def consolidate_sessions(
 
     sessions_processed = 0
     summaries_created = 0
+    sources_archived = 0
 
     for sid, nodes in by_session.items():
         if len(nodes) < min_facts:
@@ -207,10 +144,12 @@ def consolidate_sessions(
 
         # Create summary node
         try:
-            import numpy as np
+            from engine.embedding import validate_embedding_4096
             summary_id = str(uuid.uuid4())
-            embedding = db_manager.embedding_engine.embed(summary_text)
-            embedding = np.asarray(embedding, dtype=np.float32)
+            embedding = validate_embedding_4096(
+                db_manager.embedding_engine.embed(summary_text),
+                label="session summary embedding",
+            )
 
             store.create_node(
                 node_id=summary_id,
@@ -227,6 +166,7 @@ def consolidate_sessions(
             )
             db_manager.vector_index.add(summary_id, embedding)
             db_manager.graph_index.add_node(summary_id)
+            db_manager.bm25_index.add(summary_id, summary_text)
 
             # Link summary → source facts via belongs_to edges
             for source_node in nodes:
@@ -249,6 +189,13 @@ def consolidate_sessions(
                 except Exception as e:
                     logger.debug(f"consolidation: edge failed {summary_id}→{source_node['id']}: {e}")
 
+            if archive_sources:
+                source_ids = [source["id"] for source in nodes]
+                sources_archived += store.archive_nodes(source_ids, summary_id)
+                for source_id in source_ids:
+                    db_manager.vector_index.remove(source_id)
+                    db_manager.graph_index.remove_node(source_id)
+
             summaries_created += 1
             logger.info(f"consolidation: session {sid!r} → summary node {summary_id} ({len(nodes)} facts)")
         except Exception as e:
@@ -259,6 +206,7 @@ def consolidate_sessions(
     return {
         "sessions_processed": sessions_processed,
         "summaries_created": summaries_created,
+        "sources_archived": sources_archived,
         "sessions_total": len(by_session),
     }
 
@@ -277,8 +225,10 @@ def importance_score(node_id: str, db_manager) -> float:
         if node is None:
             return 0.0
 
-        # Recency score (half-life 30 days)
-        created_at_raw = node.get("created_at")
+        from config import settings
+
+        # Recency score uses event time when available.
+        created_at_raw = node.get("event_time") or node.get("created_at")
         if created_at_raw:
             try:
                 if isinstance(created_at_raw, str):
@@ -286,7 +236,9 @@ def importance_score(node_id: str, db_manager) -> float:
                 else:
                     created_dt = created_at_raw
                 age_days = (datetime.utcnow() - created_dt).total_seconds() / 86400
-                recency = math.exp(-math.log(2) * age_days / 30)
+                recency = math.exp(
+                    -math.log(2) * age_days / settings.salience_recency_half_life_days
+                )
             except Exception:
                 recency = 0.5
         else:
@@ -302,17 +254,18 @@ def importance_score(node_id: str, db_manager) -> float:
             centrality = 0.0
 
         # Access frequency
-        meta = node.get("metadata") or {}
-        if isinstance(meta, str):
-            try:
-                meta = json.loads(meta)
-            except Exception:
-                meta = {}
-        access_count = int(meta.get("access_count", 1))
+        access_count = int(node.get("access_count") or 0)
         access_score = min(1.0, math.log1p(access_count) / math.log1p(20))  # saturates at 20 hits
 
-        # Weighted composite
-        score = 0.4 * recency + 0.4 * centrality + 0.2 * access_score
+        # Weighted composite shares the retrieval salience configuration.
+        weights = (
+            settings.salience_recency_weight,
+            settings.salience_centrality_weight,
+            settings.salience_frequency_weight,
+        )
+        score = (
+            weights[0] * recency + weights[1] * centrality + weights[2] * access_score
+        ) / max(sum(weights), 1e-9)
         return round(max(0.0, min(1.0, score)), 4)
 
     except Exception as e:
