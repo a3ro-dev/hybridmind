@@ -14,13 +14,13 @@ pure vector search drops explicit structural relationships. graph-only search la
 
 ## Technical Architecture
 
-1. **Tri-Signal RRF Fusion**. Reciprocal Rank Fusion ($k=60$) blends dense vector, BM25 lexical, and graph proximity ranks using query-routed weights (`vector_weight`, `graph_weight`, `bm25_boost_weight`) via `route_query()`.
+1. **Time-Aware Hybrid Fusion**. Reciprocal Rank Fusion ($k=60$) blends 4096-dimensional dense vectors, BM25 lexical ranks, typed graph proximity, and query-derived time relevance. Request-level `search_mode` controls make vector, sparse, graph, and hybrid ablations real rather than approximate weight changes.
 2. **Cross-Encoder Reranking**. `mixedbread-ai/mxbai-rerank-large-v2` reranks top 25 RRF candidate nodes with min-max normalized score blending (70% RRF / 30% cross-encoder).
 3. **Multi-Hop Query Decomposition**. `engine/query_decomposition.py` splits multi-step questions into sub-questions via LLM inference with single-sub-question and novel-entity guards.
-4. **Embedding Backends**:
-   - **RunPod TEI** — self-hosted HuggingFace TEI endpoint (`RUNPOD_TEI_EMBEDDING_URL`) serving 4096-dim vectors with 300s timeout & 6 exponential-backoff retries.
-   - **Local** — `BAAI/bge-m3` (1024-dim default) or `all-mpnet-base-v2` (768-dim CPU fallback).
-5. **Storage Layer (`.mind`)**:
+4. **4096-Dimensional Embedding Invariant**. A remote TEI or OpenAI-compatible embedding endpoint must return exactly 4096 values. Startup, ingestion, and vector insertion fail on any mismatch; there is no local, projected, padded, or lower-dimensional fallback.
+5. **Structured Temporal Memory**. Narrative facts carry normalized entities, event time, validity, one of four memory kinds (world, experience, observation, opinion), confidence, supersession state, and optional causal/temporal relations.
+6. **Salience and Compression**. Opt-in ACT-R-inspired access/recency/centrality scoring and observer/reflector consolidation can archive source nodes from retrieval while preserving their rows and provenance edges.
+7. **Storage Layer (`.mind`)**:
    - SQLite (`store.db` in WAL mode) for nodes, edges, sessions, and metadata
    - FAISS (`vectors.faiss`) for HNSW index
    - NetworkX (`graph.nx`) binary graph pickle
@@ -36,6 +36,7 @@ python3 -m venv .venv
 # PowerShell: .\.venv\Scripts\Activate.ps1
 # Unix: source .venv/bin/activate
 pip install -r requirements.txt
+python scripts/preflight.py
 python -m uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
@@ -59,6 +60,14 @@ python -m cli.main search "attention mechanism" --mode hybrid --top-k 5
 # evaluation & statistical significance testing
 python eval_locomo_retrieval.py --with-answers
 python eval_stats.py compare <ledger_A> <ledger_B>
+
+# review the controlled experiment matrix without making network calls
+python scripts/ablation_matrix.py --list
+python scripts/ablation_matrix.py --dry-run --benchmark locomo
+
+# execute deterministic signal ablations after preflight and server startup
+python eval_locomo_retrieval.py --search-mode vector_only --vector-weight 1 --graph-weight 0 --bm25-boost 0 --rerank-pool 1 --no-route-weights --no-track-access
+python eval_locomo_retrieval.py --search-mode graph_only --graph-anchor-strategy vector_top1 --vector-weight 0 --graph-weight 1 --bm25-boost 0 --rerank-pool 1 --no-route-weights --no-track-access
 ```
 
 ---
@@ -81,3 +90,4 @@ python eval_stats.py compare <ledger_A> <ledger_B>
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — thread safety, WAL mode, and storage engines
 - [docs/ALGORITHM.md](docs/ALGORITHM.md) — RRF fusion formulas and cross-encoder score normalization
 - [docs/KV_CACHE_RESEARCH.md](docs/KV_CACHE_RESEARCH.md) — KV working-set hypotheses and evidence
+- [demos/techspec.md](demos/techspec.md) — no-code specification for six user-facing demos

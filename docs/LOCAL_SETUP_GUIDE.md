@@ -26,17 +26,21 @@ Configure parameters via `HYBRIDMIND_*` variables or `.env`:
 
 ```ini
 # Embedding configuration
-HYBRIDMIND_EMBEDDING_MODEL=BAAI/bge-m3
-HYBRIDMIND_EMBEDDING_DIMENSION=1024
+HYBRIDMIND_EMBEDDING_DIMENSION=4096
 
-# Self-hosted RunPod TEI & vLLM (optional)
+# A remote exact-4096 embedding backend is mandatory
 RUNPOD_API_KEY=your-runpod-api-key
 RUNPOD_TEI_EMBEDDING_URL=https://<endpoint>.api.runpod.ai
+# Self-hosted vLLM is optional unless decomposition/extraction is enabled
 RUNPOD_LLM_ENDPOINT_ID=your-vllm-endpoint-id
 
 # Feature flags
 HYBRIDMIND_AUTO_EDGES_ENABLED=false
 HYBRIDMIND_RERANKER_MODEL=mixedbread-ai/mxbai-rerank-large-v2
+
+# Optional cost-bounded research/testing provider; off by default
+HYBRIDMIND_ALLOW_RESEARCH_PROXY=false
+HYBRIDMIND_RESEARCH_PROXY_API_KEY=
 ```
 
 ---
@@ -52,6 +56,8 @@ python main.py
 # Or via uvicorn directly
 python -m uvicorn main:app --host 127.0.0.1 --port 8000
 ```
+
+Run `python scripts/preflight.py` first. Startup and requests fail rather than selecting a local or lower-dimensional embedding model.
 
 - API Base URL: `http://127.0.0.1:8000`
 - Interactive OpenAPI Swagger Docs: `http://127.0.0.1:8000/docs`

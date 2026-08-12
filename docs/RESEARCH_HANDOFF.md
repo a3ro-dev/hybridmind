@@ -14,7 +14,7 @@ HybridMind as an empirically supported external long-term memory system.
 - Use `D:\hybridmind\.venv` for Python.
 - Use Z.AI `glm-4.6` for canonical QA and judging.
 - Run `python scripts/preflight.py` before any live TEI/vLLM evaluation.
-- Do not restore HackClub proxy configuration.
+- Z.AI remains canonical for production. Hack Club may be used only for cost-bounded research with explicit `HYBRIDMIND_ALLOW_RESEARCH_PROXY=true`; research mode must not fall through to paid Z.AI.
 - Preserve pre-existing user edits in:
   - `engine/fact_extractor.py`
   - `engine/hybrid_ranker.py`
@@ -120,11 +120,13 @@ Formal benchmark command:
 - Do not claim GPU results until both the Torch build tag and a real CUDA model
   forward pass are verified.
 
-Latest preflight (2026-08-05):
+Latest preflight (2026-08-12):
 
 - Z.AI GLM-4.6: OK, HTTP 200.
 - RunPod vLLM decomposition: OK, HTTP 200, one worker ready.
 - RunPod TEI embedding: DOWN, `ReadTimeout` after three cold-start attempts.
+- Hack Club research proxy: OK, HTTP 200 under a temporary explicit opt-in;
+  research mode was not persisted.
 - Held-out evaluation is blocked until TEI warms or is repaired.
 
 ## Current limitations and next experiment
@@ -148,7 +150,7 @@ Candidate next hypothesis, not yet started:
 
 The threshold must be fixed before running the experiment.
 
-If TEI remains unavailable, the bounded local fallback hypothesis is:
+If TEI remains unavailable, a retrieval benchmark is blocked because the 4096-dimensional embedding contract has no fallback. The independent offline optimization hypothesis is:
 
 > A thread-safe bounded cache of candidate token sets reduces mean offline
 > lexical rerank latency by at least 3x while producing identical rankings.
