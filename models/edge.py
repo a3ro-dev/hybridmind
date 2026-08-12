@@ -30,6 +30,7 @@ class EdgeType(str, Enum):
 
     # Temporal / supersession edges (Phase 3+)
     supersedes = "supersedes"          # new fact replaces old fact
+    temporally_near = "temporally_near"  # event timestamps within configured window
 
 
 # Typed walk-weight map used by compute_weighted_proximity_score().
@@ -59,6 +60,7 @@ EDGE_TYPE_WALK_WEIGHTS: dict = {
 
     # Temporal
     EdgeType.supersedes: 1.0,
+    EdgeType.temporally_near: 0.8,
 }
 
 class EdgeCreate(BaseModel):

@@ -182,7 +182,8 @@ def main():
     tokenizer.save_pretrained(str(output_path))
     logger.info(f"Fine-tuned model saved to {output_path}")
     logger.info(
-        f"To use: HYBRIDMIND_EMBEDDING_MODEL={output_path}  HYBRIDMIND_EMBEDDING_DIMENSION=1024"
+        "Training finished. This checkpoint is research-only unless it emits "
+        "native 4096-dimensional vectors; HybridMind will reject any other dimension."
     )
     logger.info("Then run: python scripts/reindex_embeddings.py")
 

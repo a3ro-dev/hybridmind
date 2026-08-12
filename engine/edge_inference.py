@@ -23,6 +23,7 @@ inserted (text, embedding, and graph node all registered).
 from __future__ import annotations
 
 import logging
+import math
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -168,7 +169,9 @@ def infer_entity_edges(
             except Exception:
                 continue  # method may not exist in older versions
 
-        for rel_id in related_ids[:cfg.auto_edge_max_per_node]:
+        for rel_id in related_ids:
+            if created >= cfg.auto_edge_max_per_node:
+                break
             pair = tuple(sorted([node_id, rel_id]))
             if pair in seen_pairs:
                 continue
@@ -193,6 +196,70 @@ def infer_entity_edges(
 
 
 # --------------------------------------------------------------------- #
+# Temporal proximity edges
+# --------------------------------------------------------------------- #
+
+def infer_temporal_edges(
+    node_id: str,
+    event_time: Optional[str],
+    sqlite_store,
+    graph_index,
+) -> int:
+    """Link facts whose event timestamps fall within the configured window."""
+    cfg = _settings()
+    if not cfg.temporal_edges_enabled or not event_time:
+        return 0
+    try:
+        neighbors = sqlite_store.find_temporal_neighbors(
+            event_time,
+            exclude_id=node_id,
+            window_days=cfg.temporal_edge_window_days,
+            limit=cfg.temporal_edge_max_per_node,
+        )
+    except Exception as exc:
+        logger.debug(f"edge_inference: temporal lookup failed for {node_id}: {exc}")
+        return 0
+
+    created = 0
+    half_life = max(float(cfg.temporal_edge_half_life_days), 1e-6)
+    for neighbor in neighbors:
+        delta_days = max(0.0, float(neighbor.get("delta_days") or 0.0))
+        weight = math.exp(-math.log(2.0) * delta_days / half_life)
+        edge_id = str(uuid.uuid4())
+        metadata = {
+            "delta_days": round(delta_days, 6),
+            "source_event_time": event_time,
+            "target_event_time": neighbor.get("event_time"),
+            "inferred": True,
+        }
+        try:
+            sqlite_store.create_edge(
+                edge_id,
+                node_id,
+                neighbor["id"],
+                "temporally_near",
+                round(weight, 4),
+                metadata=metadata,
+                valid_from=event_time,
+            )
+            graph_index.add_edge(
+                source_id=node_id,
+                target_id=neighbor["id"],
+                edge_type="temporally_near",
+                weight=round(weight, 4),
+                edge_id=edge_id,
+                valid_from=event_time,
+                **metadata,
+            )
+            created += 1
+        except Exception as exc:
+            logger.debug(
+                f"edge_inference: temporal edge failed {node_id}->{neighbor['id']}: {exc}"
+            )
+    return created
+
+
+# --------------------------------------------------------------------- #
 # Unified ingest-time hook
 # --------------------------------------------------------------------- #
 
@@ -205,34 +272,45 @@ def run_auto_edge_inference(
     sqlite_store,
     graph_index,
     entity_index: Optional[Dict[str, List[str]]] = None,
+    event_time: Optional[str] = None,
 ) -> Dict[str, int]:
     """
     Run all enabled auto-edge mechanisms for a newly ingested node.
     Returns {mechanism: edges_created}.
     """
     cfg = _settings()
-    if not cfg.auto_edges_enabled:
-        return {}
-
     result = {}
 
-    cosine_n = infer_cosine_edges(
-        node_id=node_id,
-        embedding=embedding,
-        vector_index=vector_index,
-        sqlite_store=sqlite_store,
-        graph_index=graph_index,
-    )
-    result["cosine"] = cosine_n
+    entities = node_metadata.get("entities", [])
+    try:
+        result["entities_indexed"] = sqlite_store.upsert_node_entities(node_id, entities)
+    except Exception as exc:
+        logger.debug(f"edge_inference: entity indexing failed for {node_id}: {exc}")
+        result["entities_indexed"] = 0
 
-    entity_n = infer_entity_edges(
+    if cfg.auto_edges_enabled:
+        result["cosine"] = infer_cosine_edges(
+            node_id=node_id,
+            embedding=embedding,
+            vector_index=vector_index,
+            sqlite_store=sqlite_store,
+            graph_index=graph_index,
+        )
+
+        result["entity"] = infer_entity_edges(
+            node_id=node_id,
+            node_metadata=node_metadata,
+            node_text=node_text,
+            sqlite_store=sqlite_store,
+            graph_index=graph_index,
+            entity_index=entity_index,
+        )
+
+    result["temporal"] = infer_temporal_edges(
         node_id=node_id,
-        node_metadata=node_metadata,
-        node_text=node_text,
+        event_time=event_time or node_metadata.get("event_time") or node_metadata.get("date"),
         sqlite_store=sqlite_store,
         graph_index=graph_index,
-        entity_index=entity_index,
     )
-    result["entity"] = entity_n
 
     return result

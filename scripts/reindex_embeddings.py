@@ -1,9 +1,9 @@
 """
 Re-embed all nodes and rebuild the FAISS vector index.
 
-Run this whenever you change HYBRIDMIND_EMBEDDING_MODEL or
-HYBRIDMIND_EMBEDDING_DIMENSION, e.g. when migrating from
-all-mpnet-base-v2 (768-dim) to BAAI/bge-m3 (1024-dim).
+Run this when migrating an existing corpus to HybridMind's mandatory remote
+4096-dimensional embedding contract or when changing the remote model while
+preserving that exact dimension.
 
 Usage:
     python scripts/reindex_embeddings.py [--batch-size 32] [--dry-run]
@@ -41,7 +41,6 @@ def main():
     from storage.sqlite_store import SQLiteStore
     from storage.vector_index import VectorIndex
     from storage.mindfile import MindFile
-    from engine.embedding import EmbeddingEngine
     from engine.device import resolve_device
 
     logger.info(f"Model:     {settings.embedding_model}")
@@ -93,10 +92,12 @@ def main():
     t0 = time.perf_counter()
     embeddings = embedding_engine.embed_batch(
         texts,
-        normalize=True,
-        batch_size=args.batch_size,
-        show_progress=True,
     )
+    if embeddings.ndim != 2 or embeddings.shape[1] != 4096:
+        raise RuntimeError(
+            f"Embedding backend returned shape {embeddings.shape}; reindexing requires "
+            "exactly 4096 dimensions and will not coerce the result."
+        )
     elapsed = time.perf_counter() - t0
     logger.info(f"Embedding done: {total} nodes in {elapsed:.1f}s ({total/elapsed:.1f} nodes/s)")
     logger.info(f"Embedding shape: {embeddings.shape}")

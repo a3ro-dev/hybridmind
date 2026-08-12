@@ -4,9 +4,11 @@ Stores nodes and edges with ACID guarantees.
 """
 
 import json
+import re
 import sqlite3
 import struct
-from datetime import datetime
+import unicodedata
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
@@ -68,6 +70,15 @@ class SQLiteStore:
                     metadata TEXT DEFAULT '{}',
                     embedding BLOB,
                     raw_embedding BLOB,
+                    event_time TEXT DEFAULT NULL,
+                    valid_from TEXT DEFAULT NULL,
+                    valid_until TEXT DEFAULT NULL,
+                    memory_kind TEXT DEFAULT NULL,
+                    confidence REAL DEFAULT 1.0,
+                    access_count INTEGER DEFAULT 0,
+                    last_accessed_at TEXT DEFAULT NULL,
+                    archived_at TEXT DEFAULT NULL,
+                    archived_by TEXT DEFAULT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     deleted_at TIMESTAMP DEFAULT NULL
@@ -83,6 +94,21 @@ class SQLiteStore:
                 cursor.execute("ALTER TABLE nodes ADD COLUMN raw_embedding BLOB")
             except sqlite3.OperationalError:
                 pass
+            for col_def in [
+                "event_time TEXT DEFAULT NULL",
+                "valid_from TEXT DEFAULT NULL",
+                "valid_until TEXT DEFAULT NULL",
+                "memory_kind TEXT DEFAULT NULL",
+                "confidence REAL DEFAULT 1.0",
+                "access_count INTEGER DEFAULT 0",
+                "last_accessed_at TEXT DEFAULT NULL",
+                "archived_at TEXT DEFAULT NULL",
+                "archived_by TEXT DEFAULT NULL",
+            ]:
+                try:
+                    cursor.execute(f"ALTER TABLE nodes ADD COLUMN {col_def}")
+                except sqlite3.OperationalError:
+                    pass
             
             # Edges table
             cursor.execute("""
@@ -104,6 +130,25 @@ class SQLiteStore:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_edges_target ON edges(target_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_edges_type ON edges(type)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_nodes_updated ON nodes(updated_at)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_nodes_event_time ON nodes(event_time)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_nodes_memory_kind ON nodes(memory_kind)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_nodes_archived ON nodes(archived_at)")
+
+            # Normalized entity mentions avoid full-table JSON scans and make
+            # entity co-occurrence edges deterministic across ingest paths.
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS node_entities (
+                    node_id TEXT NOT NULL,
+                    entity_key TEXT NOT NULL,
+                    entity_name TEXT NOT NULL,
+                    confidence REAL DEFAULT 1.0,
+                    PRIMARY KEY (node_id, entity_key),
+                    FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE
+                )
+            """)
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_node_entities_key ON node_entities(entity_key)"
+            )
 
             # Temporal edge fields (Phase 3) — additive migrations safe for existing DBs
             for col_def in [
@@ -127,7 +172,7 @@ class SQLiteStore:
         return embedding.astype(np.float32).tobytes()
     
     @staticmethod
-    def _deserialize_embedding(data: bytes, dimension: int = 384) -> Optional[np.ndarray]:
+    def _deserialize_embedding(data: bytes, dimension: int = 4096) -> Optional[np.ndarray]:
         """Deserialize bytes to numpy array."""
         if data is None:
             return None
@@ -141,7 +186,12 @@ class SQLiteStore:
         text: str,
         metadata: Dict[str, Any],
         embedding: Optional[np.ndarray] = None,
-        raw_embedding: Optional[np.ndarray] = None
+        raw_embedding: Optional[np.ndarray] = None,
+        event_time: Optional[str] = None,
+        valid_from: Optional[str] = None,
+        valid_until: Optional[str] = None,
+        memory_kind: Optional[str] = None,
+        confidence: float = 1.0,
     ) -> Dict[str, Any]:
         """Create a new node."""
         now = datetime.utcnow()
@@ -150,14 +200,23 @@ class SQLiteStore:
         
         with self._cursor() as cursor:
             cursor.execute("""
-                INSERT INTO nodes (id, text, metadata, embedding, raw_embedding, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO nodes (
+                    id, text, metadata, embedding, raw_embedding, event_time,
+                    valid_from, valid_until, memory_kind, confidence,
+                    created_at, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 node_id,
                 text,
                 json.dumps(metadata),
                 embedding_blob,
                 raw_embedding_blob,
+                event_time,
+                valid_from,
+                valid_until,
+                memory_kind,
+                confidence,
                 now,
                 now
             ))
@@ -166,6 +225,15 @@ class SQLiteStore:
             "id": node_id,
             "text": text,
             "metadata": metadata,
+            "event_time": event_time,
+            "valid_from": valid_from,
+            "valid_until": valid_until,
+            "memory_kind": memory_kind,
+            "confidence": confidence,
+            "access_count": 0,
+            "last_accessed_at": None,
+            "archived_at": None,
+            "archived_by": None,
             "created_at": now,
             "updated_at": now
         }
@@ -174,7 +242,10 @@ class SQLiteStore:
         """Get a node by ID (ignores soft-deleted nodes)."""
         with self._cursor() as cursor:
             cursor.execute("""
-                SELECT id, text, metadata, embedding, raw_embedding, created_at, updated_at
+                SELECT id, text, metadata, embedding, raw_embedding, event_time,
+                       valid_from, valid_until, memory_kind, confidence,
+                       access_count, last_accessed_at, archived_at, archived_by,
+                       created_at, updated_at
                 FROM nodes WHERE id = ? AND deleted_at IS NULL
             """, (node_id,))
             row = cursor.fetchone()
@@ -188,21 +259,38 @@ class SQLiteStore:
                 "metadata": json.loads(row["metadata"]),
                 "embedding": self._deserialize_embedding(row["embedding"]),
                 "raw_embedding": self._deserialize_embedding(row["raw_embedding"]) if "raw_embedding" in row.keys() else None,
+                "event_time": row["event_time"],
+                "valid_from": row["valid_from"],
+                "valid_until": row["valid_until"],
+                "memory_kind": row["memory_kind"],
+                "confidence": row["confidence"] if row["confidence"] is not None else 1.0,
+                "access_count": row["access_count"] or 0,
+                "last_accessed_at": row["last_accessed_at"],
+                "archived_at": row["archived_at"],
+                "archived_by": row["archived_by"],
                 "created_at": row["created_at"],
                 "updated_at": row["updated_at"]
             }
             
-    def get_latest_node_by_session(self, session_id: str) -> Optional[Dict[str, Any]]:
+    def get_latest_node_by_session(
+        self,
+        session_id: str,
+        exclude_node_id: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
         """Get the most recently created node for a given session ID."""
         with self._cursor() as cursor:
             # Using JSON1 extension to filter by metadata field
             cursor.execute("""
                 SELECT id, metadata, created_at 
                 FROM nodes 
-                WHERE json_extract(metadata, '$.sessionId') = ? 
+                WHERE (
+                    json_extract(metadata, '$.sessionId') = ?
+                    OR json_extract(metadata, '$.session_id') = ?
+                )
+                AND (? IS NULL OR id != ?)
                 AND deleted_at IS NULL
                 ORDER BY created_at DESC LIMIT 1
-            """, (session_id,))
+            """, (session_id, session_id, exclude_node_id, exclude_node_id))
             row = cursor.fetchone()
             if not row:
                 return None
@@ -218,7 +306,12 @@ class SQLiteStore:
         text: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
         embedding: Optional[np.ndarray] = None,
-        raw_embedding: Optional[np.ndarray] = None
+        raw_embedding: Optional[np.ndarray] = None,
+        event_time: Optional[str] = None,
+        valid_from: Optional[str] = None,
+        valid_until: Optional[str] = None,
+        memory_kind: Optional[str] = None,
+        confidence: Optional[float] = None,
     ) -> Optional[Dict[str, Any]]:
         """Update a node."""
         # Get current node
@@ -231,6 +324,11 @@ class SQLiteStore:
         new_metadata = metadata if metadata is not None else current["metadata"]
         new_embedding = embedding if embedding is not None else current["embedding"]
         new_raw_embedding = raw_embedding if raw_embedding is not None else current.get("raw_embedding")
+        new_event_time = event_time if event_time is not None else current.get("event_time")
+        new_valid_from = valid_from if valid_from is not None else current.get("valid_from")
+        new_valid_until = valid_until if valid_until is not None else current.get("valid_until")
+        new_memory_kind = memory_kind if memory_kind is not None else current.get("memory_kind")
+        new_confidence = confidence if confidence is not None else current.get("confidence", 1.0)
         now = datetime.utcnow()
         
         embedding_blob = self._serialize_embedding(new_embedding)
@@ -239,13 +337,20 @@ class SQLiteStore:
         with self._cursor() as cursor:
             cursor.execute("""
                 UPDATE nodes
-                SET text = ?, metadata = ?, embedding = ?, raw_embedding = ?, updated_at = ?
+                SET text = ?, metadata = ?, embedding = ?, raw_embedding = ?,
+                    event_time = ?, valid_from = ?, valid_until = ?,
+                    memory_kind = ?, confidence = ?, updated_at = ?
                 WHERE id = ? AND deleted_at IS NULL
             """, (
                 new_text,
                 json.dumps(new_metadata),
                 embedding_blob,
                 raw_embedding_blob,
+                new_event_time,
+                new_valid_from,
+                new_valid_until,
+                new_memory_kind,
+                new_confidence,
                 now,
                 node_id
             ))
@@ -255,6 +360,11 @@ class SQLiteStore:
             "text": new_text,
             "metadata": new_metadata,
             "embedding": new_embedding,
+            "event_time": new_event_time,
+            "valid_from": new_valid_from,
+            "valid_until": new_valid_until,
+            "memory_kind": new_memory_kind,
+            "confidence": new_confidence,
             "created_at": current["created_at"],
             "updated_at": now
         }
@@ -304,24 +414,33 @@ class SQLiteStore:
         self,
         skip: int = 0,
         limit: int = 100,
-        include_embeddings: bool = False
+        include_embeddings: bool = False,
+        include_archived: bool = False,
     ) -> List[Dict[str, Any]]:
         """List current active nodes with pagination."""
         with self._cursor() as cursor:
             if include_embeddings:
                 cursor.execute("""
-                    SELECT id, text, metadata, embedding, created_at, updated_at
-                    FROM nodes WHERE deleted_at IS NULL
+                    SELECT id, text, metadata, embedding, event_time, valid_from,
+                           valid_until, memory_kind, confidence, access_count,
+                           last_accessed_at, archived_at, archived_by,
+                           created_at, updated_at
+                    FROM nodes
+                    WHERE deleted_at IS NULL AND (? OR archived_at IS NULL)
                     ORDER BY created_at DESC
                     LIMIT ? OFFSET ?
-                """, (limit, skip))
+                """, (include_archived, limit, skip))
             else:
                 cursor.execute("""
-                    SELECT id, text, metadata, created_at, updated_at
-                    FROM nodes WHERE deleted_at IS NULL
+                    SELECT id, text, metadata, event_time, valid_from,
+                           valid_until, memory_kind, confidence, access_count,
+                           last_accessed_at, archived_at, archived_by,
+                           created_at, updated_at
+                    FROM nodes
+                    WHERE deleted_at IS NULL AND (? OR archived_at IS NULL)
                     ORDER BY created_at DESC
                     LIMIT ? OFFSET ?
-                """, (limit, skip))
+                """, (include_archived, limit, skip))
             
             nodes = []
             for row in cursor.fetchall():
@@ -329,6 +448,15 @@ class SQLiteStore:
                     "id": row["id"],
                     "text": row["text"],
                     "metadata": json.loads(row["metadata"]),
+                    "event_time": row["event_time"],
+                    "valid_from": row["valid_from"],
+                    "valid_until": row["valid_until"],
+                    "memory_kind": row["memory_kind"],
+                    "confidence": row["confidence"] if row["confidence"] is not None else 1.0,
+                    "access_count": row["access_count"] or 0,
+                    "last_accessed_at": row["last_accessed_at"],
+                    "archived_at": row["archived_at"],
+                    "archived_by": row["archived_by"],
                     "created_at": row["created_at"],
                     "updated_at": row["updated_at"]
                 }
@@ -338,12 +466,14 @@ class SQLiteStore:
             
             return nodes
     
-    def get_all_node_embeddings(self) -> List[Tuple[str, np.ndarray]]:
-        """Get all active node IDs and embeddings for vector index rebuild."""
+    def get_all_node_embeddings(self, include_archived: bool = False) -> List[Tuple[str, np.ndarray]]:
+        """Get retrievable node IDs and embeddings for vector index rebuild."""
         with self._cursor() as cursor:
             cursor.execute("""
-                SELECT id, embedding FROM nodes WHERE embedding IS NOT NULL AND deleted_at IS NULL
-            """)
+                SELECT id, embedding FROM nodes
+                WHERE embedding IS NOT NULL AND deleted_at IS NULL
+                  AND (? OR archived_at IS NULL)
+            """, (include_archived,))
             
             results = []
             for row in cursor.fetchall():
@@ -358,6 +488,153 @@ class SQLiteStore:
         with self._cursor() as cursor:
             cursor.execute("SELECT COUNT(*) FROM nodes WHERE deleted_at IS NULL")
             return cursor.fetchone()[0]
+
+    def count_retrievable_nodes(self) -> int:
+        """Return active nodes that participate in retrieval indexes."""
+        with self._cursor() as cursor:
+            cursor.execute(
+                "SELECT COUNT(*) FROM nodes WHERE deleted_at IS NULL AND archived_at IS NULL"
+            )
+            return cursor.fetchone()[0]
+
+    def is_node_retrievable(self, node_id: str) -> bool:
+        with self._cursor() as cursor:
+            cursor.execute(
+                """SELECT 1 FROM nodes
+                   WHERE id = ? AND deleted_at IS NULL AND archived_at IS NULL""",
+                (node_id,),
+            )
+            return cursor.fetchone() is not None
+
+    # ==================== Structured Metadata ====================
+
+    @staticmethod
+    def canonicalize_entity(entity: str) -> str:
+        value = unicodedata.normalize("NFKC", str(entity)).casefold().strip()
+        value = re.sub(r"[^\w\s-]", " ", value)
+        return re.sub(r"\s+", " ", value).strip()
+
+    def upsert_node_entities(
+        self,
+        node_id: str,
+        entities: List[Any],
+        confidence: float = 1.0,
+    ) -> int:
+        """Replace normalized entity mentions for a node."""
+        normalized: Dict[str, str] = {}
+        for item in entities:
+            name = item.get("name", "") if isinstance(item, dict) else str(item)
+            key = self.canonicalize_entity(name)
+            if key:
+                normalized.setdefault(key, name.strip())
+
+        with self._cursor() as cursor:
+            cursor.execute("DELETE FROM node_entities WHERE node_id = ?", (node_id,))
+            cursor.executemany(
+                """INSERT INTO node_entities (node_id, entity_key, entity_name, confidence)
+                   VALUES (?, ?, ?, ?)""",
+                [(node_id, key, name, confidence) for key, name in sorted(normalized.items())],
+            )
+        return len(normalized)
+
+    def get_node_entities(self, node_id: str) -> List[Dict[str, Any]]:
+        with self._cursor() as cursor:
+            cursor.execute(
+                """SELECT entity_key, entity_name, confidence
+                   FROM node_entities WHERE node_id = ? ORDER BY entity_key""",
+                (node_id,),
+            )
+            return [dict(row) for row in cursor.fetchall()]
+
+    def search_nodes_by_entity(
+        self,
+        entity: str,
+        exclude_id: Optional[str] = None,
+        limit: int = 100,
+    ) -> List[str]:
+        key = self.canonicalize_entity(entity)
+        if not key:
+            return []
+        with self._cursor() as cursor:
+            cursor.execute(
+                """SELECT ne.node_id
+                   FROM node_entities AS ne
+                   JOIN nodes AS n ON n.id = ne.node_id
+                   WHERE ne.entity_key = ?
+                     AND (? IS NULL OR ne.node_id != ?)
+                     AND n.deleted_at IS NULL AND n.archived_at IS NULL
+                   ORDER BY n.created_at DESC, ne.node_id
+                   LIMIT ?""",
+                (key, exclude_id, exclude_id, limit),
+            )
+            return [row["node_id"] for row in cursor.fetchall()]
+
+    def find_temporal_neighbors(
+        self,
+        event_time: str,
+        exclude_id: Optional[str] = None,
+        window_days: float = 30.0,
+        limit: int = 20,
+    ) -> List[Dict[str, Any]]:
+        """Return retrievable nodes nearest to an ISO event timestamp."""
+        with self._cursor() as cursor:
+            cursor.execute(
+                """SELECT id, event_time,
+                          ABS(julianday(event_time) - julianday(?)) AS delta_days
+                   FROM nodes
+                   WHERE event_time IS NOT NULL
+                     AND deleted_at IS NULL AND archived_at IS NULL
+                     AND (? IS NULL OR id != ?)
+                     AND ABS(julianday(event_time) - julianday(?)) <= ?
+                   ORDER BY delta_days, id
+                   LIMIT ?""",
+                (event_time, exclude_id, exclude_id, event_time, window_days, limit),
+            )
+            return [dict(row) for row in cursor.fetchall()]
+
+    # ==================== Access and Compression State ====================
+
+    def record_access(self, node_ids: List[str], accessed_at: Optional[str] = None) -> int:
+        """Atomically increment access statistics once per unique node."""
+        unique_ids = list(dict.fromkeys(node_ids))
+        if not unique_ids:
+            return 0
+        timestamp = accessed_at or datetime.now(timezone.utc).isoformat()
+        updated = 0
+        with self._cursor() as cursor:
+            for offset in range(0, len(unique_ids), 500):
+                batch = unique_ids[offset : offset + 500]
+                placeholders = ",".join("?" for _ in batch)
+                cursor.execute(
+                    f"""UPDATE nodes
+                        SET access_count = access_count + 1,
+                            last_accessed_at = ?,
+                            updated_at = updated_at
+                        WHERE id IN ({placeholders})
+                          AND deleted_at IS NULL AND archived_at IS NULL""",
+                    (timestamp, *batch),
+                )
+                updated += cursor.rowcount
+        return updated
+
+    def archive_nodes(self, node_ids: List[str], archived_by: str) -> int:
+        """Remove sources from retrieval without deleting provenance rows/edges."""
+        unique_ids = [node_id for node_id in dict.fromkeys(node_ids) if node_id != archived_by]
+        if not unique_ids:
+            return 0
+        timestamp = datetime.now(timezone.utc).isoformat()
+        updated = 0
+        with self._cursor() as cursor:
+            for offset in range(0, len(unique_ids), 500):
+                batch = unique_ids[offset : offset + 500]
+                placeholders = ",".join("?" for _ in batch)
+                cursor.execute(
+                    f"""UPDATE nodes SET archived_at = ?, archived_by = ?
+                        WHERE id IN ({placeholders}) AND deleted_at IS NULL""",
+                    (timestamp, archived_by, *batch),
+                )
+                updated += cursor.rowcount
+        return updated
     
     # ==================== Edge Operations ====================
     

@@ -36,7 +36,7 @@ class VectorIndex:
     
     def __init__(
         self,
-        dimension: int = 384,
+        dimension: int = 4096,
         index_path: Optional[str] = None,
         deletion_threshold: float = 0.2
     ):
@@ -44,7 +44,7 @@ class VectorIndex:
         Initialize vector index.
         
         Args:
-            dimension: Embedding dimension (384 for MiniLM)
+            dimension: Embedding dimension (fixed to 4096 in HybridMind)
             index_path: Path for index persistence
             deletion_threshold: Trigger compaction when this fraction is deleted (0.2 = 20%)
         """
@@ -110,6 +110,14 @@ class VectorIndex:
         """
         # Normalize for cosine similarity
         embedding = np.asarray(embedding, dtype=np.float32)
+        if embedding.ndim != 1 or embedding.shape[0] != self.dimension:
+            raise ValueError(
+                f"Embedding for node {node_id!r} has shape {embedding.shape}; "
+                f"HybridMind requires exactly ({self.dimension},). No dimension "
+                "coercion or fallback is permitted."
+            )
+        if not np.all(np.isfinite(embedding)):
+            raise ValueError(f"Embedding for node {node_id!r} contains non-finite values")
         norm = np.linalg.norm(embedding)
         if norm > 0:
             normalized = embedding / norm

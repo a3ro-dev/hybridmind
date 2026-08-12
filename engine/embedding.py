@@ -1,18 +1,17 @@
 """
 Embedding pipeline for HybridMind.
 
-Backends (selected automatically, in priority order):
+Runtime backends (selected automatically, in priority order):
 1. TEIEmbeddingEngine: when RUNPOD_TEI_EMBEDDING_URL is set. Calls a
    self-hosted HuggingFace TEI /embed endpoint (e.g. our own RunPod
    Qwen3-Embedding-8B deployment). Native output dim (4096 for that model,
-   no MRL truncation). Falls back to local bge-m3 on HTTP errors.
+   no MRL truncation). Errors propagate; there is no local fallback.
 2. RemoteEmbeddingEngine: when HC_EMBEDDING_URL or RUNPOD_EMBEDDING_URL is
    set. Calls a remote OpenAI-compatible /v1/embeddings endpoint (e.g. Hack
-   Club AI). Falls back to local bge-m3 on HTTP errors.
-3. EmbeddingEngine (local):
-  - bge-m3  (BAAI/bge-m3*)  : FlagEmbedding BGEM3FlagModel, 1024-dim,
-    dense + sparse (lexical weights) + colbert (per-token) natively.
-  - SentenceTransformer (*): all other models, e.g. all-mpnet-base-v2 (768-dim).
+   Club AI). The response must be exactly 4096-dimensional and errors propagate.
+
+``EmbeddingEngine`` remains as an internal model adapter for optional training
+utilities, but runtime backend selection never returns it.
 
 Env vars:
   RUNPOD_TEI_EMBEDDING_URL — self-hosted RunPod TEI base URL (raw HF TEI
@@ -21,10 +20,7 @@ Env vars:
   HC_EMBEDDING_URL      — Hack Club AI base URL (https://ai.hackclub.com/proxy/v1)
   HC_API_KEY            — Hack Club AI API key
   RUNPOD_EMBEDDING_URL  — fallback OpenAI-compatible RunPod base URL (legacy)
-  HYBRIDMIND_EMBEDDING_DIMENSION — output dimension; default 4096 (native
-                                   Qwen3-Embedding-8B dim via TEI). Set to
-                                   1024 if using the MRL-truncated OpenAI-
-                                   compatible path instead.
+  HYBRIDMIND_EMBEDDING_DIMENSION — must be exactly 4096.
 """
 
 import logging
@@ -39,6 +35,19 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_MODEL = "BAAI/bge-m3"
 _DEFAULT_DIMENSION = 1024
+
+
+def validate_embedding_4096(embedding, *, label: str = "embedding") -> np.ndarray:
+    """Return a finite float32 vector or fail without coercing its dimension."""
+    vector = np.asarray(embedding, dtype=np.float32)
+    if vector.ndim != 1 or vector.shape[0] != 4096:
+        raise ValueError(
+            f"{label} has shape {vector.shape}; HybridMind requires exactly (4096,). "
+            "No projection, padding, truncation, or fallback is permitted."
+        )
+    if not np.all(np.isfinite(vector)):
+        raise ValueError(f"{label} contains non-finite values")
+    return vector
 
 _BGE_M3_PREFIX = "BAAI/bge-m3"
 
@@ -447,7 +456,8 @@ class TEIEmbeddingEngine:
       HYBRIDMIND_EMBEDDING_DIMENSION — informational only (TEI doesn't take
                                          a dimension param); default 4096.
 
-    Falls back to the local EmbeddingEngine on any HTTP error.
+    Endpoint failures and wrong-dimensional responses raise; no local fallback
+    is available to the persisted 4096-dimensional retrieval path.
     """
 
     def __init__(self, base_url: str, api_key: str, dimension: int = 4096):
@@ -623,9 +633,8 @@ def get_embedding_engine(model_name: str = _DEFAULT_MODEL, device: Optional[str]
     Priority:
     1. TEIEmbeddingEngine if RUNPOD_TEI_EMBEDDING_URL is set (self-hosted TEI, no fallback)
     2. RemoteEmbeddingEngine if HC_EMBEDDING_URL or RUNPOD_EMBEDDING_URL is set (no fallback)
-    3. Local EmbeddingEngine — ONLY if HYBRIDMIND_EMBEDDING_DIMENSION != 4096.
-       If dimension is 4096 and no remote URL is configured, we raise immediately
-       rather than silently producing 1024-dim vectors that corrupt the FAISS index.
+    There is no local or lower-dimensional fallback. HybridMind's persisted
+    vector contract is exactly 4096 dimensions in every environment.
     """
     global _embedding_engine
 
@@ -649,17 +658,8 @@ def get_embedding_engine(model_name: str = _DEFAULT_MODEL, device: Optional[str]
             _embedding_engine = RemoteEmbeddingEngine(base_url=remote_url, api_key=api_key, dimension=dim, model=remote_model)
         return _embedding_engine
 
-    # No remote configured — only allow local engine if dimension is NOT 4096.
-    configured_dim = int(os.getenv("HYBRIDMIND_EMBEDDING_DIMENSION", "1024"))
-    if configured_dim == 4096:
-        raise RuntimeError(
-            "HYBRIDMIND_EMBEDDING_DIMENSION=4096 but neither RUNPOD_TEI_EMBEDDING_URL nor "
-            "HC_EMBEDDING_URL is set. The local bge-m3 model is 1024-dim and would corrupt "
-            "the FAISS index. Set one of those env vars before starting the server."
-        )
-
-    if _embedding_engine is None or (
-        isinstance(_embedding_engine, EmbeddingEngine) and _embedding_engine.model_name != model_name
-    ):
-        _embedding_engine = EmbeddingEngine(model_name=model_name, device=device)
-    return _embedding_engine
+    raise RuntimeError(
+        "HybridMind requires an exact 4096-dimensional remote embedding backend, but "
+        "neither RUNPOD_TEI_EMBEDDING_URL nor HC_EMBEDDING_URL/RUNPOD_EMBEDDING_URL "
+        "is configured. No local or lower-dimensional fallback exists."
+    )

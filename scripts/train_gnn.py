@@ -54,7 +54,7 @@ def main():
     from storage.sqlite_store import SQLiteStore
     from storage.graph_index import GraphIndex
     from storage.mindfile import MindFile
-    from engine.embedding import EmbeddingEngine
+    from engine.embedding import validate_embedding_4096
     from engine.device import resolve_device
 
     device = resolve_device(settings.device)
@@ -65,17 +65,21 @@ def main():
     sqlite_store = SQLiteStore(paths["sqlite"])
     graph_index = GraphIndex(index_path=paths["graph"])
 
-    embedding_engine = EmbeddingEngine(model_name=settings.embedding_model, device=device)
-
     logger.info("Loading nodes and building graph tensors...")
-    all_nodes = sqlite_store.list_nodes(limit=10_000_000)
+    all_nodes = sqlite_store.list_nodes(limit=10_000_000, include_embeddings=True)
     node_ids = [n["id"] for n in all_nodes]
     id_to_idx = {nid: i for i, nid in enumerate(node_ids)}
 
-    logger.info(f"Embedding {len(node_ids)} nodes...")
-    texts = [n["text"] for n in all_nodes]
-    embeddings = embedding_engine.embed_batch(texts, normalize=True, batch_size=32, show_progress=True)
     import numpy as np
+    embeddings = np.stack(
+        [
+            validate_embedding_4096(
+                node.get("embedding"), label=f"stored GNN feature {node['id']}"
+            )
+            for node in all_nodes
+        ],
+        axis=0,
+    )
     x = torch.tensor(embeddings, dtype=torch.float32)
     in_dim = x.shape[1]
 
