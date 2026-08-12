@@ -30,6 +30,8 @@ logger = logging.getLogger(__name__)
 
 _ZAI_API_KEY = os.getenv("ZAI_API_KEY", "").strip()
 _ZAI_BASE_URL = os.getenv("ZAI_BASE_URL", "https://open.bigmodel.cn/api/paas/v4").rstrip("/")
+_HC_API_KEY = os.getenv("HC_API_KEY", "").strip()
+_OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://ai.hackclub.com/proxy/v1").rstrip("/")
 DEFAULT_ANSWER_MODEL = os.getenv("HYBRIDMIND_QA_MODEL", "glm-4.6")
 
 # Phase 6.1 (docs/PHASE_6_REALISTIC.md section 3): set to "true" to fall back to
@@ -90,8 +92,48 @@ def is_abstention(text: str) -> bool:
     return (not text) or bool(_ABSTENTION_RE.match(text))
 
 
+def _is_llm_available(model: str | None = None) -> bool:
+    requested = (model or DEFAULT_ANSWER_MODEL).lower()
+    if "qwen" in requested and _HC_API_KEY:
+        return True
+    if _ZAI_API_KEY:
+        return True
+    from engine.runpod_llm import is_configured
+    return is_configured()
+
+
 def _call(payload: dict) -> str | None:
-    """Call Z.AI for evaluation QA; use RunPod only as an optional fallback."""
+    """Call the selected evaluation LLM with bounded retries."""
+    requested_model = str(payload.get("model") or DEFAULT_ANSWER_MODEL)
+
+    if "qwen" in requested_model.lower() and _HC_API_KEY:
+        headers = {"Authorization": f"Bearer {_HC_API_KEY}", "Content-Type": "application/json"}
+        proxy_payload = dict(payload)
+        proxy_payload["reasoning_effort"] = "none"
+        client = _get_client()
+        for attempt in range(_MAX_ATTEMPTS):
+            try:
+                resp = client.post(
+                    f"{_OPENAI_BASE_URL}/chat/completions",
+                    headers=headers,
+                    json=proxy_payload,
+                )
+                if resp.status_code in (429, 500, 502, 503, 504):
+                    raise httpx.HTTPStatusError(
+                        "retryable Hack Club response", request=resp.request, response=resp
+                    )
+                resp.raise_for_status()
+                return resp.json()["choices"][0]["message"]["content"]
+            except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.ConnectError, httpx.ReadError) as e:
+                status = e.response.status_code if isinstance(e, httpx.HTTPStatusError) and e.response is not None else None
+                if status == 400 and "response_format" in proxy_payload:
+                    proxy_payload.pop("response_format", None)
+                    continue
+                if attempt < _MAX_ATTEMPTS - 1:
+                    _sleep_backoff(attempt, f"Hack Club {type(e).__name__}")
+                    continue
+                logger.error("eval_common: Hack Club failed after %s attempts: %s", _MAX_ATTEMPTS, e)
+
     if _ZAI_API_KEY:
         headers = {"Authorization": f"Bearer {_ZAI_API_KEY}", "Content-Type": "application/json"}
         client = _get_client()
@@ -144,7 +186,7 @@ def llm_answer(question: str, snippets: list[str], question_date: str = "", mode
     Returns "" if no answer could be produced (including when ZAI_API_KEY is unset).
     """
     model = model or DEFAULT_ANSWER_MODEL
-    if not snippets or (not _ZAI_API_KEY and not __import__("engine.runpod_llm", fromlist=["is_configured"]).is_configured()):
+    if not snippets or not _is_llm_available(model):
         return ""
     context = "\n".join(f"[{i + 1}] {s}" for i, s in enumerate(snippets[:10]))
     date_line = f"Question date: {question_date}\n" if question_date else ""
@@ -221,7 +263,7 @@ def llm_answer_citation(question: str, snippets: list[str], question_date: str =
     answers invented without grounding in the provided context.
     """
     model = model or DEFAULT_ANSWER_MODEL
-    if not snippets or not _ZAI_API_KEY:
+    if not snippets or not _is_llm_available(model):
         return ""
     context = "\n".join(f"[{i + 1}] {s}" for i, s in enumerate(snippets[:10]))
     date_line = f"Question date: {question_date}\n" if question_date else ""
@@ -284,7 +326,7 @@ def llm_answer_multihop(question: str, snippets: list[str], question_date: str =
     answer directly from a flat snippet list.
     """
     model = model or DEFAULT_ANSWER_MODEL
-    if not snippets or not _ZAI_API_KEY:
+    if not snippets or not _is_llm_available(model):
         return ""
     context = "\n".join(f"[{i + 1}] {s}" for i, s in enumerate(snippets[:10]))
     date_line = f"Question date: {question_date}\n" if question_date else ""

@@ -962,10 +962,23 @@ async def ingest_session_facts(request: SessionFactsRequest):
             cursor.execute(
                 """
                 SELECT id FROM nodes
-                WHERE json_extract(metadata, '$.sessionId') = ?
-                   OR json_extract(metadata, '$.session_id') = ?
+                WHERE (
+                    json_extract(metadata, '$.sessionId') = ?
+                    OR json_extract(metadata, '$.session_id') = ?
+                )
+                AND (
+                    ? IS NULL
+                    OR json_extract(metadata, '$.containerTag') = ?
+                    OR json_extract(metadata, '$.container_tag') = ?
+                )
                 """,
-                (request.session_id, request.session_id)
+                (
+                    request.session_id,
+                    request.session_id,
+                    request.container_tag,
+                    request.container_tag,
+                    request.container_tag,
+                )
             )
             session_turns = [row[0] for row in cursor.fetchall()]
     except Exception as e:
@@ -1006,6 +1019,9 @@ async def ingest_session_facts(request: SessionFactsRequest):
                             meta_cand = json.loads(meta_cand)
                         except Exception:
                             meta_cand = {}
+                    candidate_container = meta_cand.get("containerTag") or meta_cand.get("container_tag")
+                    if request.container_tag and candidate_container != request.container_tag:
+                        continue
                     if meta_cand.get("type") == "extracted_fact":
                         existing_nodes.append({
                             "id": cand_id,

@@ -124,10 +124,11 @@ Answer:`
 
       for (const msg of session.messages) {
         const role = msg.role === "user" ? "human" : "ai"
+        const speaker = ((msg as Record<string, unknown>).speaker as string | undefined) || role
         const dateStr = ((msg as Record<string, unknown>).timestamp as string) ?? sessionDate ?? ""
         const text = dateStr
-          ? `[DATE: ${dateStr}] [SPEAKER: ${role}] ${msg.content}`
-          : `[SPEAKER: ${role}] ${msg.content}`
+          ? `[DATE: ${dateStr}] [SPEAKER: ${speaker}] ${msg.content}`
+          : `[SPEAKER: ${speaker}] ${msg.content}`
           
         const metadata: Record<string, unknown> = {
           session_id: session.sessionId,
@@ -168,7 +169,9 @@ Answer:`
       // 2. Extract and store facts for this session (LLM call at ingest time only)
       try {
         const turns = session.messages.map((msg) => ({
-          speaker: msg.role === "user" ? "human" : "ai",
+          speaker:
+            ((msg as Record<string, unknown>).speaker as string | undefined) ||
+            (msg.role === "user" ? "human" : "ai"),
           text: msg.content,
           date: (msg as Record<string, unknown>).timestamp as string ?? sessionDate ?? "",
         }))
@@ -214,7 +217,7 @@ Answer:`
   }
 
   async search(query: string, options: SearchOptions): Promise<unknown[]> {
-    const topK = 15  // Increased from 10 for better recall
+    const topK = options.limit || 15
     const route = routeQuery(query)
 
     const body: Record<string, unknown> = {
@@ -253,11 +256,6 @@ Answer:`
       }
     }
 
-    // Entity questions: filter to extracted_fact nodes first for precision.
-    if (route.type === "entity" && route.metadataFilter) {
-      body.filter_metadata = { ...(body.filter_metadata as Record<string, unknown>), ...route.metadataFilter }
-    }
-
     const res = await fetch(`${this.baseUrl}/search/hybrid`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -272,27 +270,6 @@ Answer:`
     const data = (await res.json()) as { results?: unknown[] }
     let results = data.results || []
 
-    // Entity fallback: if fact filter returns nothing, retry without type filter
-    if (route.type === "entity" && results.length === 0) {
-      const fallbackBody: Record<string, unknown> = { query_text: query, top_k: topK, min_score: 0.0 }
-      if (options.containerTag) {
-        fallbackBody.filter_metadata = { containerTag: options.containerTag }
-      }
-      try {
-        const fallbackRes = await fetch(`${this.baseUrl}/search/hybrid`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(fallbackBody),
-        })
-        if (fallbackRes.ok) {
-          const fallbackData = (await fallbackRes.json()) as { results?: unknown[] }
-          results = fallbackData.results || []
-        }
-      } catch {
-        // Use empty results
-      }
-    }
-
     // Normalize: MemoryBench expects result.id — HybridMind returns result.node_id
     const normalizedResults = results.map((r: unknown) => {
       const result = r as Record<string, unknown>
@@ -302,21 +279,7 @@ Answer:`
       }
     })
 
-    return this._sortChronologically(normalizedResults)
-  }
-
-  private _sortChronologically(nodes: unknown[]): unknown[] {
-    const getTimestamp = (node: any): number | null => {
-      const d = node.metadata?.timestamp || node.metadata?.date || node.metadata?.createdAt
-      if (!d) return null
-      const parsed = Date.parse(d)
-      return isNaN(parsed) ? null : parsed
-    }
-    return [...nodes].sort((a: any, b: any) => {
-      const tsA = getTimestamp(a)
-      const tsB = getTimestamp(b)
-      return tsA !== null && tsB !== null ? tsA - tsB : 0
-    })
+    return normalizedResults
   }
 
   async clear(_containerTag: string): Promise<void> {

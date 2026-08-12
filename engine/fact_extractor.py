@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 _HC_API_KEY = os.getenv("HC_API_KEY", "")
 _BASE_URL = os.getenv("OPENAI_BASE_URL", "https://ai.hackclub.com/proxy/v1").rstrip("/")
-_MODEL = "openai/gpt-4o"
+_MODEL = os.getenv("HYBRIDMIND_FACT_MODEL", "qwen/qwen3.5-9b")
 
 # Retry configuration
 _MAX_ATTEMPTS = 4
@@ -199,6 +199,10 @@ def _call_llm(
         "max_tokens": max_tokens,
         "temperature": 0.0,
     }
+    if "qwen" in _MODEL.lower():
+        # Hack Club's proxy exposes Qwen thinking separately. Without this,
+        # short structured calls can exhaust max_tokens and return content=null.
+        payload["reasoning_effort"] = "none"
     if response_format:
         payload["response_format"] = response_format
     headers = {

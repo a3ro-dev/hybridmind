@@ -1,0 +1,400 @@
+{
+  "benchmark": "locomo_kv_reduction_frontier",
+  "coverage": {
+    "ledger_records": 755,
+    "matched_records": 755,
+    "retrieved_node_reference_resolution_rate": 1.0,
+    "unique_retrieved_nodes_resolved": 0,
+    "unmatched_dataset_questions": 1231,
+    "unmatched_ledger_records": 0,
+    "unresolved_gold_evidence_ids": 3
+  },
+  "frontier": {
+    "1": {
+      "answer_overlap_proxy_hit_all": {
+        "ci95_high": 0.08344370860927153,
+        "ci95_low": 0.04768211920529802,
+        "mean": 0.06490066225165562,
+        "n": 755
+      },
+      "answer_overlap_proxy_hit_with_gold_evidence": {
+        "ci95_high": 0.08244680851063829,
+        "ci95_low": 0.047872340425531915,
+        "mean": 0.06515957446808511,
+        "n": 752
+      },
+      "context_reduction": {
+        "ci95_high": 0.9992597938808395,
+        "ci95_low": 0.9991414753359459,
+        "mean": 0.9992013474999993,
+        "n": 755
+      },
+      "exact_source_all_hit": {
+        "ci95_high": 0.07446808510638298,
+        "ci95_low": 0.041223404255319146,
+        "mean": 0.057180851063829786,
+        "n": 752
+      },
+      "exact_source_any_hit": {
+        "ci95_high": 0.07712765957446809,
+        "ci95_low": 0.043882978723404256,
+        "mean": 0.0598404255319149,
+        "n": 752
+      },
+      "exact_source_recall": {
+        "ci95_high": 0.07579787234042554,
+        "ci95_low": 0.0425531914893617,
+        "mean": 0.05851063829787234,
+        "n": 752
+      },
+      "retrieved_context_tokens": {
+        "mean": 21.570860927152317,
+        "median": 13.0,
+        "n": 755,
+        "p95": 67.0
+      }
+    },
+    "10": {
+      "answer_overlap_proxy_hit_all": {
+        "ci95_high": 0.23841059602649006,
+        "ci95_low": 0.18013245033112582,
+        "mean": 0.20927152317880796,
+        "n": 755
+      },
+      "answer_overlap_proxy_hit_with_gold_evidence": {
+        "ci95_high": 0.24069148936170212,
+        "ci95_low": 0.18085106382978725,
+        "mean": 0.21010638297872342,
+        "n": 752
+      },
+      "context_reduction": {
+        "ci95_high": 0.991761559339442,
+        "ci95_low": 0.9910865077142037,
+        "mean": 0.991419687547639,
+        "n": 755
+      },
+      "exact_source_all_hit": {
+        "ci95_high": 0.3537234042553192,
+        "ci95_low": 0.28856382978723405,
+        "mean": 0.3204787234042553,
+        "n": 752
+      },
+      "exact_source_any_hit": {
+        "ci95_high": 0.39228723404255317,
+        "ci95_low": 0.3257978723404255,
+        "mean": 0.3603723404255319,
+        "n": 752
+      },
+      "exact_source_recall": {
+        "ci95_high": 0.3717198581560284,
+        "ci95_low": 0.3038563829787234,
+        "mean": 0.33766780648429584,
+        "n": 752
+      },
+      "retrieved_context_tokens": {
+        "mean": 231.27549668874173,
+        "median": 215.0,
+        "n": 755,
+        "p95": 434.0
+      }
+    },
+    "100": {
+      "answer_overlap_proxy_hit_all": {
+        "ci95_high": 0.36026490066225164,
+        "ci95_low": 0.29403973509933773,
+        "mean": 0.3271523178807947,
+        "n": 755
+      },
+      "answer_overlap_proxy_hit_with_gold_evidence": {
+        "ci95_high": 0.35904255319148937,
+        "ci95_low": 0.2925531914893617,
+        "mean": 0.3271276595744681,
+        "n": 752
+      },
+      "context_reduction": {
+        "ci95_high": 0.9035573520303085,
+        "ci95_low": 0.8984620899548303,
+        "mean": 0.9010099745835146,
+        "n": 755
+      },
+      "exact_source_all_hit": {
+        "ci95_high": 0.6382978723404256,
+        "ci95_low": 0.5678191489361702,
+        "mean": 0.6037234042553191,
+        "n": 752
+      },
+      "exact_source_any_hit": {
+        "ci95_high": 0.7220744680851063,
+        "ci95_low": 0.6555851063829787,
+        "mean": 0.6888297872340425,
+        "n": 752
+      },
+      "exact_source_recall": {
+        "ci95_high": 0.6753102836879432,
+        "ci95_low": 0.611616641337386,
+        "mean": 0.6432307497467072,
+        "n": 752
+      },
+      "retrieved_context_tokens": {
+        "mean": 2707.1615894039737,
+        "median": 2793.0,
+        "n": 755,
+        "p95": 3799.0
+      }
+    },
+    "25": {
+      "answer_overlap_proxy_hit_all": {
+        "ci95_high": 0.2900662251655629,
+        "ci95_low": 0.22913907284768212,
+        "mean": 0.2596026490066225,
+        "n": 755
+      },
+      "answer_overlap_proxy_hit_with_gold_evidence": {
+        "ci95_high": 0.2898936170212766,
+        "ci95_low": 0.22739361702127658,
+        "mean": 0.25930851063829785,
+        "n": 752
+      },
+      "context_reduction": {
+        "ci95_high": 0.9790351667172829,
+        "ci95_low": 0.9775480630743831,
+        "mean": 0.9783004912018546,
+        "n": 755
+      },
+      "exact_source_all_hit": {
+        "ci95_high": 0.46143617021276595,
+        "ci95_low": 0.39095744680851063,
+        "mean": 0.42686170212765956,
+        "n": 752
+      },
+      "exact_source_any_hit": {
+        "ci95_high": 0.523936170212766,
+        "ci95_low": 0.4521276595744681,
+        "mean": 0.488031914893617,
+        "n": 752
+      },
+      "exact_source_recall": {
+        "ci95_high": 0.49181231003039516,
+        "ci95_low": 0.4212987588652482,
+        "mean": 0.45577507598784195,
+        "n": 752
+      },
+      "retrieved_context_tokens": {
+        "mean": 586.5509933774835,
+        "median": 575.0,
+        "n": 755,
+        "p95": 984.0
+      }
+    },
+    "3": {
+      "answer_overlap_proxy_hit_all": {
+        "ci95_high": 0.14966887417218544,
+        "ci95_low": 0.10198675496688742,
+        "mean": 0.12450331125827814,
+        "n": 755
+      },
+      "answer_overlap_proxy_hit_with_gold_evidence": {
+        "ci95_high": 0.14893617021276595,
+        "ci95_low": 0.10106382978723404,
+        "mean": 0.125,
+        "n": 752
+      },
+      "context_reduction": {
+        "ci95_high": 0.997491021556894,
+        "ci95_low": 0.9972236566274522,
+        "mean": 0.997356064707409,
+        "n": 755
+      },
+      "exact_source_all_hit": {
+        "ci95_high": 0.19148936170212766,
+        "ci95_low": 0.13962765957446807,
+        "mean": 0.16489361702127658,
+        "n": 752
+      },
+      "exact_source_any_hit": {
+        "ci95_high": 0.21010638297872342,
+        "ci95_low": 0.15425531914893617,
+        "mean": 0.18218085106382978,
+        "n": 752
+      },
+      "exact_source_recall": {
+        "ci95_high": 0.20057624113475178,
+        "ci95_low": 0.14627659574468085,
+        "mean": 0.17331560283687944,
+        "n": 752
+      },
+      "retrieved_context_tokens": {
+        "mean": 71.07152317880795,
+        "median": 61.0,
+        "n": 755,
+        "p95": 162.0
+      }
+    },
+    "5": {
+      "answer_overlap_proxy_hit_all": {
+        "ci95_high": 0.18675496688741722,
+        "ci95_low": 0.1337748344370861,
+        "mean": 0.16026490066225166,
+        "n": 755
+      },
+      "answer_overlap_proxy_hit_with_gold_evidence": {
+        "ci95_high": 0.18882978723404256,
+        "ci95_low": 0.13430851063829788,
+        "mean": 0.16090425531914893,
+        "n": 752
+      },
+      "context_reduction": {
+        "ci95_high": 0.9957117053338063,
+        "ci95_low": 0.9953189652341398,
+        "mean": 0.9955228207944061,
+        "n": 755
+      },
+      "exact_source_all_hit": {
+        "ci95_high": 0.2765957446808511,
+        "ci95_low": 0.2154255319148936,
+        "mean": 0.24601063829787234,
+        "n": 752
+      },
+      "exact_source_any_hit": {
+        "ci95_high": 0.3045212765957447,
+        "ci95_low": 0.24335106382978725,
+        "mean": 0.2726063829787234,
+        "n": 752
+      },
+      "exact_source_recall": {
+        "ci95_high": 0.2902260638297872,
+        "ci95_low": 0.22683953900709222,
+        "mean": 0.2582003546099291,
+        "n": 752
+      },
+      "retrieved_context_tokens": {
+        "mean": 120.34172185430464,
+        "median": 108.0,
+        "n": 755,
+        "p95": 244.0
+      }
+    },
+    "50": {
+      "answer_overlap_proxy_hit_all": {
+        "ci95_high": 0.32450331125827814,
+        "ci95_low": 0.2596026490066225,
+        "mean": 0.29271523178807946,
+        "n": 755
+      },
+      "answer_overlap_proxy_hit_with_gold_evidence": {
+        "ci95_high": 0.3257978723404255,
+        "ci95_low": 0.25930851063829785,
+        "mean": 0.2925531914893617,
+        "n": 752
+      },
+      "context_reduction": {
+        "ci95_high": 0.9550616989584033,
+        "ci95_low": 0.9524137922305781,
+        "mean": 0.953771021900662,
+        "n": 755
+      },
+      "exact_source_all_hit": {
+        "ci95_high": 0.5492021276595744,
+        "ci95_low": 0.4787234042553192,
+        "mean": 0.5132978723404256,
+        "n": 752
+      },
+      "exact_source_any_hit": {
+        "ci95_high": 0.6263297872340425,
+        "ci95_low": 0.5558510638297872,
+        "mean": 0.5917553191489362,
+        "n": 752
+      },
+      "exact_source_recall": {
+        "ci95_high": 0.5824594731509625,
+        "ci95_low": 0.5159067882472138,
+        "mean": 0.5493636018237082,
+        "n": 752
+      },
+      "retrieved_context_tokens": {
+        "mean": 1259.0781456953641,
+        "median": 1295.0,
+        "n": 755,
+        "p95": 1868.0
+      }
+    }
+  },
+  "full_context_tokens": {
+    "mean": 28686.394701986756,
+    "median": 31913.0,
+    "n": 755,
+    "p95": 35532.0
+  },
+  "hypothesis": {
+    "data_valid": true,
+    "k": 10,
+    "observed_context_reduction": 0.991419687547639,
+    "observed_quality": 0.21010638297872342,
+    "passed": false,
+    "quality_metric": "answer-overlap proxy hit rate on questions with gold evidence",
+    "statement": "At k=10, HybridMind preserves answer-bearing context for at least 80% of LoCoMo questions with gold evidence while reducing memory-context tokens and proportional KV bytes by at least 90% versus full-history prompting."
+  },
+  "inputs": {
+    "bootstrap_resamples": 2000,
+    "checkpoint": "memorybench\\data\\runs\\hybridmind-locomo-fixed-20260726\\checkpoint.json",
+    "checkpoint_result_order": "local-lexical-rrf",
+    "checkpoint_sha256": "63545d37d9cdfba5a9c1554cc62e026323c2822d585d34b08e47a75f06b9935c",
+    "checkpoint_size_bytes": 347672409,
+    "dataset": "memorybench\\data\\benchmarks\\locomo\\locomo10.json",
+    "dataset_sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+    "k_values": [
+      1,
+      3,
+      5,
+      10,
+      25,
+      50,
+      100
+    ],
+    "local_lexical_pool_size": 500,
+    "local_lexical_weight": 0.5,
+    "retrieved_text_sha256": "bc1eafa8b37483effbafd2bd7fcc3366b4316261dc0f70b73955323a8da57af1",
+    "seed": 42,
+    "tokenizer": "BAAI/bge-m3"
+  },
+  "limitations": [
+    "Token reduction is a prompt-side KV working-set proxy, not a measurement of model-internal cache eviction.",
+    "The answer-text overlap signal is weaker than downstream QA accuracy.",
+    "Exact-source metrics require the original annotated turn text and do not credit paraphrased extracted facts.",
+    "Latency and throughput require a live, preflight-verified inference run and are not inferred here.",
+    "The MemoryBench checkpoint is partial and contains only completed historical searches.",
+    "The checkpoint has no non-null cross-encoder scores, so lexical reranking is evaluated before any neural reranker interaction."
+  ],
+  "offline_rerank_duration_ms": {
+    "mean": 59.30954105954498,
+    "median": 61.21530000382336,
+    "n": 755,
+    "p95": 73.63030000124127
+  },
+  "ranking_hypothesis": {
+    "baseline_mean": 0.15713652482269502,
+    "confirmation_limit": "The same partial checkpoint informed hypothesis selection, so this is a paired retrospective estimate rather than an independent holdout confirmation.",
+    "confirmatory": false,
+    "improved_questions": 154,
+    "improvement": {
+      "ci95_high": 0.20848847517730495,
+      "ci95_low": 0.15267223910840932,
+      "mean": 0.18053128166160082,
+      "n": 752
+    },
+    "k": 10,
+    "metric": "paired exact-source Recall@10",
+    "minimum_improvement": 0.05,
+    "passed": true,
+    "regressed_questions": 6,
+    "statement": "A 50%/50% fusion of query-local lexical rank and existing candidate rank improves exact-source Recall@10 by at least 5%.",
+    "unchanged_questions": 592,
+    "variant_mean": 0.33766780648429584
+  },
+  "search_duration_ms": {
+    "mean": 14176.87549668874,
+    "median": 13960.0,
+    "n": 755,
+    "p95": 29744.0
+  }
+}

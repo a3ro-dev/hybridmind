@@ -80,3 +80,4 @@ python eval_stats.py compare <ledger_A> <ledger_B>
 - [AGENTS.md](AGENTS.md) — system specs and developer rules
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — thread safety, WAL mode, and storage engines
 - [docs/ALGORITHM.md](docs/ALGORITHM.md) — RRF fusion formulas and cross-encoder score normalization
+- [docs/KV_CACHE_RESEARCH.md](docs/KV_CACHE_RESEARCH.md) — KV working-set hypotheses and evidence

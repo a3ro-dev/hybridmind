@@ -57,6 +57,18 @@ class HybridRanker:
         self.bm25_index = bm25_index
         self.disable_graph_expansion = disable_graph_expansion
         self.reranker = reranker
+        self._lexical_term_cache = None
+        if bm25_index is not None:
+            try:
+                from config import settings as _cfg
+                if _cfg.local_lexical_term_cache_size > 0:
+                    from engine.lexical_reranker import BoundedTokenSetCache
+                    self._lexical_term_cache = BoundedTokenSetCache(
+                        bm25_index.tokenize,
+                        max_entries=_cfg.local_lexical_term_cache_size,
+                    )
+            except Exception as e:
+                logger.debug(f"Query-local lexical token cache disabled ({e})")
 
         # Query routing: classify query → per-type weights
         # Reads from config if not explicitly set
@@ -285,23 +297,27 @@ class HybridRanker:
         else:
             reference_nodes = candidate_ids[:3]
 
-        # Expand candidates
-        expanded_candidates = set(candidate_ids)
+        # Expand candidates without losing rank order. A set here made tied
+        # zero-score candidates depend on Python hash iteration order.
+        expanded_candidates = list(candidate_ids)
+        expanded_candidate_ids = set(candidate_ids)
         if not self.disable_graph_expansion:
             for ref in reference_nodes:
-            # Traversal
+                # Traversal
                 try:
                     # get nodes from graph within max_depth
                     neighbors, _, _ = self.graph_engine.traverse(start_id=ref, depth=max_depth)
                     for n in neighbors:
-                        expanded_candidates.add(n["node_id"])
+                        neighbor_id = n["node_id"]
+                        if neighbor_id not in expanded_candidate_ids:
+                            expanded_candidate_ids.add(neighbor_id)
+                            expanded_candidates.append(neighbor_id)
                 except Exception as e:
                     import logging
                     logging.getLogger(__name__).warning(f"Graph traversal failed for {ref}: {e}")
 
         # Add the expanded candidates to our node_data and rolled_up_scores if missing
-        expanded_candidates_list = list(expanded_candidates)
-        for nid in expanded_candidates_list:
+        for nid in expanded_candidates:
             if nid not in rolled_up_nodes:
                 p_node = self.vector_engine.sqlite_store.get_node(nid)
                 if p_node:
@@ -319,7 +335,7 @@ class HybridRanker:
                     rolled_up_raw_bm25_scores[nid] = 0.0
 
         # Update candidate_ids to include expanded pool
-        candidate_ids = [nid for nid in expanded_candidates_list if nid in rolled_up_nodes]
+        candidate_ids = [nid for nid in expanded_candidates if nid in rolled_up_nodes]
 
         # Step 4: Compute Graph Scores (with optional temporal decay)
         graph_scores = self.graph_engine.compute_proximity_scores(
@@ -340,15 +356,27 @@ class HybridRanker:
             # own dedicated "sparse" RRF signal below instead of being pre-baked
             # into the dense signal, so it isn't double-counted.
             dense_list = sorted(
-                [(nid, rolled_up_raw_scores.get(nid, 0.0)) for nid in candidate_ids],
+                [
+                    (nid, rolled_up_raw_scores.get(nid, 0.0))
+                    for nid in candidate_ids
+                    if rolled_up_raw_scores.get(nid, 0.0) > 0.0
+                ],
                 key=lambda x: -x[1],
             )
             sparse_list = sorted(
-                [(nid, rolled_up_raw_bm25_scores.get(nid, 0.0)) for nid in candidate_ids],
+                [
+                    (nid, rolled_up_raw_bm25_scores.get(nid, 0.0))
+                    for nid in candidate_ids
+                    if rolled_up_raw_bm25_scores.get(nid, 0.0) > 0.0
+                ],
                 key=lambda x: -x[1],
             )
             graph_list = sorted(
-                [(nid, graph_scores.get(nid, 0.0)) for nid in candidate_ids],
+                [
+                    (nid, graph_scores.get(nid, 0.0))
+                    for nid in candidate_ids
+                    if graph_scores.get(nid, 0.0) > 0.0
+                ],
                 key=lambda x: -x[1],
             )
             rrf_scores = rrf_fuse(
@@ -455,6 +483,40 @@ class HybridRanker:
                 )
         except Exception as e:
             logger.debug(f"GNN reranking skipped ({e})")
+
+        # Query-local lexical reranking recovers exact source turns that are
+        # present in the generated pool but under-ranked by corpus-global RRF.
+        # It runs before the expensive cross-encoder so the neural stage sees a
+        # stronger bounded candidate set.
+        try:
+            from config import settings as _cfg
+            if _cfg.local_lexical_rerank_enabled and self.bm25_index is not None:
+                from engine.lexical_reranker import rerank_with_query_local_lexical_rrf
+                hybrid_results = rerank_with_query_local_lexical_rrf(
+                    query_text,
+                    hybrid_results,
+                    self.bm25_index.tokenize,
+                    pool_size=_cfg.local_lexical_rerank_pool_size,
+                    lexical_weight=_cfg.local_lexical_rerank_weight,
+                    rrf_k=get_rrf_k(),
+                    document_term_cache=self._lexical_term_cache,
+                )
+        except Exception as e:
+            logger.warning(f"Query-local lexical reranking skipped ({e})")
+
+        # Cross-encoder reranking is the final text relevance stage. Only the
+        # strongest fusion candidates enter the expensive model, and the API
+        # contract is enforced here rather than leaking the full graph-expanded
+        # pool to callers.
+        hybrid_results.sort(key=lambda x: (-x["combined_score"], -x.get("vector_score", 0.0)))
+        rerank_candidates = hybrid_results[:max(top_k, rerank_pool)]
+        if self.reranker is not None and rerank_pool > top_k:
+            rerank_candidates = self.reranker.rerank(
+                query_text,
+                rerank_candidates[:rerank_pool],
+                top_k=None,
+            )
+        hybrid_results = rerank_candidates[:top_k]
 
         # Visual search candidates merge (Phase 7)
         if include_images:

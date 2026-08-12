@@ -80,6 +80,13 @@ class Settings(BaseSettings):
     query_decomposition_enabled: bool = False
     rerank_pool_size: int = 25  # Phase 6.2.4 candidate pool size knob
 
+    # Lightweight query-local lexical reranking. The 500-candidate LoCoMo
+    # checkpoint replay improved exact-source Recall@10 at ~61ms mean cost.
+    local_lexical_rerank_enabled: bool = True
+    local_lexical_rerank_weight: float = 0.5
+    local_lexical_rerank_pool_size: int = 500
+    local_lexical_term_cache_size: int = 20_000
+
     # Temporal decay: weight graph edges by recency (exp decay on created_at)
     temporal_decay_enabled: bool = False   # set True to activate; tune half_life_days per use case
     temporal_decay_half_life_days: float = 30.0  # 7 for conversation, 90 for domain knowledge
