@@ -161,9 +161,21 @@ class DatabaseManager:
             self.bm25_index.clear()
             self.bm25_index.add_batch(bm25_batch)
             logger.info(f"BM25 index rebuilt with {len(bm25_batch)} documents")
+
+            # Persistence retains archived provenance, while retrieval indexes
+            # must expose only active memory and its summaries.
+            archived = self.sqlite_store.list_nodes(
+                limit=1_000_000, include_archived=True
+            )
+            for node in archived:
+                if node.get("archived_at"):
+                    self.graph_index.remove_node(node["id"])
                     
         except Exception as e:
-            logger.error(f"Error rebuilding indexes: {e}")
+            raise RuntimeError(
+                "Index rebuild failed. HybridMind will not start with a partial or "
+                f"dimension-inconsistent 4096-dimensional index: {e}"
+            ) from e
     
     def get_stats(self) -> dict:
         """Get database statistics."""

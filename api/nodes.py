@@ -27,7 +27,7 @@ from storage.sqlite_store import SQLiteStore
 from storage.vector_index import VectorIndex
 from typing import Any as _AnyType
 from storage.graph_index import GraphIndex
-from engine.embedding import EmbeddingEngine
+from engine.embedding import EmbeddingEngine, validate_embedding_4096
 from engine.cache import invalidate_cache
 from engine.edge_inference import run_auto_edge_inference
 
@@ -71,6 +71,23 @@ async def create_node(
 
     # Generate node ID
     node_id = str(uuid.uuid4())
+    metadata = dict(node.metadata or {})
+    entities = node.entities or metadata.get("entities", [])
+    event_time = node.event_time or metadata.get("event_time") or metadata.get("date")
+    valid_from = node.valid_from or metadata.get("valid_from")
+    valid_until = node.valid_until or metadata.get("valid_until")
+    memory_kind = node.memory_kind or metadata.get("memory_kind")
+    if entities:
+        metadata["entities"] = entities
+    if event_time:
+        metadata["event_time"] = event_time
+    if valid_from:
+        metadata["valid_from"] = valid_from
+    if valid_until:
+        metadata["valid_until"] = valid_until
+    if memory_kind:
+        metadata["memory_kind"] = memory_kind
+    metadata["confidence"] = node.confidence
     
     # Generate or use provided embedding
     import numpy as np
@@ -79,10 +96,12 @@ async def create_node(
     embed_text = _strip_metadata_prefixes(node.text)
 
     if node.embedding:
-        raw_embedding = np.array(node.embedding, dtype=np.float32)
+        raw_embedding = validate_embedding_4096(node.embedding, label="provided node embedding")
         embedding = raw_embedding
     else:
-        raw_embedding = embedding_engine.embed(embed_text)
+        raw_embedding = validate_embedding_4096(
+            embedding_engine.embed(embed_text), label="generated node embedding"
+        )
         embedding = raw_embedding
         
         if getattr(settings, "use_graph_conditioned_embeddings", False):
@@ -105,23 +124,33 @@ async def create_node(
                         neighbor_embeddings,
                         alpha=0.7
                     )
+                    embedding = validate_embedding_4096(
+                        embedding, label="graph-conditioned node embedding"
+                    )
     
     # Store in SQLite
     result = sqlite_store.create_node(
         node_id=node_id,
         text=node.text,
-        metadata=node.metadata or {},
+        metadata=metadata,
         embedding=embedding,
-        raw_embedding=raw_embedding
+        raw_embedding=raw_embedding,
+        event_time=event_time,
+        valid_from=valid_from,
+        valid_until=valid_until,
+        memory_kind=memory_kind,
+        confidence=node.confidence,
     )
     
     # Add to graph
-    graph_index.add_node(node_id)
+    graph_index.add_node(node_id, event_time=event_time, memory_kind=memory_kind)
     
     # Structural Edges (Priority 2)
-    session_id = (node.metadata or {}).get("sessionId")
+    session_id = metadata.get("sessionId") or metadata.get("session_id")
     if session_id:
-        prev_node = sqlite_store.get_latest_node_by_session(session_id)
+        prev_node = sqlite_store.get_latest_node_by_session(
+            session_id, exclude_node_id=node_id
+        )
         if prev_node and prev_node["id"] != node_id:
             # Temporal 'next_turn' edge
             t_edge_id = str(uuid.uuid4())
@@ -153,9 +182,12 @@ async def create_node(
     for i, sentence in enumerate(sentences):
         child_id = f"{node_id}_{i}"
         # Also clean sentence chunks for embedding
-        child_embedding = embedding_engine.embed(_strip_metadata_prefixes(sentence))
+        child_embedding = validate_embedding_4096(
+            embedding_engine.embed(_strip_metadata_prefixes(sentence)),
+            label="sentence embedding",
+        )
         
-        child_metadata = (node.metadata or {}).copy()
+        child_metadata = metadata.copy()
         child_metadata.update({"parent_id": node_id, "is_sentence_chunk": True})
         
         # Link child sentence to parent map
@@ -164,7 +196,12 @@ async def create_node(
             text=sentence,
             metadata=child_metadata,
             embedding=child_embedding,
-            raw_embedding=child_embedding
+            raw_embedding=child_embedding,
+            event_time=event_time,
+            valid_from=valid_from,
+            valid_until=valid_until,
+            memory_kind=memory_kind,
+            confidence=node.confidence,
         )
         graph_index.add_node(child_id)
         
@@ -191,11 +228,12 @@ async def create_node(
     run_auto_edge_inference(
         node_id=node_id,
         embedding=embedding,
-        node_metadata=node.metadata or {},
+        node_metadata=metadata,
         node_text=node.text,
         vector_index=vector_index,
         sqlite_store=sqlite_store,
         graph_index=graph_index,
+        event_time=event_time,
     )
 
     # ColBERT per-token vectors (opt-in: HYBRIDMIND_COLBERT_ENABLED=true)
@@ -216,6 +254,11 @@ async def create_node(
         created_at=result["created_at"],
         updated_at=result["updated_at"],
         modality=result["metadata"].get("modality", "text"),
+        event_time=result.get("event_time"),
+        valid_from=result.get("valid_from"),
+        valid_until=result.get("valid_until"),
+        memory_kind=result.get("memory_kind"),
+        confidence=result.get("confidence", 1.0),
         edges=[]
     )
 
@@ -259,6 +302,15 @@ async def get_node(
         created_at=node["created_at"],
         updated_at=node["updated_at"],
         modality=node["metadata"].get("modality", "text"),
+        event_time=node.get("event_time"),
+        valid_from=node.get("valid_from"),
+        valid_until=node.get("valid_until"),
+        memory_kind=node.get("memory_kind"),
+        confidence=node.get("confidence", 1.0),
+        access_count=node.get("access_count", 0),
+        last_accessed_at=node.get("last_accessed_at"),
+        archived_at=node.get("archived_at"),
+        archived_by=node.get("archived_by"),
         edges=edges
     )
 
@@ -284,14 +336,53 @@ async def update_node(
     
     # Prepare update values
     new_text = update.text if update.text is not None else existing["text"]
-    new_metadata = update.metadata if update.metadata is not None else existing["metadata"]
+    new_metadata = dict(update.metadata if update.metadata is not None else existing["metadata"])
+    if update.entities is not None:
+        new_metadata["entities"] = update.entities
+    for key, value in (
+        ("event_time", update.event_time),
+        ("valid_from", update.valid_from),
+        ("valid_until", update.valid_until),
+        ("memory_kind", update.memory_kind),
+        ("confidence", update.confidence),
+    ):
+        if value is not None:
+            new_metadata[key] = value
+
+    # Structured values may arrive either through the first-class request
+    # fields or through metadata. Keep SQLite's normalized columns and entity
+    # table synchronized with the representation returned by the API.
+    effective_entities = (
+        update.entities
+        if update.entities is not None
+        else (new_metadata.get("entities") if update.metadata is not None else None)
+    )
+    effective_event_time = update.event_time
+    if effective_event_time is None and update.metadata is not None:
+        effective_event_time = new_metadata.get("event_time") or new_metadata.get("date")
+    effective_valid_from = update.valid_from
+    if effective_valid_from is None and update.metadata is not None:
+        effective_valid_from = new_metadata.get("valid_from")
+    effective_valid_until = update.valid_until
+    if effective_valid_until is None and update.metadata is not None:
+        effective_valid_until = new_metadata.get("valid_until")
+    effective_memory_kind = update.memory_kind
+    if effective_memory_kind is None and update.metadata is not None:
+        effective_memory_kind = new_metadata.get("memory_kind")
+    effective_confidence = update.confidence
+    if effective_confidence is None and update.metadata is not None:
+        metadata_confidence = new_metadata.get("confidence")
+        if metadata_confidence is not None:
+            effective_confidence = float(metadata_confidence)
     
     # Regenerate embedding if requested and text changed
     new_embedding = existing["embedding"]
     new_raw_embedding = existing.get("raw_embedding")
     
     if update.regenerate_embedding and update.text is not None:
-        new_raw_embedding = embedding_engine.embed(new_text)
+        new_raw_embedding = validate_embedding_4096(
+            embedding_engine.embed(new_text), label="updated node embedding"
+        )
         new_embedding = new_raw_embedding
         
         from config import settings
@@ -316,6 +407,9 @@ async def update_node(
                         neighbor_embeddings,
                         alpha=0.7
                     )
+                    new_embedding = validate_embedding_4096(
+                        new_embedding, label="updated graph-conditioned embedding"
+                    )
     
     # Update in SQLite
     result = sqlite_store.update_node(
@@ -323,8 +417,15 @@ async def update_node(
         text=new_text,
         metadata=new_metadata,
         embedding=new_embedding,
-        raw_embedding=new_raw_embedding
+        raw_embedding=new_raw_embedding,
+        event_time=effective_event_time,
+        valid_from=effective_valid_from,
+        valid_until=effective_valid_until,
+        memory_kind=effective_memory_kind,
+        confidence=effective_confidence,
     )
+    if effective_entities is not None:
+        sqlite_store.upsert_node_entities(node_id, effective_entities)
     
     # Update vector index if embedding changed
     if new_embedding is not None:
@@ -359,6 +460,11 @@ async def update_node(
         created_at=result["created_at"],
         updated_at=result["updated_at"],
         modality=result["metadata"].get("modality", "text"),
+        event_time=result.get("event_time"),
+        valid_from=result.get("valid_from"),
+        valid_until=result.get("valid_until"),
+        memory_kind=result.get("memory_kind"),
+        confidence=result.get("confidence", 1.0),
         edges=edges
     )
 
@@ -435,6 +541,15 @@ async def list_nodes(
             created_at=node["created_at"],
             updated_at=node["updated_at"],
             modality=node["metadata"].get("modality", "text"),
+            event_time=node.get("event_time"),
+            valid_from=node.get("valid_from"),
+            valid_until=node.get("valid_until"),
+            memory_kind=node.get("memory_kind"),
+            confidence=node.get("confidence", 1.0),
+            access_count=node.get("access_count", 0),
+            last_accessed_at=node.get("last_accessed_at"),
+            archived_at=node.get("archived_at"),
+            archived_by=node.get("archived_by"),
             edges=edges
         ))
     
@@ -491,7 +606,9 @@ async def create_image_node(
     visual_store.add(node_id, patch_vectors)
 
     # 4. Embed the caption text
-    caption_raw_emb = embedding_engine.embed(node.caption)
+    caption_raw_emb = validate_embedding_4096(
+        embedding_engine.embed(node.caption), label="image caption embedding"
+    )
     caption_emb = caption_raw_emb
 
     if getattr(settings, "use_graph_conditioned_embeddings", False):
@@ -509,6 +626,9 @@ async def create_image_node(
                     node.caption,
                     neighbor_embeddings,
                     alpha=0.7
+                )
+                caption_emb = validate_embedding_4096(
+                    caption_emb, label="graph-conditioned image caption embedding"
                 )
 
     # 5. Build node metadata

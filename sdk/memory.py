@@ -233,12 +233,27 @@ class HybridMemory:
         text: str,
         metadata: Optional[Dict[str, Any]] = None,
         session_id: Optional[str] = None,
+        entities: Optional[List[str]] = None,
+        event_time: Optional[str] = None,
+        valid_from: Optional[str] = None,
+        valid_until: Optional[str] = None,
+        memory_kind: Optional[str] = None,
+        confidence: float = 1.0,
     ) -> str:
         """Store a single memory node and return node ID."""
         payload_metadata = dict(metadata or {})
         if session_id:
             payload_metadata[self.META_SESSION_ID] = session_id
-        payload = {"text": text, "metadata": payload_metadata}
+        payload = {
+            "text": text,
+            "metadata": payload_metadata,
+            "entities": entities or [],
+            "event_time": event_time,
+            "valid_from": valid_from,
+            "valid_until": valid_until,
+            "memory_kind": memory_kind,
+            "confidence": confidence,
+        }
         result = self._post("/nodes", payload)
         return result["id"]
 
@@ -253,6 +268,9 @@ class HybridMemory:
         anchor_nodes: Optional[List[str]] = None,
         max_depth: int = 2,
         min_score: float = 0.0,
+        bm25_weight: float = 0.35,
+        route_weights: bool = True,
+        track_access: Optional[bool] = None,
     ) -> List[Dict[str, Any]]:
         """Recall relevant nodes via vector or hybrid search.
 
@@ -260,7 +278,16 @@ class HybridMemory:
         client-side filtering because /search/hybrid does not expose
         filter_metadata in request schema.
         """
-        if mode == "hybrid":
+        hybrid_modes = {
+            "hybrid": "hybrid",
+            "vector_only": "vector_only",
+            "sparse_only": "sparse_only",
+            "vector_sparse": "vector_sparse",
+            "graph_only": "graph_only",
+        }
+        if mode in hybrid_modes:
+            if mode == "graph_only" and not anchor_nodes:
+                raise ValueError("graph_only recall requires anchor_nodes")
             payload = {
                 "query_text": query,
                 "top_k": min(max(top_k * 5, top_k), 200) if filter_metadata else min(top_k, 200),
@@ -269,14 +296,14 @@ class HybridMemory:
                 "anchor_nodes": anchor_nodes,
                 "max_depth": max_depth,
                 "min_score": min_score,
+                "filter_metadata": filter_metadata,
+                "bm25_boost_weight": bm25_weight,
+                "search_mode": hybrid_modes[mode],
+                "route_weights": route_weights,
+                "track_access": track_access,
             }
             result = self._post("/search/hybrid", payload)
             rows = result.get("results", [])
-            if filter_metadata:
-                rows = [
-                    r for r in rows
-                    if self._metadata_matches(r.get("metadata") or {}, filter_metadata)
-                ]
             return rows[:top_k]
 
         if mode == "vector":
@@ -293,7 +320,10 @@ class HybridMemory:
         if mode == "graph":
             raise ValueError("graph mode requires start node id; use trace()")
 
-        raise ValueError(f"Unknown mode: {mode!r}. Use 'hybrid', 'vector', or 'graph'.")
+        raise ValueError(
+            f"Unknown mode: {mode!r}. Use hybrid, vector, vector_only, "
+            "sparse_only, vector_sparse, graph_only, or graph."
+        )
 
     def trace(self, concept: str, depth: int = 2) -> Dict[str, Any]:
         """Find best semantic anchor for concept then graph traverse from it."""
@@ -319,6 +349,9 @@ class HybridMemory:
         relation_type: str,
         weight: float = 1.0,
         metadata: Optional[Dict[str, Any]] = None,
+        valid_from: Optional[str] = None,
+        valid_until: Optional[str] = None,
+        confidence: float = 1.0,
     ) -> str:
         """Create directed edge between nodes and return edge ID."""
         edge_type = self._normalize_edge_type(relation_type)
@@ -328,6 +361,9 @@ class HybridMemory:
             "type": edge_type,
             "weight": weight,
             "metadata": metadata or {},
+            "valid_from": valid_from,
+            "valid_until": valid_until,
+            "confidence": confidence,
         }
         result = self._post("/edges", payload)
         return result["id"]

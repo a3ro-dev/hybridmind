@@ -110,6 +110,29 @@ def verify_integrity(mind_path: str) -> str:
     Path(paths["graph"]).unlink(missing_ok=True)
     return "FAILED"
 
+async def _memory_compression_worker(db_manager) -> None:
+    """Periodically run observer/reflector consolidation when explicitly enabled."""
+    interval = max(60, settings.memory_compression_interval_seconds)
+    while True:
+        await asyncio.sleep(interval)
+        try:
+            from engine.consolidation import consolidate_sessions
+
+            result = await asyncio.to_thread(
+                consolidate_sessions,
+                db_manager,
+                min_facts=settings.memory_compression_min_facts,
+                max_age_hours=settings.memory_compression_max_age_hours,
+                model=settings.consolidation_model,
+                archive_sources=settings.memory_compression_archive_sources,
+            )
+            logger.info(f"memory compression cycle: {result}")
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.exception(f"memory compression cycle failed: {exc}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -176,10 +199,13 @@ async def lifespan(app: FastAPI):
                 f"current embedder with `python scripts/reindex_embeddings.py`."
             )
     else:
-        logger.warning("  Embedding model not available, using mock embeddings")
+        raise RuntimeError(
+            "The embedding backend did not initialize. HybridMind requires an exact "
+            "4096-dimensional backend and has no mock/local fallback."
+        )
 
     # Step 2.5: BUG-1 — Verify FAISS index is in sync with SQLite
-    sqlite_count = db_manager.sqlite_store.count_nodes()
+    sqlite_count = db_manager.sqlite_store.count_retrievable_nodes()
     faiss_count = db_manager.vector_index.size
     if abs(sqlite_count - faiss_count) > 0:
         logger.warning(
@@ -241,24 +267,35 @@ async def lifespan(app: FastAPI):
     print(f"- Checksum verification: {integrity_status}")
     print(f"- Graph-conditioned embeddings: {'ENABLED' if graph_embeddings_enabled else 'DISABLED'}")
 
-    runpod_endpoint = os.getenv("RUNPOD_LLM_ENDPOINT_ID")
-    hc_key = os.getenv("HC_API_KEY")
-    openai_key = os.getenv("OPENAI_API_KEY")
-    if runpod_endpoint:
-        print(f"- Fact Extractor LLM: RunPod vLLM ({runpod_endpoint})")
-    elif hc_key:
-        print(f"- Fact Extractor LLM: LOADED (Key starts with {hc_key[:8]}...)")
-    elif openai_key:
-        print(f"- Fact Extractor LLM: LOADED (Key starts with {openai_key[:8]}...)")
-    else:
-        print(f"- Fact Extractor LLM: FAILED (No API Key found)")
+    from engine.llm_client import provider_chain
+
+    providers = provider_chain()
+    print(
+        "- Fact Extractor LLM: "
+        + (" -> ".join(providers) if providers else "DISABLED (no policy-allowed provider)")
+    )
 
     print("\n")
-    
+
+    compression_task = None
+    if settings.memory_compression_enabled:
+        compression_task = asyncio.create_task(_memory_compression_worker(db_manager))
+        logger.info(
+            "Observer/reflector compression enabled: interval=%ss archive_sources=%s",
+            settings.memory_compression_interval_seconds,
+            settings.memory_compression_archive_sources,
+        )
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down HybridMind...")
+    if compression_task is not None:
+        compression_task.cancel()
+        try:
+            await compression_task
+        except asyncio.CancelledError:
+            pass
     db_manager.save_indexes()
     db_manager.close(save=False)
     logger.info("HybridMind shutdown complete")
@@ -538,7 +575,7 @@ async def readiness_check():
             "vector_nodes": stats.get("vector_index_size", 0),
             "settings": {
                 "graph_conditioned_embeddings": getattr(settings, "use_graph_conditioned_embeddings", False),
-                "dimensions": getattr(settings, "embedding_dimension", 384)
+                "dimensions": getattr(settings, "embedding_dimension", 4096)
             }
         }
     except Exception:
@@ -708,9 +745,10 @@ async def clear_database():
 # ==================== Admin: Memory Lifecycle ====================
 
 class ConsolidateRequest(BaseModel):
-    min_facts: int = 5
-    max_age_hours: int = 24
+    min_facts: int = settings.memory_compression_min_facts
+    max_age_hours: int = settings.memory_compression_max_age_hours
     model: Optional[str] = None
+    archive_sources: bool = settings.memory_compression_archive_sources
 
 
 @app.post("/admin/consolidate", tags=["Admin"])
@@ -730,6 +768,7 @@ async def consolidate_memory(request: ConsolidateRequest = ConsolidateRequest())
             min_facts=request.min_facts,
             max_age_hours=request.max_age_hours,
             model=request.model,
+            archive_sources=request.archive_sources,
         )
         return {"status": "success", **result}
     except Exception as e:
@@ -826,8 +865,8 @@ class SessionFactsResponse(BaseModel):
 # ---- Per-session fact-extraction cache (single-flight) -------------------------
 # The memorybench harness re-ingests the SAME conversation sessions once per
 # question, so without memoization each session's (slow, ~10-20s) gpt-4o fact
-# extraction runs ~25x per conversation — overloading the HC proxy until the
-# socket drops mid-run. We memoize the extracted facts list (NOT node ids, since
+# extraction runs ~25x per conversation and overloads any configured provider.
+# We memoize the extracted facts list (NOT node ids, since
 # nodes must still be created per container_tag) keyed by the session content
 # hash, with single-flight so concurrent ingests of the same session share one
 # LLM call.
@@ -938,6 +977,8 @@ async def ingest_session_facts(request: SessionFactsRequest):
 
     db_manager = get_db_manager()
     node_ids: List[str] = []
+    fact_id_by_text: Dict[str, str] = {}
+    causal_links: List[tuple[str, str]] = []
     
     valid_facts = [f for f in facts if f.get("fact", "").strip()]
     if not valid_facts:
@@ -951,9 +992,19 @@ async def ingest_session_facts(request: SessionFactsRequest):
     
     try:
         embeddings = db_manager.embedding_engine.embed_batch(fact_texts)
+        if embeddings.ndim != 2 or embeddings.shape != (len(fact_texts), 4096):
+            raise ValueError(
+                f"fact embedding batch has shape {embeddings.shape}; expected "
+                f"({len(fact_texts)}, 4096)"
+            )
+        if not _np.all(_np.isfinite(embeddings)):
+            raise ValueError("fact embedding batch contains non-finite values")
     except Exception as e:
-        logger.warning(f"Batch embedding failed for fact nodes: {e}")
-        embeddings = _np.zeros((len(fact_texts), db_manager.vector_index.dimension), dtype=_np.float32)
+        logger.error(f"Fact embedding failed; refusing zero/local fallback: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail="Exact 4096-dimensional fact embedding failed; no fallback was used.",
+        ) from e
 
     # Find all raw turn nodes for this session
     session_turns = []
@@ -987,16 +1038,23 @@ async def ingest_session_facts(request: SessionFactsRequest):
     for fact, fact_text, embedding in zip(valid_facts, fact_texts, embeddings):
         node_id = str(_uuid.uuid4())
         
-        # Memory pool classification (Phase 4)
+        # Four-network fact kind comes from structured extraction. Legacy
+        # lifecycle pools remain available for backwards-compatible filtering.
         from models.memory_pool import classify_memory_type
         pool = classify_memory_type(fact_text)
+        memory_kind = str(fact.get("memory_kind", "world")).lower()
+        if memory_kind not in {"world", "experience", "observation", "opinion"}:
+            memory_kind = "world"
 
         metadata = {
             "type": "extracted_fact",
             "session_id": request.session_id,
             "entities": fact.get("entities", []),
             "date": fact.get("date", ""),
+            "event_time": fact.get("date", "") or None,
             "memory_pool": pool.value,
+            "memory_kind": memory_kind,
+            "confidence": float(fact.get("confidence", 1.0)),
         }
         if request.container_tag:
             metadata["container_tag"] = request.container_tag
@@ -1045,10 +1103,15 @@ async def ingest_session_facts(request: SessionFactsRequest):
             metadata=metadata,
             embedding=embedding,
             raw_embedding=embedding,
+            event_time=metadata["event_time"],
+            valid_from=metadata["event_time"],
+            memory_kind=metadata["memory_kind"],
+            confidence=metadata["confidence"],
         )
 
         # Add to vector index
         db_manager.vector_index.add(node_id, embedding)
+        db_manager.bm25_index.add(node_id, fact_text)
 
         # Add to graph index
         db_manager.graph_index.add_node(node_id)
@@ -1087,7 +1150,11 @@ async def ingest_session_facts(request: SessionFactsRequest):
                         except Exception:
                             b_meta = {}
                     b_meta["superseded_by"] = node_id
-                    db_manager.sqlite_store.update_node(contradicted_id, metadata=b_meta)
+                    db_manager.sqlite_store.update_node(
+                        contradicted_id,
+                        metadata=b_meta,
+                        valid_until=now_iso,
+                    )
             except Exception as e:
                 logger.warning(f"Failed to create supersedes edge for fact {node_id}: {e}")
 
@@ -1123,6 +1190,7 @@ async def ingest_session_facts(request: SessionFactsRequest):
                 vector_index=db_manager.vector_index,
                 sqlite_store=db_manager.sqlite_store,
                 graph_index=db_manager.graph_index,
+                event_time=metadata["event_time"],
             )
         except Exception as e:
             logger.debug(f"Auto-edge inference failed for fact {node_id}: {e}")
@@ -1136,6 +1204,37 @@ async def ingest_session_facts(request: SessionFactsRequest):
             logger.debug(f"ColBERT storage failed for fact {node_id}: {e}")
 
         node_ids.append(node_id)
+        fact_id_by_text[fact_text.casefold().strip()] = node_id
+        for cause_text in fact.get("caused_by", []):
+            if isinstance(cause_text, str) and cause_text.strip():
+                causal_links.append((cause_text.casefold().strip(), fact_text.casefold().strip()))
+
+    if settings.causal_edges_enabled:
+        for cause_text, effect_text in causal_links:
+            cause_id = fact_id_by_text.get(cause_text)
+            effect_id = fact_id_by_text.get(effect_text)
+            if not cause_id or not effect_id or cause_id == effect_id:
+                continue
+            edge_id = str(_uuid.uuid4())
+            edge_metadata = {"inferred_by": "structured_fact_extractor"}
+            db_manager.sqlite_store.create_edge(
+                edge_id=edge_id,
+                source_id=cause_id,
+                target_id=effect_id,
+                edge_type="led_to",
+                weight=0.9,
+                metadata=edge_metadata,
+                confidence=0.9,
+            )
+            db_manager.graph_index.add_edge(
+                edge_id=edge_id,
+                source_id=cause_id,
+                target_id=effect_id,
+                edge_type="led_to",
+                weight=0.9,
+                confidence=0.9,
+                **edge_metadata,
+            )
 
     invalidate_cache()
 

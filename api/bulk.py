@@ -5,13 +5,12 @@ Includes LLM-powered unstructured data processing.
 """
 
 import logging
-import os
 import time
 import uuid
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from api.dependencies import (
     get_sqlite_store,
@@ -25,17 +24,13 @@ from storage.sqlite_store import SQLiteStore
 from storage.vector_index import VectorIndex
 from typing import Any as _BM25AnyType
 from storage.graph_index import GraphIndex
-from engine.embedding import EmbeddingEngine
+from engine.embedding import EmbeddingEngine, validate_embedding_4096
 from engine.cache import invalidate_cache
 from engine.edge_inference import run_auto_edge_inference
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/bulk", tags=["Bulk Operations"])
-
-# Default API key for OSM API
-DEFAULT_OSM_API_KEY = os.getenv("OSM_API_KEY", "")
-
 
 # ==================== Request/Response Models ====================
 
@@ -53,6 +48,14 @@ class BulkNodesRequest(BaseModel):
         default=True,
         description="Generate embeddings for nodes"
     )
+
+    @model_validator(mode="after")
+    def embeddings_are_mandatory(self):
+        if not self.generate_embeddings:
+            raise ValueError(
+                "HybridMind requires exact 4096-dimensional embeddings for every node"
+            )
+        return self
 
 
 class BulkEdgeCreate(BaseModel):
@@ -89,6 +92,14 @@ class BulkImportRequest(BaseModel):
     edges: List[BulkEdgeCreate] = Field(default_factory=list)
     generate_embeddings: bool = Field(default=True)
 
+    @model_validator(mode="after")
+    def embeddings_are_mandatory(self):
+        if not self.generate_embeddings:
+            raise ValueError(
+                "HybridMind requires exact 4096-dimensional embeddings for every node"
+            )
+        return self
+
 
 class BulkImportResult(BaseModel):
     """Result of combined bulk import."""
@@ -100,8 +111,8 @@ class BulkImportResult(BaseModel):
 class UnstructuredDataRequest(BaseModel):
     """Request for processing unstructured data via LLM."""
     text: str = Field(..., min_length=10, max_length=100000, description="Raw unstructured text to process")
-    api_key: Optional[str] = Field(default=None, description="Optional OSM API key")
-    model: str = Field(default="qwen3.5-397b-a17b", description="LLM model to use")
+    api_key: Optional[str] = Field(default=None, description="Deprecated; provider credentials come from config.py")
+    model: Optional[str] = Field(default=None, description="Deprecated; provider models come from config.py")
 
 
 class UnstructuredDataResult(BaseModel):
@@ -179,9 +190,15 @@ async def bulk_create_nodes(
         try:
             import asyncio
             embeddings = await asyncio.to_thread(embedding_engine.embed_batch, texts, True, 32, False)
+            if embeddings.shape != (len(texts), 4096):
+                raise ValueError(
+                    f"bulk embedding batch returned {embeddings.shape}; expected ({len(texts)}, 4096)"
+                )
         except Exception as e:
-            errors.append(f"Embedding generation failed: {str(e)}")
-            embeddings = None
+            raise HTTPException(
+                status_code=503,
+                detail=f"Exact 4096-dimensional bulk embedding failed; no fallback used: {e}",
+            ) from e
     
     # Create nodes in database
     vector_batch = []
@@ -189,14 +206,24 @@ async def bulk_create_nodes(
     
     for i, node_data in enumerate(nodes_to_create):
         try:
-            embedding = embeddings[i] if embeddings is not None else None
+            embedding = validate_embedding_4096(
+                embeddings[i], label=f"bulk embedding {node_data['id']}"
+            )
+            metadata = node_data["metadata"] or {}
+            event_time = metadata.get("event_time") or metadata.get("date")
             
             # Create in SQLite
             sqlite_store.create_node(
                 node_id=node_data["id"],
                 text=node_data["text"],
-                metadata=node_data["metadata"],
-                embedding=embedding
+                metadata=metadata,
+                embedding=embedding,
+                raw_embedding=embedding,
+                event_time=event_time,
+                valid_from=metadata.get("valid_from"),
+                valid_until=metadata.get("valid_until"),
+                memory_kind=metadata.get("memory_kind"),
+                confidence=float(metadata.get("confidence", 1.0)),
             )
             
             # Add to graph index
@@ -263,8 +290,11 @@ async def bulk_create_nodes(
         except Exception as e:
             errors.append(f"Vector index batch add failed: {str(e)}")
 
+    node_data_by_id = {node_data["id"]: node_data for node_data in nodes_to_create}
+
     # Auto-edge inference (config-gated: HYBRIDMIND_AUTO_EDGES_ENABLED=true)
-    for node_data, (nid, emb) in zip(nodes_to_create, vector_batch):
+    for nid, emb in vector_batch:
+        node_data = node_data_by_id[nid]
         try:
             run_auto_edge_inference(
                 node_id=nid,
@@ -274,6 +304,8 @@ async def bulk_create_nodes(
                 vector_index=vector_index,
                 sqlite_store=sqlite_store,
                 graph_index=graph_index,
+                event_time=(node_data.get("metadata") or {}).get("event_time")
+                or (node_data.get("metadata") or {}).get("date"),
             )
         except Exception as e:
             logger.debug(f"Auto-edge inference failed for {nid}: {e}")
@@ -286,18 +318,18 @@ async def bulk_create_nodes(
             cs = get_colbert_store()
             ee = _get_emb()
             if cs is not None and ee is not None:
-                for nid, _node_data, _emb in zip(
-                    [x[0] for x in vector_batch],
-                    nodes_to_create,
-                    [x[1] for x in vector_batch],
-                ):
+                for nid, _emb in vector_batch:
+                    _node_data = node_data_by_id[nid]
                     maybe_store_colbert(nid, _node_data.get("text", ""), ee, cs)
     except Exception as e:
         logger.debug(f"ColBERT storage failed during bulk ingest: {e}")
     
     # Batch add to BM25 index
     try:
-        bm25_batch = [(n["id"], n["text"]) for n in nodes_to_create]
+        bm25_batch = [
+            (node_id, node_data_by_id[node_id]["text"])
+            for node_id in successful_node_ids
+        ]
         bm25_index.add_batch(bm25_batch)
     except Exception as e:
         errors.append(f"BM25 index batch add failed: {str(e)}")
@@ -469,11 +501,12 @@ async def process_unstructured_data(
     vector_index: VectorIndex = Depends(get_vector_index),
     graph_index: GraphIndex = Depends(get_graph_index),
     embedding_engine: EmbeddingEngine = Depends(get_embedding_engine),
+    bm25_index: _BM25AnyType = Depends(get_bm25_index),
 ):
     """
     Process unstructured text using LLM and extract knowledge graph.
     
-    Uses OSM API with Qwen3.5 397B A17B to:
+    Uses the centralized, policy-gated LLM provider to:
     - Extract entities, concepts, and facts from raw text
     - Create structured nodes with rich metadata
     - Identify and create relationships between nodes
@@ -487,12 +520,9 @@ async def process_unstructured_data(
     start_time = time.perf_counter()
     errors = []
     
-    # Get API key
-    api_key = request.api_key or os.getenv("OSM_API_KEY") or DEFAULT_OSM_API_KEY
-    
     try:
         from engine.llm import LLMEngine
-        llm = LLMEngine(api_key=api_key, model=request.model)
+        llm = LLMEngine()
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -518,16 +548,33 @@ async def process_unstructured_data(
     node_id_map = {}  # Map index to actual node ID
     
     # Prepare texts for batch embedding
-    texts = [n.get("text", "")[:2000] for n in raw_nodes if n.get("text")]
+    valid_texts = [
+        (index, node.get("text", "")[:2000])
+        for index, node in enumerate(raw_nodes)
+        if node.get("text") and len(node.get("text", "")) >= 10
+    ]
+    texts = [text for _, text in valid_texts]
     
     # Generate embeddings in batch
     embeddings = None
+    embedding_by_index = {}
     if texts:
         try:
             import asyncio
             embeddings = await asyncio.to_thread(embedding_engine.embed_batch, texts, True, 32, False)
+            if embeddings.shape != (len(texts), 4096):
+                raise ValueError(
+                    f"unstructured embedding batch returned {embeddings.shape}; expected ({len(texts)}, 4096)"
+                )
+            embedding_by_index = {
+                raw_index: embeddings[position]
+                for position, (raw_index, _) in enumerate(valid_texts)
+            }
         except Exception as e:
-            errors.append(f"Embedding generation failed: {str(e)}")
+            raise HTTPException(
+                status_code=503,
+                detail=f"Exact 4096-dimensional unstructured embedding failed; no fallback used: {e}",
+            ) from e
     
     # Create nodes
     for i, node_data in enumerate(raw_nodes):
@@ -546,19 +593,38 @@ async def process_unstructured_data(
         metadata["summary_context"] = summary[:200]
         
         try:
-            embedding = embeddings[i] if embeddings is not None and i < len(embeddings) else None
+            embedding = validate_embedding_4096(
+                embedding_by_index[i], label=f"unstructured embedding {i}"
+            )
             
             sqlite_store.create_node(
                 node_id=node_id,
                 text=node_text[:5000],
                 metadata=metadata,
-                embedding=embedding
+                embedding=embedding,
+                raw_embedding=embedding,
+                event_time=metadata.get("event_time") or metadata.get("date"),
+                valid_from=metadata.get("valid_from"),
+                valid_until=metadata.get("valid_until"),
+                memory_kind=metadata.get("memory_kind"),
+                confidence=float(metadata.get("confidence", 1.0)),
             )
             
             graph_index.add_node(node_id)
             
             if embedding is not None:
                 vector_index.add(node_id, embedding)
+            bm25_index.add(node_id, node_text[:5000])
+            run_auto_edge_inference(
+                node_id=node_id,
+                embedding=embedding,
+                node_metadata=metadata,
+                node_text=node_text[:5000],
+                vector_index=vector_index,
+                sqlite_store=sqlite_store,
+                graph_index=graph_index,
+                event_time=metadata.get("event_time") or metadata.get("date"),
+            )
             
             nodes_created += 1
             
