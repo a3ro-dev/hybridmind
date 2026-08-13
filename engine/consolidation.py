@@ -15,11 +15,12 @@ Design:
 from __future__ import annotations
 
 import json
+import hashlib
 import logging
 import math
 import re
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from config import settings
@@ -32,8 +33,8 @@ def _call_llm(messages: list, max_tokens: int = 512, model: Optional[str] = None
     return llm_client.chat_completion(
         messages,
         max_tokens=max_tokens,
-        temperature=0.3,
-        model=settings.consolidation_model,
+        temperature=0.0,
+        model=model or settings.consolidation_model,
     )
 
 
@@ -41,32 +42,75 @@ def llm_summarize(facts: List[str], model: Optional[str] = None) -> str:
     """
     Summarize a list of fact strings into a single concise paragraph.
 
-    Returns a deterministic joined summary if no LLM is available.
-    Falls back to joining with semicolons so callers always get something usable.
+    Every non-empty fact is included in a bounded hierarchical request. If the
+    provider is unavailable or any stage fails, return an empty string rather
+    than silently storing a truncated concatenation as a successful summary.
+
+    The result is a lossy derived retrieval aid. Callers must preserve and link
+    the exact source facts.
     """
     if not facts:
         return ""
-    numbered = "\n".join(f"{i+1}. {f}" for i, f in enumerate(facts[:50]))
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "You are a memory consolidation system. Merge the following facts "
-                "into one concise, information-dense summary paragraph. Preserve all "
-                "key entities, dates, and relationships. Output only the summary, no "
-                "preamble or explanation."
-            ),
-        },
-        {"role": "user", "content": f"Facts to consolidate:\n{numbered}\n\nSummary:"},
-    ]
-    result = _call_llm(messages, max_tokens=512, model=model)
-    if result and result.strip():
-        return result.strip()
-    # Fallback: join with semicolons (no LLM available)
-    return "; ".join(facts[:20])
+    clean_facts = [str(fact).strip() for fact in facts if str(fact).strip()]
+    if not clean_facts:
+        return ""
+
+    # Bound per-request context and total provider calls. Refuse oversized work
+    # rather than silently dropping facts or creating an unbounded token bill.
+    batches: list[list[str]] = []
+    current: list[str] = []
+    current_chars = 0
+    for fact in clean_facts:
+        if current and (len(current) >= 20 or current_chars + len(fact) > 12_000):
+            batches.append(current)
+            current = []
+            current_chars = 0
+        current.append(fact)
+        current_chars += len(fact)
+    if current:
+        batches.append(current)
+    if len(batches) > 15:
+        logger.error(
+            "consolidation refused: %d facts require %d first-stage calls (limit=15)",
+            len(clean_facts),
+            len(batches),
+        )
+        return ""
+
+    def summarize_batch(items: list[str], label: str) -> Optional[str]:
+        numbered = "\n".join(f"{index + 1}. {item}" for index, item in enumerate(items))
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "Create a concise derived retrieval summary of every supplied item. "
+                    "Preserve named entities, dates, validity changes, disagreements, and "
+                    "explicit causal links. Do not resolve contradictions or invent facts. "
+                    "Output only the summary."
+                ),
+            },
+            {"role": "user", "content": f"{label}:\n{numbered}\n\nDerived summary:"},
+        ]
+        result = _call_llm(messages, max_tokens=768, model=model)
+        return result.strip() if result and result.strip() else None
+
+    summaries: list[str] = []
+    for batch in batches:
+        summary = summarize_batch(batch, "Source facts")
+        if summary is None:
+            logger.error("consolidation failed: provider returned no usable first-stage summary")
+            return ""
+        summaries.append(summary)
+    if len(summaries) == 1:
+        return summaries[0]
+    final_summary = summarize_batch(summaries, "Partial derived summaries")
+    if final_summary is None:
+        logger.error("consolidation failed: provider returned no usable final summary")
+        return ""
+    return final_summary
 
 
-def consolidate_sessions(
+def _consolidate_sessions_unlocked(
     db_manager,
     min_facts: int = 5,
     max_age_hours: int = 24,
@@ -74,12 +118,17 @@ def consolidate_sessions(
     archive_sources: bool = False,
 ) -> Dict[str, Any]:
     """
-    Group extracted_fact nodes by session, summarize old sessions.
+    Group extracted_fact nodes by (container, session), then create a derived
+    summary while retaining every exact source fact and provenance edge.
 
-    Idempotent: skips sessions that already have a summary node.
+    Idempotent: the summary ID is derived from the ordered source fingerprint.
     Returns statistics dict with sessions_processed, summaries_created.
     """
     store = db_manager.sqlite_store
+    if archive_sources:
+        raise ValueError(
+            "archive_sources is disabled: a lossy summary cannot replace exact source facts"
+        )
     cutoff = (datetime.utcnow() - timedelta(hours=max_age_hours)).isoformat()
 
     # Fetch all extracted_fact nodes
@@ -93,48 +142,79 @@ def consolidate_sessions(
                 ORDER BY json_extract(metadata, '$.session_id'), created_at
             """, (cutoff,))
             rows = cursor.fetchall()
-    except Exception as e:
-        logger.error(f"consolidation: failed to query nodes: {e}")
-        return {"sessions_processed": 0, "summaries_created": 0, "error": str(e)}
+    except Exception as exc:
+        logger.error(
+            "consolidation: failed to query nodes type=%s", type(exc).__name__
+        )
+        return {
+            "sessions_processed": 0,
+            "summaries_created": 0,
+            "error_type": type(exc).__name__,
+        }
 
-    # Group by session_id
-    by_session: Dict[str, List[Dict]] = {}
+    # A session name is not globally unique. Container scope is part of the key
+    # so summaries cannot leak facts between corpora or evaluation runs.
+    by_session: Dict[tuple[str, str], List[Dict[str, Any]]] = {}
+    skipped_missing_session = 0
     for row in rows:
         meta = {}
         try:
             meta = json.loads(row["metadata"])
         except Exception:
             pass
-        sid = meta.get("session_id") or meta.get("sessionId", "_unknown")
-        by_session.setdefault(sid, []).append(
-            {"id": row["id"], "text": row["text"], "session_id": sid}
+        sid = meta.get("session_id") or meta.get("sessionId")
+        if not sid:
+            skipped_missing_session += 1
+            continue
+        container = meta.get("container_tag") or meta.get("containerTag") or "__default__"
+        by_session.setdefault((str(container), str(sid)), []).append(
+            {
+                "id": row["id"],
+                "text": row["text"],
+                "metadata": meta,
+                "created_at": str(row["created_at"]),
+            }
         )
 
     sessions_processed = 0
     summaries_created = 0
     sources_archived = 0
 
-    for sid, nodes in by_session.items():
+    failures: list[dict[str, str]] = []
+
+    for (container, sid), nodes in by_session.items():
         if len(nodes) < min_facts:
             continue
 
-        # Check if already summarized for this session
-        try:
-            with store._cursor() as cursor:
-                cursor.execute("""
-                    SELECT id FROM nodes
-                    WHERE json_extract(metadata, '$.type') = 'session_summary'
-                      AND json_extract(metadata, '$.summary_session_id') = ?
-                      AND deleted_at IS NULL
-                    LIMIT 1
-                """, (sid,))
-                existing = cursor.fetchone()
-            if existing:
-                logger.debug(f"consolidation: session {sid!r} already summarized — skipping")
-                sessions_processed += 1
-                continue
-        except Exception as e:
-            logger.warning(f"consolidation: existence check failed for session {sid!r}: {e}")
+        canonical_sources = [
+            {
+                "id": node["id"],
+                "text": node["text"],
+                "metadata": node["metadata"],
+                "created_at": node["created_at"],
+            }
+            for node in nodes
+        ]
+        source_fingerprint = hashlib.sha256(
+            json.dumps(
+                canonical_sources,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+                default=str,
+            ).encode("utf-8")
+        ).hexdigest()
+        summary_id = str(
+            uuid.uuid5(
+                uuid.NAMESPACE_URL,
+                f"hybridmind:session-summary:{container}:{sid}:{source_fingerprint}",
+            )
+        )
+        existing = store.get_node(summary_id)
+        if existing:
+            logger.debug("consolidation: exact source generation already summarized: %s", summary_id)
+            sessions_processed += 1
+            continue
 
         # Summarize
         facts = [n["text"] for n in nodes]
@@ -145,61 +225,97 @@ def consolidate_sessions(
         # Create summary node
         try:
             from engine.embedding import validate_embedding_4096
-            summary_id = str(uuid.uuid4())
             embedding = validate_embedding_4096(
                 db_manager.embedding_engine.embed(summary_text),
                 label="session summary embedding",
             )
 
-            store.create_node(
-                node_id=summary_id,
-                text=summary_text,
-                metadata={
-                    "type": "session_summary",
-                    "memory_pool": "summary",
-                    "summary_session_id": sid,
-                    "source_count": len(nodes),
-                    "summarized_at": datetime.utcnow().isoformat(),
-                },
-                embedding=embedding,
-                raw_embedding=embedding,
-            )
-            db_manager.vector_index.add(summary_id, embedding)
-            db_manager.graph_index.add_node(summary_id)
-            db_manager.bm25_index.add(summary_id, summary_text)
+            summary_metadata = {
+                "type": "session_summary",
+                "memory_pool": "summary",
+                "summary_session_id": sid,
+                "container_tag": None if container == "__default__" else container,
+                "source_count": len(nodes),
+                "source_ids": [node["id"] for node in nodes],
+                "source_fingerprint_sha256": source_fingerprint,
+                "lossy_derived_summary": True,
+                "summary_model": model or settings.consolidation_model,
+                "summarized_at": datetime.utcnow().isoformat(),
+            }
+            with store.transaction():
+                store.create_node(
+                    node_id=summary_id,
+                    text=summary_text,
+                    metadata=summary_metadata,
+                    embedding=embedding,
+                    raw_embedding=embedding,
+                )
+                db_manager.vector_index.add(summary_id, embedding)
+                db_manager.graph_index.add_node(summary_id)
+                db_manager.bm25_index.add(summary_id, summary_text)
 
-            # Link summary → source facts via belongs_to edges
-            for source_node in nodes:
-                eid = str(uuid.uuid4())
-                try:
+                # Each source is retained as an independently retrievable entity;
+                # the summary is a PROV-style derivation, never a replacement.
+                for source_node in nodes:
+                    eid = str(
+                        uuid.uuid5(
+                            uuid.NAMESPACE_URL,
+                            f"{summary_id}:source:{source_node['id']}",
+                        )
+                    )
                     store.create_edge(
                         edge_id=eid,
                         source_id=summary_id,
                         target_id=source_node["id"],
-                        edge_type="belongs_to",
+                        edge_type="derived_from",
                         weight=0.9,
+                        metadata={
+                            "activity": "session_consolidation",
+                            "source_fingerprint_sha256": source_fingerprint,
+                            "lossy": True,
+                        },
                     )
                     db_manager.graph_index.add_edge(
                         edge_id=eid,
                         source_id=summary_id,
                         target_id=source_node["id"],
-                        edge_type="belongs_to",
+                        edge_type="derived_from",
                         weight=0.9,
+                        activity="session_consolidation",
+                        source_fingerprint_sha256=source_fingerprint,
+                        lossy=True,
                     )
-                except Exception as e:
-                    logger.debug(f"consolidation: edge failed {summary_id}→{source_node['id']}: {e}")
-
-            if archive_sources:
-                source_ids = [source["id"] for source in nodes]
-                sources_archived += store.archive_nodes(source_ids, summary_id)
-                for source_id in source_ids:
-                    db_manager.vector_index.remove(source_id)
-                    db_manager.graph_index.remove_node(source_id)
 
             summaries_created += 1
             logger.info(f"consolidation: session {sid!r} → summary node {summary_id} ({len(nodes)} facts)")
-        except Exception as e:
-            logger.error(f"consolidation: failed to create summary node for session {sid!r}: {e}")
+        except Exception as exc:
+            # SQL rolled back. Remove any already-projected summary state so a
+            # failed derivation is never visible in only a subset of indexes.
+            for projection, operation in (
+                ("bm25", lambda: db_manager.bm25_index.remove(summary_id)),
+                ("vector", lambda: db_manager.vector_index.remove(summary_id)),
+                ("graph", lambda: db_manager.graph_index.remove_node(summary_id)),
+            ):
+                try:
+                    operation()
+                except Exception as cleanup_exc:
+                    logger.critical(
+                        "consolidation cleanup failed projection=%s type=%s",
+                        projection,
+                        type(cleanup_exc).__name__,
+                    )
+            logger.error(
+                "consolidation: failed to create summary for session=%r type=%s",
+                sid,
+                type(exc).__name__,
+            )
+            failures.append(
+                {
+                    "container": container,
+                    "session_id": sid,
+                    "error_type": type(exc).__name__,
+                }
+            )
 
         sessions_processed += 1
 
@@ -208,10 +324,46 @@ def consolidate_sessions(
         "summaries_created": summaries_created,
         "sources_archived": sources_archived,
         "sessions_total": len(by_session),
+        "skipped_missing_session": skipped_missing_session,
+        "failures": failures,
     }
 
 
-def importance_score(node_id: str, db_manager) -> float:
+def consolidate_sessions(
+    db_manager,
+    min_facts: int = 5,
+    max_age_hours: int = 24,
+    model: Optional[str] = None,
+    archive_sources: bool = False,
+) -> Dict[str, Any]:
+    """Run consolidation under the shared SQL/projection mutation boundary."""
+    mutation = getattr(db_manager, "mutation", None)
+    if mutation is None:
+        # Lightweight test doubles and standalone compatibility managers may
+        # not implement coordination. Real DatabaseManager instances always do.
+        return _consolidate_sessions_unlocked(
+            db_manager,
+            min_facts=min_facts,
+            max_age_hours=max_age_hours,
+            model=model,
+            archive_sources=archive_sources,
+        )
+    with mutation():
+        return _consolidate_sessions_unlocked(
+            db_manager,
+            min_facts=min_facts,
+            max_age_hours=max_age_hours,
+            model=model,
+            archive_sources=archive_sources,
+        )
+
+
+def importance_score(
+    node_id: str,
+    db_manager,
+    *,
+    max_graph_degree: Optional[float] = None,
+) -> float:
     """
     Compute a composite importance score [0, 1] for a node.
 
@@ -232,10 +384,17 @@ def importance_score(node_id: str, db_manager) -> float:
         if created_at_raw:
             try:
                 if isinstance(created_at_raw, str):
-                    created_dt = datetime.fromisoformat(created_at_raw)
+                    created_dt = datetime.fromisoformat(created_at_raw.replace("Z", "+00:00"))
                 else:
                     created_dt = created_at_raw
-                age_days = (datetime.utcnow() - created_dt).total_seconds() / 86400
+                if created_dt.tzinfo is None:
+                    created_dt = created_dt.replace(tzinfo=timezone.utc)
+                else:
+                    created_dt = created_dt.astimezone(timezone.utc)
+                age_days = max(
+                    0.0,
+                    (datetime.now(timezone.utc) - created_dt).total_seconds() / 86400,
+                )
                 recency = math.exp(
                     -math.log(2) * age_days / settings.salience_recency_half_life_days
                 )
@@ -248,7 +407,11 @@ def importance_score(node_id: str, db_manager) -> float:
         try:
             graph = db_manager.graph_index.graph
             degree = graph.degree(node_id) if graph.has_node(node_id) else 0
-            max_degree = max(dict(graph.degree()).values(), default=1)
+            max_degree = (
+                float(max_graph_degree)
+                if max_graph_degree is not None
+                else max(dict(graph.degree()).values(), default=1)
+            )
             centrality = degree / max(max_degree, 1)
         except Exception:
             centrality = 0.0
@@ -268,8 +431,12 @@ def importance_score(node_id: str, db_manager) -> float:
         ) / max(sum(weights), 1e-9)
         return round(max(0.0, min(1.0, score)), 4)
 
-    except Exception as e:
-        logger.error(f"importance_score: failed for {node_id}: {e}")
+    except Exception as exc:
+        logger.error(
+            "importance_score: failed node=%s type=%s",
+            node_id,
+            type(exc).__name__,
+        )
         return 0.0
 
 
@@ -282,8 +449,9 @@ def check_contradiction(
     """
     Check if new_fact_text supersedes any existing node.
 
-    Returns the node_id of an existing node when a simple slot-value update is
-    detected, or the highest-similarity node if cosine similarity >= threshold.
+    Returns the node_id of an existing node only when a simple subject/slot
+    match has a different value. Semantic similarity is not evidence of
+    contradiction and is deliberately not used for this decision.
 
     This is intentionally cheap and conservative. It is not full natural
     language inference.
@@ -291,7 +459,6 @@ def check_contradiction(
     if not existing_nodes or not new_fact_text.strip():
         return None
     try:
-        import numpy as np
         new_slot = _extract_fact_slot(new_fact_text)
         if new_slot:
             for node in existing_nodes:
@@ -304,28 +471,11 @@ def check_contradiction(
                     logger.debug(f"check_contradiction: slot update -> conflict with {node.get('id')}")
                     return node.get("id")
 
-        new_emb = np.asarray(embedding_engine.embed(new_fact_text), dtype=np.float32)
-        new_norm = new_emb / (np.linalg.norm(new_emb) + 1e-8)
-
-        best_id = None
-        best_sim = -1.0
-        for node in existing_nodes:
-            existing_emb = node.get("embedding")
-            if existing_emb is None:
-                continue
-            e = np.asarray(existing_emb, dtype=np.float32)
-            e_norm = e / (np.linalg.norm(e) + 1e-8)
-            sim = float(np.dot(new_norm, e_norm))
-            if sim > best_sim:
-                best_sim = sim
-                best_id = node.get("id")
-
-        if best_sim >= threshold:
-            logger.debug(f"check_contradiction: similarity {best_sim:.3f} >= {threshold} → conflict with {best_id}")
-            return best_id
         return None
-    except Exception as e:
-        logger.debug(f"check_contradiction: failed: {e}")
+    except Exception as exc:
+        logger.debug(
+            "check_contradiction: failed type=%s", type(exc).__name__
+        )
         return None
 
 

@@ -39,6 +39,50 @@ def _settings():
 # Cosine-threshold edges
 # --------------------------------------------------------------------- #
 
+def _create_projected_edge(
+    sqlite_store,
+    graph_index,
+    *,
+    edge_id: str,
+    source_id: str,
+    target_id: str,
+    edge_type: str,
+    weight: float,
+    metadata: Optional[Dict[str, Any]] = None,
+    valid_from: Optional[str] = None,
+    confidence: float = 1.0,
+) -> None:
+    """Create one inferred edge without allowing a split SQL/graph commit."""
+    sqlite_store.create_edge(
+        edge_id,
+        source_id,
+        target_id,
+        edge_type,
+        weight,
+        metadata=metadata,
+        valid_from=valid_from,
+        confidence=confidence,
+    )
+    try:
+        graph_index.add_edge(
+            source_id=source_id,
+            target_id=target_id,
+            edge_type=edge_type,
+            weight=weight,
+            edge_id=edge_id,
+            valid_from=valid_from,
+            confidence=confidence,
+            **(metadata or {}),
+        )
+    except Exception:
+        # This also works inside an outer SQLite transaction. If compensation
+        # itself fails, propagate that failure; never report inferred success.
+        try:
+            graph_index.remove_edge_by_id(edge_id)
+        finally:
+            sqlite_store.delete_edge(edge_id)
+        raise
+
 def infer_cosine_edges(
     node_id: str,
     embedding,
@@ -61,8 +105,12 @@ def infer_cosine_edges(
         import numpy as np
         emb = np.asarray(embedding, dtype=np.float32)
         candidates: List[Tuple[str, float]] = vector_index.search(emb, top_k=max_edges + 5)
-    except Exception as e:
-        logger.debug(f"edge_inference: vector search failed for {node_id}: {e}")
+    except Exception as exc:
+        logger.debug(
+            "edge_inference: vector search failed node=%s type=%s",
+            node_id,
+            type(exc).__name__,
+        )
         return 0
 
     created = 0
@@ -73,20 +121,18 @@ def infer_cosine_edges(
             continue
         if created >= max_edges:
             break
-        try:
-            edge_id = str(uuid.uuid4())
-            weight = round(min(1.0, float(score)), 4)
-            sqlite_store.create_edge(edge_id, node_id, cand_id, "similar_to", weight)
-            graph_index.add_edge(
-                source_id=node_id,
-                target_id=cand_id,
-                edge_type="similar_to",
-                weight=weight,
-                edge_id=edge_id,
-            )
-            created += 1
-        except Exception as e:
-            logger.debug(f"edge_inference: failed to create similar_to edge {node_id}→{cand_id}: {e}")
+        edge_id = str(uuid.uuid4())
+        weight = round(min(1.0, float(score)), 4)
+        _create_projected_edge(
+            sqlite_store,
+            graph_index,
+            edge_id=edge_id,
+            source_id=node_id,
+            target_id=cand_id,
+            edge_type="similar_to",
+            weight=weight,
+        )
+        created += 1
 
     if created:
         logger.debug(f"edge_inference: {created} cosine edges created for {node_id} (τ={threshold})")
@@ -176,19 +222,17 @@ def infer_entity_edges(
             if pair in seen_pairs:
                 continue
             seen_pairs.add(pair)
-            try:
-                edge_id = str(uuid.uuid4())
-                sqlite_store.create_edge(edge_id, node_id, rel_id, "co_occurs", 0.6)
-                graph_index.add_edge(
-                    source_id=node_id,
-                    target_id=rel_id,
-                    edge_type="co_occurs",
-                    weight=0.6,
-                    edge_id=edge_id,
-                )
-                created += 1
-            except Exception as e:
-                logger.debug(f"edge_inference: co_occurs edge failed {node_id}→{rel_id}: {e}")
+            edge_id = str(uuid.uuid4())
+            _create_projected_edge(
+                sqlite_store,
+                graph_index,
+                edge_id=edge_id,
+                source_id=node_id,
+                target_id=rel_id,
+                edge_type="co_occurs",
+                weight=0.6,
+            )
+            created += 1
 
     if created:
         logger.debug(f"edge_inference: {created} entity edges created for {node_id}")
@@ -217,7 +261,11 @@ def infer_temporal_edges(
             limit=cfg.temporal_edge_max_per_node,
         )
     except Exception as exc:
-        logger.debug(f"edge_inference: temporal lookup failed for {node_id}: {exc}")
+        logger.debug(
+            "edge_inference: temporal lookup failed node=%s type=%s",
+            node_id,
+            type(exc).__name__,
+        )
         return 0
 
     created = 0
@@ -232,30 +280,18 @@ def infer_temporal_edges(
             "target_event_time": neighbor.get("event_time"),
             "inferred": True,
         }
-        try:
-            sqlite_store.create_edge(
-                edge_id,
-                node_id,
-                neighbor["id"],
-                "temporally_near",
-                round(weight, 4),
-                metadata=metadata,
-                valid_from=event_time,
-            )
-            graph_index.add_edge(
-                source_id=node_id,
-                target_id=neighbor["id"],
-                edge_type="temporally_near",
-                weight=round(weight, 4),
-                edge_id=edge_id,
-                valid_from=event_time,
-                **metadata,
-            )
-            created += 1
-        except Exception as exc:
-            logger.debug(
-                f"edge_inference: temporal edge failed {node_id}->{neighbor['id']}: {exc}"
-            )
+        _create_projected_edge(
+            sqlite_store,
+            graph_index,
+            edge_id=edge_id,
+            source_id=node_id,
+            target_id=neighbor["id"],
+            edge_type="temporally_near",
+            weight=round(weight, 4),
+            metadata=metadata,
+            valid_from=event_time,
+        )
+        created += 1
     return created
 
 
@@ -285,7 +321,11 @@ def run_auto_edge_inference(
     try:
         result["entities_indexed"] = sqlite_store.upsert_node_entities(node_id, entities)
     except Exception as exc:
-        logger.debug(f"edge_inference: entity indexing failed for {node_id}: {exc}")
+        logger.debug(
+            "edge_inference: entity indexing failed node=%s type=%s",
+            node_id,
+            type(exc).__name__,
+        )
         result["entities_indexed"] = 0
 
     if cfg.auto_edges_enabled:

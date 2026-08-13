@@ -5,6 +5,8 @@ Includes LLM-powered unstructured data processing.
 """
 
 import logging
+import math
+import json
 import time
 import uuid
 from typing import Any, Dict, List, Optional
@@ -19,6 +21,7 @@ from api.dependencies import (
     get_embedding_engine,
     get_db_manager,
     get_bm25_index,
+    coordinate_mutation,
 )
 from storage.sqlite_store import SQLiteStore
 from storage.vector_index import VectorIndex
@@ -27,10 +30,28 @@ from storage.graph_index import GraphIndex
 from engine.embedding import EmbeddingEngine, validate_embedding_4096
 from engine.cache import invalidate_cache
 from engine.edge_inference import run_auto_edge_inference
+from config import settings
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/bulk", tags=["Bulk Operations"])
+MAX_BULK_TOTAL_CHARS = 1_000_000
+
+
+def _node_payload_chars(nodes: List["BulkNodeCreate"]) -> int:
+    return sum(
+        len(node.text)
+        + len(json.dumps(node.metadata, ensure_ascii=False, separators=(",", ":"), default=str))
+        for node in nodes
+    )
+
+
+def _edge_payload_chars(edges: List["BulkEdgeCreate"]) -> int:
+    return sum(
+        len(edge.source_id) + len(edge.target_id) + len(edge.type)
+        + len(json.dumps(edge.metadata, ensure_ascii=False, separators=(",", ":"), default=str))
+        for edge in edges
+    )
 
 # ==================== Request/Response Models ====================
 
@@ -55,6 +76,11 @@ class BulkNodesRequest(BaseModel):
             raise ValueError(
                 "HybridMind requires exact 4096-dimensional embeddings for every node"
             )
+        if _node_payload_chars(self.nodes) > MAX_BULK_TOTAL_CHARS:
+            raise ValueError("Bulk node payload exceeds the total character limit")
+        ids = [node.id for node in self.nodes if node.id is not None]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Duplicate explicit node IDs are not allowed")
         return self
 
 
@@ -73,8 +99,19 @@ class BulkEdgesRequest(BaseModel):
     edges: List[BulkEdgeCreate] = Field(..., min_length=1, max_length=5000)
     skip_validation: bool = Field(
         default=False,
-        description="Skip node existence validation for faster import"
+        description="Deprecated compatibility flag; endpoint existence is always validated"
     )
+
+    @model_validator(mode="after")
+    def edge_ids_are_unique_and_finite(self):
+        ids = [edge.id for edge in self.edges if edge.id is not None]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Duplicate explicit edge IDs are not allowed")
+        if any(not math.isfinite(edge.weight) for edge in self.edges):
+            raise ValueError("Edge weights must be finite")
+        if _edge_payload_chars(self.edges) > MAX_BULK_TOTAL_CHARS:
+            raise ValueError("Bulk edge payload exceeds the total character limit")
+        return self
 
 
 class BulkResult(BaseModel):
@@ -98,6 +135,17 @@ class BulkImportRequest(BaseModel):
             raise ValueError(
                 "HybridMind requires exact 4096-dimensional embeddings for every node"
             )
+        if (
+            _node_payload_chars(self.nodes) + _edge_payload_chars(self.edges)
+            > MAX_BULK_TOTAL_CHARS
+        ):
+            raise ValueError("Bulk import payload exceeds the total character limit")
+        node_ids = [node.id for node in self.nodes if node.id is not None]
+        edge_ids = [edge.id for edge in self.edges if edge.id is not None]
+        if len(node_ids) != len(set(node_ids)):
+            raise ValueError("Duplicate explicit node IDs are not allowed")
+        if len(edge_ids) != len(set(edge_ids)):
+            raise ValueError("Duplicate explicit edge IDs are not allowed")
         return self
 
 
@@ -110,7 +158,7 @@ class BulkImportResult(BaseModel):
 
 class UnstructuredDataRequest(BaseModel):
     """Request for processing unstructured data via LLM."""
-    text: str = Field(..., min_length=10, max_length=100000, description="Raw unstructured text to process")
+    text: str = Field(..., min_length=10, max_length=12000, description="Raw unstructured text to process")
     api_key: Optional[str] = Field(default=None, description="Deprecated; provider credentials come from config.py")
     model: Optional[str] = Field(default=None, description="Deprecated; provider models come from config.py")
 
@@ -128,6 +176,168 @@ class UnstructuredDataResult(BaseModel):
     elapsed_ms: float
 
 
+def _delete_sql_nodes(sqlite_store: SQLiteStore, node_ids: List[str]) -> None:
+    if not node_ids:
+        return
+    placeholders = ",".join("?" for _ in node_ids)
+    with sqlite_store._cursor() as cursor:
+        # Compensation is rollback, not a historical user event. Failed
+        # attempts must leave neither current rows nor bitemporal versions.
+        cursor.execute(
+            f"DELETE FROM node_versions WHERE node_id IN ({placeholders})",
+            tuple(node_ids),
+        )
+        cursor.execute(f"DELETE FROM nodes WHERE id IN ({placeholders})", tuple(node_ids))
+
+
+def _rollback_nodes(
+    sqlite_store: SQLiteStore,
+    vector_index: VectorIndex,
+    graph_index: GraphIndex,
+    bm25_index: _BM25AnyType,
+    node_ids: List[str],
+) -> None:
+    """Best-effort derived-index cleanup followed by authoritative SQL removal."""
+    cleanup_failures = []
+    for node_id in reversed(node_ids):
+        for label, operation in (
+            ("bm25", lambda nid=node_id: bm25_index.remove(nid)),
+            ("vector", lambda nid=node_id: vector_index.remove(nid)),
+            ("graph", lambda nid=node_id: graph_index.remove_node(nid)),
+        ):
+            try:
+                operation()
+            except Exception as exc:
+                cleanup_failures.append((label, type(exc).__name__))
+    _delete_sql_nodes(sqlite_store, node_ids)
+    if cleanup_failures:
+        logger.error("Bulk node compensation had derived-index cleanup failures: %s", cleanup_failures)
+    try:
+        _rebuild_indexes_from_sql(sqlite_store, vector_index, graph_index, bm25_index)
+    except Exception as exc:
+        logger.critical("Bulk node compensation rebuild failed type=%s", type(exc).__name__)
+
+
+def _rollback_edges(
+    sqlite_store: SQLiteStore,
+    graph_index: GraphIndex,
+    edge_ids: List[str],
+) -> None:
+    for edge_id in reversed(edge_ids):
+        try:
+            graph_index.remove_edge_by_id(edge_id)
+        except Exception as exc:
+            logger.error("Bulk edge graph compensation failed type=%s", type(exc).__name__)
+        try:
+            sqlite_store.delete_edge(edge_id)
+        except Exception as exc:
+            logger.error("Bulk edge SQL compensation failed type=%s", type(exc).__name__)
+    try:
+        graph_index.rebuild_from_edges(sqlite_store.get_all_edges())
+        for node in sqlite_store.list_nodes(limit=1_000_000):
+            if not graph_index.has_node(node["id"]):
+                graph_index.add_node(node["id"])
+        for node in sqlite_store.list_nodes(limit=1_000_000, include_archived=True):
+            if node.get("archived_at"):
+                graph_index.remove_node(node["id"])
+    except Exception as exc:
+        logger.critical("Bulk edge compensation rebuild failed type=%s", type(exc).__name__)
+
+
+def _create_edge_consistently(
+    sqlite_store: SQLiteStore,
+    graph_index: GraphIndex,
+    *,
+    edge_id: str,
+    source_id: str,
+    target_id: str,
+    edge_type: str,
+    weight: float,
+    metadata: Optional[Dict[str, Any]] = None,
+) -> None:
+    sqlite_store.create_edge(
+        edge_id=edge_id,
+        source_id=source_id,
+        target_id=target_id,
+        edge_type=edge_type,
+        weight=weight,
+        metadata=metadata,
+    )
+    try:
+        graph_index.add_edge(
+            edge_id=edge_id,
+            source_id=source_id,
+            target_id=target_id,
+            edge_type=edge_type,
+            weight=weight,
+            metadata=metadata or {},
+        )
+    except Exception:
+        try:
+            graph_index.remove_edge_by_id(edge_id)
+        except Exception:
+            pass
+        sqlite_store.delete_edge(edge_id)
+        raise
+
+
+def _reconcile_created_node_edges(
+    sqlite_store: SQLiteStore,
+    graph_index: GraphIndex,
+    node_ids: List[str],
+) -> None:
+    """Ensure auto/session edges committed in SQL are reachable in the graph."""
+    seen = set()
+    for node_id in node_ids:
+        for edge in sqlite_store.get_node_edges(node_id):
+            edge_id = edge["id"]
+            if edge_id in seen or graph_index.get_edge_by_id(edge_id) is not None:
+                continue
+            seen.add(edge_id)
+            graph_index.add_edge(
+                edge_id=edge_id,
+                source_id=edge["source_id"],
+                target_id=edge["target_id"],
+                edge_type=edge["type"],
+                weight=float(edge["weight"]),
+            )
+
+
+def _rebuild_indexes_from_sql(
+    sqlite_store: SQLiteStore,
+    vector_index: VectorIndex,
+    graph_index: GraphIndex,
+    bm25_index: _BM25AnyType,
+) -> None:
+    """Rebuild primary derived indexes from the authoritative SQLite state."""
+    embeddings = sqlite_store.get_all_node_embeddings(include_archived=False)
+    vector_index.rebuild_from_embeddings(embeddings)
+    edges = sqlite_store.get_all_edges()
+    graph_index.rebuild_from_edges(edges)
+    nodes = sqlite_store.list_nodes(limit=1_000_000)
+    for node in nodes:
+        if not graph_index.has_node(node["id"]):
+            graph_index.add_node(node["id"])
+    archived_nodes = sqlite_store.list_nodes(limit=1_000_000, include_archived=True)
+    for node in archived_nodes:
+        if node.get("archived_at"):
+            graph_index.remove_node(node["id"])
+    if hasattr(bm25_index, "rebuild_from_nodes"):
+        bm25_index.rebuild_from_nodes(nodes)
+    else:
+        bm25_index.clear()
+        bm25_index.add_batch([(node["id"], node["text"]) for node in nodes])
+
+
+def _rebuild_primary_indexes(db_manager) -> None:
+    _rebuild_indexes_from_sql(
+        db_manager.sqlite_store,
+        db_manager.vector_index,
+        db_manager.graph_index,
+        db_manager.bm25_index,
+    )
+
+
 # ==================== Endpoints ====================
 
 @router.post("/nodes", response_model=BulkResult)
@@ -138,6 +348,7 @@ async def bulk_create_nodes(
     graph_index: GraphIndex = Depends(get_graph_index),
     embedding_engine: EmbeddingEngine = Depends(get_embedding_engine),
     bm25_index: _BM25AnyType = Depends(get_bm25_index),
+    mutation_guard: None = Depends(coordinate_mutation),
 ):
     """
     Bulk create nodes with optional embedding generation.
@@ -150,201 +361,198 @@ async def bulk_create_nodes(
     Maximum 1000 nodes per request.
     """
     start_time = time.perf_counter()
-    created = 0
-    failed = 0
-    errors = []
-    
     nodes_to_create = []
-    
-    # Prepare nodes
     for node in request.nodes:
         node_id = node.id or f"node_{uuid.uuid4().hex[:12]}"
-        
-        # Check if ID already exists
         if sqlite_store.get_node(node_id):
-            errors.append(f"Node {node_id} already exists")
-            failed += 1
-            continue
-        
+            raise HTTPException(status_code=409, detail="One or more node IDs already exist")
+        metadata = dict(node.metadata or {})
+        try:
+            event_time, valid_from, valid_until = SQLiteStore.normalize_temporal_fields(
+                event_time=(
+                    metadata.get("event_time")
+                    or metadata.get("date")
+                    or metadata.get("timestamp")
+                ),
+                valid_from=metadata.get("valid_from"),
+                valid_until=metadata.get("valid_until"),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        if event_time is not None:
+            metadata["event_time"] = event_time
+            if metadata.get("date"):
+                metadata["date"] = event_time
+            if metadata.get("timestamp"):
+                metadata["timestamp"] = event_time
+        if valid_from is not None:
+            metadata["valid_from"] = valid_from
+        if valid_until is not None:
+            metadata["valid_until"] = valid_until
+        try:
+            confidence = float(metadata.get("confidence", 1.0))
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=422, detail="Node confidence must be numeric")
+        if not math.isfinite(confidence) or not 0.0 <= confidence <= 1.0:
+            raise HTTPException(status_code=422, detail="Node confidence must be finite and between 0 and 1")
         nodes_to_create.append({
             "id": node_id,
             "text": node.text,
-            "metadata": node.metadata
+            "metadata": metadata,
+            "confidence": confidence,
+            "event_time": event_time,
+            "valid_from": valid_from,
+            "valid_until": valid_until,
         })
-    
-    if not nodes_to_create:
-        return BulkResult(
-            success=False,
-            created=0,
-            failed=failed,
-            errors=errors,
-            elapsed_ms=round((time.perf_counter() - start_time) * 1000, 2)
+
+    import asyncio
+    import numpy as np
+    import re as _re
+    prefix_re = _re.compile(r'^(\[DATE:[^\]]*\]\s*)?(\[SPEAKER:[^\]]*\]\s*)?')
+    texts = [prefix_re.sub('', node["text"], count=1).strip() for node in nodes_to_create]
+    try:
+        raw_embeddings = await asyncio.to_thread(
+            embedding_engine.embed_batch,
+            texts,
+            True,
+            max(1, settings.embedding_batch_size),
+            False,
         )
-    
-    # Generate embeddings in batch (strip metadata prefixes for cleaner semantic signal)
-    embeddings = None
-    if request.generate_embeddings:
-        import re as _re
-        _prefix_re = _re.compile(r'^(\[DATE:[^\]]*\]\s*)?(\[SPEAKER:[^\]]*\]\s*)?')
-        texts = [_prefix_re.sub('', n["text"], count=1).strip() for n in nodes_to_create]
-        try:
-            import asyncio
-            embeddings = await asyncio.to_thread(embedding_engine.embed_batch, texts, True, 32, False)
-            if embeddings.shape != (len(texts), 4096):
-                raise ValueError(
-                    f"bulk embedding batch returned {embeddings.shape}; expected ({len(texts)}, 4096)"
-                )
-        except Exception as e:
-            raise HTTPException(
-                status_code=503,
-                detail=f"Exact 4096-dimensional bulk embedding failed; no fallback used: {e}",
-            ) from e
-    
-    # Create nodes in database
-    vector_batch = []
-    successful_node_ids = set()
-    
-    for i, node_data in enumerate(nodes_to_create):
-        try:
-            embedding = validate_embedding_4096(
-                embeddings[i], label=f"bulk embedding {node_data['id']}"
-            )
-            metadata = node_data["metadata"] or {}
-            event_time = metadata.get("event_time") or metadata.get("date")
-            
-            # Create in SQLite
+        embeddings = np.asarray(raw_embeddings, dtype=np.float32)
+        if embeddings.shape != (len(texts), 4096) or not np.all(np.isfinite(embeddings)):
+            raise ValueError("invalid bulk embedding batch")
+        validated_embeddings = [
+            validate_embedding_4096(embeddings[index], label="bulk embedding")
+            for index in range(len(nodes_to_create))
+        ]
+    except Exception as exc:
+        logger.error("Bulk embedding preflight failed type=%s", type(exc).__name__)
+        raise HTTPException(
+            status_code=503,
+            detail="Exact finite 4096-dimensional bulk embedding failed; no fallback was used",
+        ) from exc
+
+    created_node_ids: List[str] = []
+    colbert_store = None
+    colbert_node_ids: List[str] = []
+    try:
+        for node_data, embedding in zip(nodes_to_create, validated_embeddings):
+            metadata = node_data["metadata"]
             sqlite_store.create_node(
                 node_id=node_data["id"],
                 text=node_data["text"],
                 metadata=metadata,
                 embedding=embedding,
                 raw_embedding=embedding,
-                event_time=event_time,
-                valid_from=metadata.get("valid_from"),
-                valid_until=metadata.get("valid_until"),
+                event_time=node_data["event_time"],
+                valid_from=node_data["valid_from"],
+                valid_until=node_data["valid_until"],
                 memory_kind=metadata.get("memory_kind"),
-                confidence=float(metadata.get("confidence", 1.0)),
+                confidence=node_data["confidence"],
             )
-            
-            # Add to graph index
+            created_node_ids.append(node_data["id"])
             graph_index.add_node(node_data["id"])
-            successful_node_ids.add(node_data["id"])
-            
-            # Prepare vector batch
-            if embedding is not None:
-                vector_batch.append((node_data["id"], embedding))
-            
-            created += 1
-            
-        except Exception as e:
-            errors.append(f"Failed to create node {node_data['id']}: {str(e)}")
-            failed += 1
+        vector_batch = [
+            (node_data["id"], embedding)
+            for node_data, embedding in zip(nodes_to_create, validated_embeddings)
+        ]
+        vector_index.add_batch(vector_batch)
+        bm25_index.add_batch([(node["id"], node["text"]) for node in nodes_to_create])
 
-    # Create structural edges for sessions
-    sessions = {}
-    for node_data in nodes_to_create:
-        nid = node_data["id"]
-        if nid not in successful_node_ids:
-            continue
-        meta = node_data["metadata"] or {}
-        sess_id = meta.get("sessionId") or meta.get("session_id")
-        if sess_id:
-            if sess_id not in sessions:
-                sessions[sess_id] = []
-            sessions[sess_id].append(nid)
-            
-    # For each session, connect consecutive nodes
-    for sess_id, node_ids_in_sess in sessions.items():
-        for j in range(len(node_ids_in_sess) - 1):
-            src_id = node_ids_in_sess[j]
-            tgt_id = node_ids_in_sess[j + 1]
-            try:
-                # next_turn edge
-                t_edge_id = f"edge_{uuid.uuid4().hex[:12]}"
-                sqlite_store.create_edge(t_edge_id, src_id, tgt_id, "next_turn", 1.0)
-                graph_index.add_edge(
-                    source_id=src_id,
-                    target_id=tgt_id,
-                    edge_type="next_turn",
-                    weight=1.0,
-                    edge_id=t_edge_id,
+        # ColBERT is part of the active retrieval contract when enabled.  It is
+        # therefore a required stage, not a best-effort post-success side effect.
+        from storage.colbert_store import colbert_enabled, maybe_store_colbert
+        if colbert_enabled():
+            from api.dependencies import get_colbert_store
+            colbert_store = get_colbert_store()
+            if colbert_store is None:
+                raise RuntimeError("enabled ColBERT store is unavailable")
+            for node_data in nodes_to_create:
+                colbert_node_ids.append(node_data["id"])
+                if not maybe_store_colbert(
+                    node_data["id"], node_data["text"], embedding_engine, colbert_store
+                ):
+                    raise RuntimeError("enabled ColBERT indexing failed")
+
+        sessions: Dict[tuple[str, str], List[Dict[str, Any]]] = {}
+        for node_data in nodes_to_create:
+            metadata = node_data["metadata"]
+            session_id = metadata.get("sessionId") or metadata.get("session_id")
+            if session_id:
+                container = metadata.get("containerTag") or metadata.get("container_tag") or "__default__"
+                turn_index = metadata.get("turn_index")
+                try:
+                    normalized_turn_index = (
+                        int(turn_index) if turn_index is not None else None
+                    )
+                except (TypeError, ValueError) as exc:
+                    raise ValueError("turn_index must be an integer") from exc
+                sessions.setdefault((str(container), str(session_id)), []).append(
+                    {
+                        "id": node_data["id"],
+                        "turn_index": normalized_turn_index,
+                    }
                 )
-                
-                # same_session edge
-                s_edge_id = f"edge_{uuid.uuid4().hex[:12]}"
-                sqlite_store.create_edge(s_edge_id, src_id, tgt_id, "same_session", 0.5)
-                graph_index.add_edge(
-                    source_id=src_id,
-                    target_id=tgt_id,
-                    edge_type="same_session",
-                    weight=0.5,
-                    edge_id=s_edge_id,
-                )
-            except Exception as e:
-                logger.warning(f"Failed to create edge in bulk ingest: {e}")
-    
-    # Batch add to vector index
-    if vector_batch:
-        try:
-            vector_index.add_batch(vector_batch)
-        except Exception as e:
-            errors.append(f"Vector index batch add failed: {str(e)}")
+        for session_nodes in sessions.values():
+            if all(node["turn_index"] is not None for node in session_nodes):
+                indices = [node["turn_index"] for node in session_nodes]
+                if len(indices) != len(set(indices)):
+                    raise ValueError("A session contains duplicate turn_index values")
+                session_nodes.sort(key=lambda node: (node["turn_index"], node["id"]))
+            session_node_ids = [node["id"] for node in session_nodes]
+            for source_id, target_id in zip(session_node_ids, session_node_ids[1:]):
+                for edge_type, weight in (("next_turn", 1.0), ("same_session", 0.5)):
+                    _create_edge_consistently(
+                        sqlite_store,
+                        graph_index,
+                        edge_id=f"edge_{uuid.uuid4().hex[:12]}",
+                        source_id=source_id,
+                        target_id=target_id,
+                        edge_type=edge_type,
+                        weight=weight,
+                    )
 
-    node_data_by_id = {node_data["id"]: node_data for node_data in nodes_to_create}
-
-    # Auto-edge inference (config-gated: HYBRIDMIND_AUTO_EDGES_ENABLED=true)
-    for nid, emb in vector_batch:
-        node_data = node_data_by_id[nid]
-        try:
+        for node_data, embedding in zip(nodes_to_create, validated_embeddings):
             run_auto_edge_inference(
-                node_id=nid,
-                embedding=emb,
-                node_metadata=node_data.get("metadata") or {},
-                node_text=node_data.get("text", ""),
+                node_id=node_data["id"],
+                embedding=embedding,
+                node_metadata=node_data["metadata"],
+                node_text=node_data["text"],
                 vector_index=vector_index,
                 sqlite_store=sqlite_store,
                 graph_index=graph_index,
-                event_time=(node_data.get("metadata") or {}).get("event_time")
-                or (node_data.get("metadata") or {}).get("date"),
+                event_time=node_data["metadata"].get("event_time")
+                or node_data["metadata"].get("date"),
             )
-        except Exception as e:
-            logger.debug(f"Auto-edge inference failed for {nid}: {e}")
+        _reconcile_created_node_edges(sqlite_store, graph_index, created_node_ids)
+    except Exception as exc:
+        logger.error("Bulk node mutation failed; compensating type=%s", type(exc).__name__)
+        if colbert_store is not None:
+            for node_id in colbert_node_ids:
+                try:
+                    colbert_store.remove(node_id)
+                except Exception as cleanup_exc:
+                    logger.error("ColBERT compensation failed type=%s", type(cleanup_exc).__name__)
+        _rollback_nodes(
+            sqlite_store, vector_index, graph_index, bm25_index, created_node_ids
+        )
+        invalidate_cache()
+        raise HTTPException(
+            status_code=500,
+            detail="Bulk node creation failed; created rows were rolled back",
+        ) from exc
 
-    # ColBERT per-token vectors (opt-in: HYBRIDMIND_COLBERT_ENABLED=true)
-    try:
-        from storage.colbert_store import colbert_enabled, maybe_store_colbert
-        if colbert_enabled():
-            from api.dependencies import get_colbert_store, get_embedding_engine as _get_emb
-            cs = get_colbert_store()
-            ee = _get_emb()
-            if cs is not None and ee is not None:
-                for nid, _emb in vector_batch:
-                    _node_data = node_data_by_id[nid]
-                    maybe_store_colbert(nid, _node_data.get("text", ""), ee, cs)
-    except Exception as e:
-        logger.debug(f"ColBERT storage failed during bulk ingest: {e}")
-    
-    # Batch add to BM25 index
-    try:
-        bm25_batch = [
-            (node_id, node_data_by_id[node_id]["text"])
-            for node_id in successful_node_ids
-        ]
-        bm25_index.add_batch(bm25_batch)
-    except Exception as e:
-        errors.append(f"BM25 index batch add failed: {str(e)}")
-    
     # Invalidate cache
     invalidate_cache()
     
     elapsed = (time.perf_counter() - start_time) * 1000
-    logger.info(f"Bulk created {created} nodes in {elapsed:.0f}ms")
+    logger.info("Bulk created %d nodes in %.0fms", len(created_node_ids), elapsed)
     
     return BulkResult(
-        success=failed == 0,
-        created=created,
-        failed=failed,
-        errors=errors[:10],  # Limit error messages
+        success=True,
+        created=len(created_node_ids),
+        failed=0,
+        errors=[],
         elapsed_ms=round(elapsed, 2)
     )
 
@@ -354,6 +562,7 @@ async def bulk_create_edges(
     request: BulkEdgesRequest,
     sqlite_store: SQLiteStore = Depends(get_sqlite_store),
     graph_index: GraphIndex = Depends(get_graph_index),
+    mutation_guard: None = Depends(coordinate_mutation),
 ):
     """
     Bulk create edges between existing nodes.
@@ -365,73 +574,54 @@ async def bulk_create_edges(
     Maximum 5000 edges per request.
     """
     start_time = time.perf_counter()
-    created = 0
-    failed = 0
-    errors = []
-    
-    # Validate nodes exist (unless skip_validation)
-    if not request.skip_validation:
-        node_ids = set()
-        for edge in request.edges:
-            node_ids.add(edge.source_id)
-            node_ids.add(edge.target_id)
-        
-        # Check which nodes exist
-        missing = []
-        for node_id in node_ids:
-            if not sqlite_store.get_node(node_id):
-                missing.append(node_id)
-        
-        if missing:
-            return BulkResult(
-                success=False,
-                created=0,
-                failed=len(request.edges),
-                errors=[f"Missing nodes: {', '.join(missing[:10])}{'...' if len(missing) > 10 else ''}"],
-                elapsed_ms=round((time.perf_counter() - start_time) * 1000, 2)
-            )
-    
-    # Create edges
+    prepared = []
     for edge in request.edges:
         edge_id = edge.id or f"edge_{uuid.uuid4().hex[:12]}"
-        
-        try:
-            # Create in SQLite
-            sqlite_store.create_edge(
+        if sqlite_store.get_edge(edge_id):
+            raise HTTPException(status_code=409, detail="One or more edge IDs already exist")
+        prepared.append((edge_id, edge))
+
+    # SQL foreign-key enforcement is not a substitute for a useful API error;
+    # validate even when legacy callers request skip_validation.
+    endpoint_ids = {endpoint for _, edge in prepared for endpoint in (edge.source_id, edge.target_id)}
+    missing = [node_id for node_id in endpoint_ids if not sqlite_store.get_node(node_id)]
+    if missing:
+        raise HTTPException(status_code=422, detail="One or more edge endpoints do not exist")
+
+    created_edge_ids: List[str] = []
+    try:
+        for edge_id, edge in prepared:
+            _create_edge_consistently(
+                sqlite_store,
+                graph_index,
                 edge_id=edge_id,
                 source_id=edge.source_id,
                 target_id=edge.target_id,
                 edge_type=edge.type,
                 weight=edge.weight,
-                metadata=edge.metadata
+                metadata=edge.metadata,
             )
-            
-            # Add to graph index
-            graph_index.add_edge(
-                edge_id=edge_id,
-                source_id=edge.source_id,
-                target_id=edge.target_id,
-                edge_type=edge.type,
-                weight=edge.weight
-            )
-            
-            created += 1
-            
-        except Exception as e:
-            errors.append(f"Failed to create edge {edge_id}: {str(e)}")
-            failed += 1
+            created_edge_ids.append(edge_id)
+    except Exception as exc:
+        logger.error("Bulk edge mutation failed; compensating type=%s", type(exc).__name__)
+        _rollback_edges(sqlite_store, graph_index, created_edge_ids)
+        invalidate_cache()
+        raise HTTPException(
+            status_code=500,
+            detail="Bulk edge creation failed; created rows were rolled back",
+        ) from exc
     
     # Invalidate cache
     invalidate_cache()
     
     elapsed = (time.perf_counter() - start_time) * 1000
-    logger.info(f"Bulk created {created} edges in {elapsed:.0f}ms")
+    logger.info("Bulk created %d edges in %.0fms", len(created_edge_ids), elapsed)
     
     return BulkResult(
-        success=failed == 0,
-        created=created,
-        failed=failed,
-        errors=errors[:10],
+        success=True,
+        created=len(created_edge_ids),
+        failed=0,
+        errors=[],
         elapsed_ms=round(elapsed, 2)
     )
 
@@ -444,6 +634,7 @@ async def bulk_import(
     graph_index: GraphIndex = Depends(get_graph_index),
     embedding_engine: EmbeddingEngine = Depends(get_embedding_engine),
     bm25_index: _BM25AnyType = Depends(get_bm25_index),
+    mutation_guard: None = Depends(coordinate_mutation),
 ):
     """
     Combined bulk import of nodes and edges.
@@ -452,11 +643,14 @@ async def bulk_import(
     complete knowledge graphs in a single request.
     """
     total_start = time.perf_counter()
-    
-    # Import nodes
+    prepared_nodes = [
+        node if node.id is not None else node.model_copy(update={"id": f"node_{uuid.uuid4().hex[:12]}"})
+        for node in request.nodes
+    ]
+
     node_result = await bulk_create_nodes(
         BulkNodesRequest(
-            nodes=request.nodes,
+            nodes=prepared_nodes,
             generate_embeddings=request.generate_embeddings
         ),
         sqlite_store=sqlite_store,
@@ -468,17 +662,28 @@ async def bulk_import(
         success=True, created=0, failed=0, errors=[], elapsed_ms=0
     )
     
-    # Import edges (skip validation since we just created the nodes)
-    edge_result = await bulk_create_edges(
-        BulkEdgesRequest(
-            edges=request.edges,
-            skip_validation=False  # Still validate in case of partial node failures
-        ),
-        sqlite_store=sqlite_store,
-        graph_index=graph_index,
-    ) if request.edges else BulkResult(
-        success=True, created=0, failed=0, errors=[], elapsed_ms=0
-    )
+    try:
+        edge_result = await bulk_create_edges(
+            BulkEdgesRequest(edges=request.edges, skip_validation=False),
+            sqlite_store=sqlite_store,
+            graph_index=graph_index,
+        ) if request.edges else BulkResult(
+            success=True, created=0, failed=0, errors=[], elapsed_ms=0
+        )
+    except Exception as exc:
+        _rollback_nodes(
+            sqlite_store,
+            vector_index,
+            graph_index,
+            bm25_index,
+            [node.id for node in prepared_nodes if node.id is not None],
+        )
+        invalidate_cache()
+        logger.error("Combined bulk import failed; nodes compensated type=%s", type(exc).__name__)
+        raise HTTPException(
+            status_code=500,
+            detail="Bulk import failed; all created data was rolled back",
+        ) from exc
     
     total_elapsed = (time.perf_counter() - total_start) * 1000
     
@@ -502,6 +707,7 @@ async def process_unstructured_data(
     graph_index: GraphIndex = Depends(get_graph_index),
     embedding_engine: EmbeddingEngine = Depends(get_embedding_engine),
     bm25_index: _BM25AnyType = Depends(get_bm25_index),
+    mutation_guard: None = Depends(coordinate_mutation),
 ):
     """
     Process unstructured text using LLM and extract knowledge graph.
@@ -518,201 +724,147 @@ async def process_unstructured_data(
     - Any large text content
     """
     start_time = time.perf_counter()
-    errors = []
-    
     try:
         from engine.llm import LLMEngine
         llm = LLMEngine()
-    except Exception as e:
+    except Exception as exc:
+        logger.error("Unstructured LLM initialization failed type=%s", type(exc).__name__)
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to initialize LLM engine: {str(e)}"
-        )
-    
-    # Process unstructured data with LLM
+            status_code=503,
+            detail="The configured unstructured-ingest provider is unavailable",
+        ) from exc
+
     try:
-        extracted = llm.process_unstructured(request.text)
-    except Exception as e:
+        import asyncio
+        extracted = await asyncio.to_thread(llm.process_unstructured, request.text)
+    except Exception as exc:
+        logger.error("Unstructured provider processing failed type=%s", type(exc).__name__)
         raise HTTPException(
-            status_code=500,
-            detail=f"LLM processing failed: {str(e)}"
-        )
-    
+            status_code=502,
+            detail="Unstructured extraction failed validation or provider processing",
+        ) from exc
+
+    if not isinstance(extracted, dict):
+        raise HTTPException(status_code=502, detail="Unstructured extraction returned an invalid document")
     summary = extracted.get("summary", "")
-    raw_nodes = extracted.get("nodes", [])
-    raw_edges = extracted.get("edges", [])
-    
-    # Create nodes
-    nodes_created = 0
-    nodes_failed = 0
-    node_id_map = {}  # Map index to actual node ID
-    
-    # Prepare texts for batch embedding
-    valid_texts = [
-        (index, node.get("text", "")[:2000])
-        for index, node in enumerate(raw_nodes)
-        if node.get("text") and len(node.get("text", "")) >= 10
-    ]
-    texts = [text for _, text in valid_texts]
-    
-    # Generate embeddings in batch
-    embeddings = None
-    embedding_by_index = {}
-    if texts:
-        try:
-            import asyncio
-            embeddings = await asyncio.to_thread(embedding_engine.embed_batch, texts, True, 32, False)
-            if embeddings.shape != (len(texts), 4096):
-                raise ValueError(
-                    f"unstructured embedding batch returned {embeddings.shape}; expected ({len(texts)}, 4096)"
-                )
-            embedding_by_index = {
-                raw_index: embeddings[position]
-                for position, (raw_index, _) in enumerate(valid_texts)
-            }
-        except Exception as e:
-            raise HTTPException(
-                status_code=503,
-                detail=f"Exact 4096-dimensional unstructured embedding failed; no fallback used: {e}",
-            ) from e
-    
-    # Create nodes
-    for i, node_data in enumerate(raw_nodes):
-        node_text = node_data.get("text", "")
-        if not node_text or len(node_text) < 10:
-            nodes_failed += 1
-            continue
-        
-        node_id = f"node_{uuid.uuid4().hex[:12]}"
-        node_id_map[i] = node_id
-        
+    raw_nodes = extracted.get("nodes")
+    raw_edges = extracted.get("edges")
+    if not isinstance(summary, str) or not isinstance(raw_nodes, list) or not isinstance(raw_edges, list):
+        raise HTTPException(status_code=502, detail="Unstructured extraction returned an invalid schema")
+    if not raw_nodes or len(raw_nodes) > 1000 or len(raw_edges) > 5000:
+        raise HTTPException(status_code=502, detail="Unstructured extraction exceeded safe resource limits")
+
+    node_id_map: Dict[int, str] = {}
+    prepared_nodes: List[BulkNodeCreate] = []
+    for index, node_data in enumerate(raw_nodes):
+        if not isinstance(node_data, dict):
+            raise HTTPException(status_code=502, detail="Unstructured extraction returned an invalid node")
+        node_text = node_data.get("text")
         metadata = node_data.get("metadata", {})
-        if not isinstance(metadata, dict):
-            metadata = {}
-        metadata["source"] = "llm_extraction"
-        metadata["summary_context"] = summary[:200]
-        
-        try:
-            embedding = validate_embedding_4096(
-                embedding_by_index[i], label=f"unstructured embedding {i}"
-            )
-            
-            sqlite_store.create_node(
-                node_id=node_id,
-                text=node_text[:5000],
-                metadata=metadata,
-                embedding=embedding,
-                raw_embedding=embedding,
-                event_time=metadata.get("event_time") or metadata.get("date"),
-                valid_from=metadata.get("valid_from"),
-                valid_until=metadata.get("valid_until"),
-                memory_kind=metadata.get("memory_kind"),
-                confidence=float(metadata.get("confidence", 1.0)),
-            )
-            
-            graph_index.add_node(node_id)
-            
-            if embedding is not None:
-                vector_index.add(node_id, embedding)
-            bm25_index.add(node_id, node_text[:5000])
-            run_auto_edge_inference(
-                node_id=node_id,
-                embedding=embedding,
-                node_metadata=metadata,
-                node_text=node_text[:5000],
-                vector_index=vector_index,
-                sqlite_store=sqlite_store,
-                graph_index=graph_index,
-                event_time=metadata.get("event_time") or metadata.get("date"),
-            )
-            
-            nodes_created += 1
-            
-        except Exception as e:
-            errors.append(f"Failed to create node {i}: {str(e)}")
-            nodes_failed += 1
-    
-    # Create edges
-    edges_created = 0
-    edges_failed = 0
-    
+        if not isinstance(node_text, str) or not 10 <= len(node_text) <= 50000 or not isinstance(metadata, dict):
+            raise HTTPException(status_code=502, detail="Unstructured extraction returned an invalid node")
+        node_id = f"node_{uuid.uuid4().hex[:12]}"
+        node_id_map[index] = node_id
+        enriched_metadata = dict(metadata)
+        enriched_metadata["source"] = "llm_extraction"
+        enriched_metadata["summary_context"] = summary[:200]
+        prepared_nodes.append(
+            BulkNodeCreate(id=node_id, text=node_text, metadata=enriched_metadata)
+        )
+
+    prepared_edges: List[BulkEdgeCreate] = []
     for edge_data in raw_edges:
-        source_idx = edge_data.get("source_index")
-        target_idx = edge_data.get("target_index")
-        
-        if source_idx is None or target_idx is None:
-            edges_failed += 1
-            continue
-        
-        source_id = node_id_map.get(source_idx)
-        target_id = node_id_map.get(target_idx)
-        
-        if not source_id or not target_id:
-            edges_failed += 1
-            continue
-        
-        edge_id = f"edge_{uuid.uuid4().hex[:12]}"
+        if not isinstance(edge_data, dict):
+            raise HTTPException(status_code=502, detail="Unstructured extraction returned an invalid edge")
+        source_index = edge_data.get("source_index")
+        target_index = edge_data.get("target_index")
+        if (
+            isinstance(source_index, bool)
+            or isinstance(target_index, bool)
+            or not isinstance(source_index, int)
+            or not isinstance(target_index, int)
+            or source_index not in node_id_map
+            or target_index not in node_id_map
+        ):
+            raise HTTPException(status_code=502, detail="Unstructured extraction returned an invalid edge endpoint")
         edge_type = edge_data.get("type", "relates_to")
         weight = edge_data.get("weight", 0.5)
-        
-        try:
-            sqlite_store.create_edge(
-                edge_id=edge_id,
-                source_id=source_id,
-                target_id=target_id,
-                edge_type=edge_type,
-                weight=float(weight) if isinstance(weight, (int, float)) else 0.5,
-                metadata={"reasoning": edge_data.get("reasoning", "")}
-            )
-            
-            graph_index.add_edge(
-                edge_id=edge_id,
-                source_id=source_id,
-                target_id=target_id,
-                edge_type=edge_type,
-                weight=float(weight) if isinstance(weight, (int, float)) else 0.5
-            )
-            
-            edges_created += 1
-            
-        except Exception as e:
-            errors.append(f"Failed to create edge: {str(e)}")
-            edges_failed += 1
-    
-    # Invalidate cache
-    invalidate_cache()
-    
-    elapsed = (time.perf_counter() - start_time) * 1000
-    
-    # Collect entity info for response
-    extracted_entities = []
-    for i, node_data in enumerate(raw_nodes[:20]):
-        if i in node_id_map:
-            extracted_entities.append({
-                "node_id": node_id_map[i],
-                "text_preview": node_data.get("text", "")[:100],
-                "metadata": node_data.get("metadata", {})
-            })
-    
-    logger.info(
-        f"Unstructured import: {nodes_created} nodes, {edges_created} edges in {elapsed:.0f}ms"
+        if not isinstance(edge_type, str) or not edge_type.strip():
+            raise HTTPException(status_code=502, detail="Unstructured extraction returned an invalid edge type")
+        if isinstance(weight, bool) or not isinstance(weight, (int, float)) or not math.isfinite(float(weight)):
+            raise HTTPException(status_code=502, detail="Unstructured extraction returned an invalid edge weight")
+        if not 0.0 <= float(weight) <= 1.0:
+            raise HTTPException(status_code=502, detail="Unstructured extraction returned an invalid edge weight")
+        prepared_edges.append(BulkEdgeCreate(
+            id=f"edge_{uuid.uuid4().hex[:12]}",
+            source_id=node_id_map[source_index],
+            target_id=node_id_map[target_index],
+            type=edge_type,
+            weight=float(weight),
+            metadata={"reasoning": str(edge_data.get("reasoning", ""))[:2000]},
+        ))
+
+    node_result = await bulk_create_nodes(
+        BulkNodesRequest(nodes=prepared_nodes, generate_embeddings=True),
+        sqlite_store=sqlite_store,
+        vector_index=vector_index,
+        graph_index=graph_index,
+        embedding_engine=embedding_engine,
+        bm25_index=bm25_index,
     )
-    
+    try:
+        edge_result = await bulk_create_edges(
+            BulkEdgesRequest(edges=prepared_edges, skip_validation=False),
+            sqlite_store=sqlite_store,
+            graph_index=graph_index,
+        ) if prepared_edges else BulkResult(
+            success=True, created=0, failed=0, errors=[], elapsed_ms=0
+        )
+    except Exception as exc:
+        _rollback_nodes(
+            sqlite_store,
+            vector_index,
+            graph_index,
+            bm25_index,
+            list(node_id_map.values()),
+        )
+        invalidate_cache()
+        logger.error("Unstructured edge commit failed; nodes compensated type=%s", type(exc).__name__)
+        raise HTTPException(
+            status_code=500,
+            detail="Unstructured ingest failed; all created data was rolled back",
+        ) from exc
+
+    elapsed = (time.perf_counter() - start_time) * 1000
+    extracted_entities = [
+        {
+            "node_id": node_id_map[index],
+            "text_preview": raw_nodes[index]["text"][:100],
+            "metadata": raw_nodes[index].get("metadata", {}),
+        }
+        for index in range(min(20, len(raw_nodes)))
+    ]
+    logger.info(
+        "Unstructured import committed nodes=%d edges=%d in %.0fms",
+        node_result.created,
+        edge_result.created,
+        elapsed,
+    )
     return UnstructuredDataResult(
-        success=nodes_failed == 0 and edges_failed == 0,
+        success=True,
         summary=summary,
-        nodes_created=nodes_created,
-        edges_created=edges_created,
-        nodes_failed=nodes_failed,
-        edges_failed=edges_failed,
+        nodes_created=node_result.created,
+        edges_created=edge_result.created,
+        nodes_failed=0,
+        edges_failed=0,
         extracted_entities=extracted_entities,
-        errors=errors[:10],
-        elapsed_ms=round(elapsed, 2)
+        errors=[],
+        elapsed_ms=round(elapsed, 2),
     )
 
 
 @router.delete("/clear", response_model=dict)
-async def clear_all_data():
+async def clear_all_data(mutation_guard: None = Depends(coordinate_mutation)):
     """
     Clear all data from the database.
     
@@ -720,7 +872,7 @@ async def clear_all_data():
     Use with caution.
     """
     start_time = time.perf_counter()
-    
+    db_manager = None
     try:
         db_manager = get_db_manager()
         
@@ -729,16 +881,17 @@ async def clear_all_data():
         nodes_count = stats["total_nodes"]
         edges_count = stats["total_edges"]
         
-        # Clear vector index
-        db_manager.vector_index.clear()
-        
-        # Clear graph index
-        db_manager.graph_index.clear()
-        
-        # Clear SQLite (need to delete all records)
+        # Keep the SQL transaction open until all primary indexes clear. If an
+        # index operation fails, SQL rolls back and the indexes are rebuilt.
         with db_manager.sqlite_store._cursor() as cursor:
             cursor.execute("DELETE FROM edges")
+            # Clear is an erasure boundary, unlike ordinary lifecycle soft
+            # deletion. Remove immutable history before current rows.
+            cursor.execute("DELETE FROM node_versions")
             cursor.execute("DELETE FROM nodes")
+            db_manager.vector_index.clear()
+            db_manager.graph_index.clear()
+            db_manager.bm25_index.clear()
         
         # Invalidate cache
         invalidate_cache()
@@ -752,6 +905,12 @@ async def clear_all_data():
             "elapsed_ms": round(elapsed, 2)
         }
         
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to clear data: {str(e)}")
+    except Exception as exc:
+        logger.error("Bulk clear failed type=%s", type(exc).__name__)
+        if db_manager is not None:
+            try:
+                _rebuild_primary_indexes(db_manager)
+            except Exception as rebuild_exc:
+                logger.critical("Bulk clear recovery failed type=%s", type(rebuild_exc).__name__)
+        raise HTTPException(status_code=500, detail="Failed to clear data safely") from exc
 

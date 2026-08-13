@@ -267,8 +267,7 @@ class BM25Index:
 
     def add(self, node_id: str, text: str):
         if node_id in self.doc_lengths:
-            # Handle update by removing first (naive approach)
-            pass
+            self.remove(node_id)
 
         tokens = self.tokenize(text)
         if not tokens:
@@ -292,6 +291,26 @@ class BM25Index:
 
         # We can lazy compute idf during search or precompute here.
         # Since addition happens one by one, we will recompute lazily during search.
+
+    def remove(self, node_id: str) -> bool:
+        """Remove a document and invalidate collection-dependent IDF values."""
+        counts = self.term_freqs.pop(node_id, None)
+        if counts is None:
+            return False
+        for term in counts:
+            remaining = self.doc_freqs.get(term, 0) - 1
+            if remaining > 0:
+                self.doc_freqs[term] = remaining
+            else:
+                self.doc_freqs.pop(term, None)
+        self.doc_lengths.pop(node_id, None)
+        self.doc_ids = [doc_id for doc_id in self.doc_ids if doc_id != node_id]
+        self.doc_count = len(self.doc_lengths)
+        self.avgdl = (
+            sum(self.doc_lengths.values()) / self.doc_count if self.doc_count else 0.0
+        )
+        self.idf.clear()
+        return True
 
     def add_batch(self, batch: List[Tuple[str, str]]):
         for node_id, text in batch:
@@ -463,6 +482,20 @@ class BM25SBackend:
             self._corpus.append((node_id, text))
         self._dirty = True
 
+    def remove(self, node_id: str) -> bool:
+        """Remove a corpus entry while preserving a dense ID-to-row mapping."""
+        idx = self._id_to_idx.get(node_id)
+        if idx is None:
+            return False
+        self._corpus.pop(idx)
+        self._id_to_idx = {
+            corpus_id: position
+            for position, (corpus_id, _) in enumerate(self._corpus)
+        }
+        self._retriever = None
+        self._dirty = True
+        return True
+
     def add_batch(self, batch: List[Tuple[str, str]]):
         for node_id, text in batch:
             self.add(node_id, text)
@@ -624,6 +657,14 @@ class SpladeBackend:
         self._vectors[node_id] = {"indices": vec.indices, "values": vec.values}
         if node_id not in self._ids:
             self._ids.append(node_id)
+
+    def remove(self, node_id: str) -> bool:
+        """Remove one sparse vector from the in-memory SPLADE store."""
+        if node_id not in self._vectors:
+            return False
+        self._vectors.pop(node_id, None)
+        self._ids = [stored_id for stored_id in self._ids if stored_id != node_id]
+        return True
 
     def add_batch(self, batch: List[Tuple[str, str]]):
         self._ensure_model()

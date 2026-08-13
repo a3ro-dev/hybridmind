@@ -47,8 +47,12 @@ class ColbertStore:
             return None
         try:
             return np.load(path)["colbert"]
-        except Exception as e:
-            logger.debug(f"ColbertStore: failed to load {node_id}: {e}")
+        except Exception as exc:
+            logger.debug(
+                "ColbertStore load failed node=%s type=%s",
+                node_id,
+                type(exc).__name__,
+            )
             return None
 
     def has(self, node_id: str) -> bool:
@@ -138,6 +142,10 @@ def maybe_store_colbert(
         if colbert_list and len(colbert_list) > 0 and colbert_list[0] is not None:
             colbert_store.add(node_id, colbert_list[0])
             return True
-    except Exception as e:
-        logger.debug(f"ColBERT storage failed for {node_id}: {e}")
+    except Exception as exc:
+        logger.debug(
+            "ColBERT storage failed node=%s type=%s",
+            node_id,
+            type(exc).__name__,
+        )
     return False

@@ -12,6 +12,36 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import networkx as nx
 
 
+# Relations that are semantically symmetric even though they are persisted in
+# a directed container. Causal, dependency, ownership, and sequence relations
+# deliberately do not appear here.
+_SYMMETRIC_EDGE_TYPES = {
+    "analogous_to",
+    "co_occurs",
+    "contradicts",
+    "same_session",
+    "similar_to",
+    "temporally_near",
+}
+
+
+def _parse_graph_time(value: Any) -> Optional[datetime]:
+    if value in (None, ""):
+        return None
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        try:
+            parsed = datetime.fromisoformat(str(value).strip().replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            return None
+    return (
+        parsed.replace(tzinfo=timezone.utc)
+        if parsed.tzinfo is None
+        else parsed.astimezone(timezone.utc)
+    )
+
+
 class GraphIndex:
     """
     NetworkX-based directed graph for relationship storage and traversal.
@@ -30,6 +60,7 @@ class GraphIndex:
         # next_turn edge and a same_session edge). DiGraph silently overwrote
         # the first relation; MultiDiGraph preserves the SQLite edge model.
         self.graph = nx.MultiDiGraph()
+        self._edge_locations: Dict[str, Tuple[str, str, Any]] = {}
         
         # Load from disk if exists
         if self.index_path and self.index_path.exists():
@@ -55,6 +86,12 @@ class GraphIndex:
         """Remove a node and all its edges."""
         if node_id not in self.graph:
             return False
+        for source, target, key, data in list(
+            self.graph.in_edges(node_id, keys=True, data=True)
+        ) + list(self.graph.out_edges(node_id, keys=True, data=True)):
+            edge_id = data.get("edge_id")
+            if edge_id is not None:
+                self._edge_locations.pop(str(edge_id), None)
         self.graph.remove_node(node_id)
         return True
     
@@ -90,6 +127,16 @@ class GraphIndex:
             edge_id: Optional edge identifier
             **attrs: Additional edge attributes
         """
+        if source_id == target_id:
+            raise ValueError("Graph self-loops are not supported")
+        if not math.isfinite(float(weight)) or not 0.0 <= float(weight) <= 1.0:
+            raise ValueError("Graph edge weight must be finite and in [0, 1]")
+        confidence = attrs.get("confidence", 1.0)
+        if not math.isfinite(float(confidence)) or not 0.0 <= float(confidence) <= 1.0:
+            raise ValueError("Graph edge confidence must be finite and in [0, 1]")
+        if edge_id is not None and str(edge_id) in self._edge_locations:
+            raise ValueError(f"Graph edge ID already exists: {edge_id}")
+
         # Ensure nodes exist
         if source_id not in self.graph:
             self.graph.add_node(source_id)
@@ -106,22 +153,30 @@ class GraphIndex:
             edge_id=edge_id,
             **attrs
         )
+        if edge_id is not None:
+            self._edge_locations[str(edge_id)] = (source_id, target_id, key)
     
     def remove_edge(self, source_id: str, target_id: str) -> bool:
         """Remove every typed edge between two nodes."""
         if not self.graph.has_edge(source_id, target_id):
             return False
-        for key in list(self.graph[source_id][target_id]):
+        for key, data in list(self.graph[source_id][target_id].items()):
+            edge_id = data.get("edge_id")
+            if edge_id is not None:
+                self._edge_locations.pop(str(edge_id), None)
             self.graph.remove_edge(source_id, target_id, key=key)
         return True
     
     def remove_edge_by_id(self, edge_id: str) -> bool:
         """Remove an edge by its ID."""
-        for u, v, key, data in list(self.graph.edges(keys=True, data=True)):
-            if data.get("edge_id") == edge_id:
-                self.graph.remove_edge(u, v, key=key)
-                return True
-        return False
+        location = self._edge_locations.pop(str(edge_id), None)
+        if location is None:
+            return False
+        source, target, key = location
+        if not self.graph.has_edge(source, target, key=key):
+            raise RuntimeError("Graph edge locator is inconsistent with graph state")
+        self.graph.remove_edge(source, target, key=key)
+        return True
     
     def get_edge(self, source_id: str, target_id: str) -> Optional[Dict[str, Any]]:
         """Get edge data between two nodes."""
@@ -132,14 +187,14 @@ class GraphIndex:
     
     def get_edge_by_id(self, edge_id: str) -> Optional[Dict[str, Any]]:
         """Get edge data by edge ID."""
-        for u, v, _key, data in self.graph.edges(keys=True, data=True):
-            if data.get("edge_id") == edge_id:
-                return {
-                    "source_id": u,
-                    "target_id": v,
-                    **data
-                }
-        return None
+        location = self._edge_locations.get(str(edge_id))
+        if location is None:
+            return None
+        source, target, key = location
+        data = self.graph.get_edge_data(source, target, key)
+        if data is None:
+            raise RuntimeError("Graph edge locator is inconsistent with graph state")
+        return {"source_id": source, "target_id": target, **data}
     
     def get_node_edges(
         self,
@@ -194,7 +249,8 @@ class GraphIndex:
         start_id: str,
         max_depth: int = 2,
         direction: str = "both",
-        edge_types: Optional[List[str]] = None
+        edge_types: Optional[List[str]] = None,
+        as_of: Optional[datetime] = None,
     ) -> List[Tuple[str, int, List[str]]]:
         """
         BFS traversal from a starting node.
@@ -211,6 +267,7 @@ class GraphIndex:
         if start_id not in self.graph:
             return []
         
+        reference_time = _parse_graph_time(as_of) or datetime.now(timezone.utc)
         visited: Dict[str, Tuple[int, List[str]]] = {start_id: (0, [start_id])}
         queue = deque([(start_id, 0, [start_id])])
         results = []
@@ -221,20 +278,35 @@ class GraphIndex:
             if depth >= max_depth:
                 continue
             
-            # Get neighbors based on direction
+            # Get neighbors based on direction. ``typed`` follows every edge
+            # forward but only traverses the reverse of symmetric relations.
             neighbors = set()
-            
-            if direction in ("outgoing", "both"):
+
+            if direction in ("outgoing", "both", "typed"):
                 for _, target, _key, data in self.graph.out_edges(node, keys=True, data=True):
-                    if edge_types is None or data.get("type") in edge_types:
+                    if (
+                        (edge_types is None or data.get("type") in edge_types)
+                        and self._edge_is_active(data, reference_time)
+                    ):
                         neighbors.add(target)
-            
+
             if direction in ("incoming", "both"):
                 for source, _, _key, data in self.graph.in_edges(node, keys=True, data=True):
-                    if edge_types is None or data.get("type") in edge_types:
+                    if (
+                        (edge_types is None or data.get("type") in edge_types)
+                        and self._edge_is_active(data, reference_time)
+                    ):
                         neighbors.add(source)
-            
-            for neighbor in neighbors:
+            elif direction == "typed":
+                for source, _, _key, data in self.graph.in_edges(node, keys=True, data=True):
+                    if (
+                        data.get("type") in _SYMMETRIC_EDGE_TYPES
+                        and (edge_types is None or data.get("type") in edge_types)
+                        and self._edge_is_active(data, reference_time)
+                    ):
+                        neighbors.add(source)
+
+            for neighbor in sorted(neighbors):
                 if neighbor not in visited:
                     new_path = path + [neighbor]
                     visited[neighbor] = (depth + 1, new_path)
@@ -308,12 +380,34 @@ class GraphIndex:
         if not self.graph.has_edge(source_id, target_id):
             return []
         return [dict(attrs) for attrs in self.graph[source_id][target_id].values()]
+
+    @staticmethod
+    def _edge_is_active(edge: Dict[str, Any], reference_time: datetime) -> bool:
+        """Evaluate half-open edge validity at a transaction-independent time."""
+        confidence = float(edge.get("confidence", 1.0))
+        if not math.isfinite(confidence) or confidence <= 0.0:
+            return False
+        valid_from_raw = edge.get("valid_from")
+        valid_until_raw = edge.get("valid_until")
+        valid_from = _parse_graph_time(valid_from_raw)
+        valid_until = _parse_graph_time(valid_until_raw)
+        # A malformed declared boundary is corruption, not an unbounded range.
+        if valid_from_raw not in (None, "") and valid_from is None:
+            return False
+        if valid_until_raw not in (None, "") and valid_until is None:
+            return False
+        if valid_from is not None and reference_time < valid_from:
+            return False
+        if valid_until is not None and reference_time >= valid_until:
+            return False
+        return True
     
     def compute_proximity_score(
         self,
         node_id: str,
         reference_nodes: List[str],
-        max_depth: int = 3
+        max_depth: int = 3,
+        as_of: Optional[datetime] = None,
     ) -> float:
         """
         Compute graph proximity score for a node relative to reference nodes.
@@ -328,45 +422,22 @@ class GraphIndex:
         Returns:
             Proximity score between 0.0 and 1.0
         """
-        if not reference_nodes or node_id not in self.graph:
-            return 0.0
-        
-        min_distance = float('inf')
-        
-        for ref_node in reference_nodes:
-            if ref_node not in self.graph:
-                continue
-            
-            if ref_node == node_id:
-                return 1.0  # Same node
-            
-            # Try forward path
-            try:
-                dist = nx.shortest_path_length(self.graph, ref_node, node_id)
-                if dist <= max_depth:
-                    min_distance = min(min_distance, dist)
-            except nx.NetworkXNoPath:
-                pass
-            
-            # Try reverse path (undirected proximity)
-            try:
-                dist = nx.shortest_path_length(self.graph, node_id, ref_node)
-                if dist <= max_depth:
-                    min_distance = min(min_distance, dist)
-            except nx.NetworkXNoPath:
-                pass
-        
-        if min_distance == float('inf'):
-            return 0.0
-        
-        return 1.0 / (1.0 + min_distance)
+        return self._best_path_proximity(
+            node_id,
+            reference_nodes,
+            max_depth,
+            direction="typed",
+            as_of=as_of,
+        )
     
     def compute_weighted_proximity_score(
         self,
         node_id: str,
         reference_nodes: List[str],
         max_depth: int = 3,
-        edge_type_weights: Optional[Dict[str, float]] = None
+        edge_type_weights: Optional[Dict[str, float]] = None,
+        direction: str = "typed",
+        as_of: Optional[datetime] = None,
     ) -> float:
         """
         Compute weighted proximity score considering edge types and weights.
@@ -385,6 +456,8 @@ class GraphIndex:
             reference_nodes,
             max_depth,
             edge_type_weights=edge_type_weights,
+            direction=direction,
+            as_of=as_of,
         )
 
     def _best_path_proximity(
@@ -396,11 +469,13 @@ class GraphIndex:
         temporal_decay: bool = False,
         half_life_days: float = 30.0,
         skip_stale: bool = True,
+        direction: str = "typed",
+        as_of: Optional[datetime] = None,
     ) -> float:
-        """Maximum bounded path strength over incoming and outgoing relations."""
+        """Maximum confidence-aware strength over directionally valid paths."""
         if not reference_nodes or node_id not in self.graph:
             return 0.0
-        now = datetime.now(tz=timezone.utc)
+        reference_time = _parse_graph_time(as_of) or datetime.now(tz=timezone.utc)
         best_score = 0.0
 
         for reference in reference_nodes:
@@ -416,24 +491,35 @@ class GraphIndex:
                 if depth >= max_depth:
                     continue
 
-                neighbors = set(self.graph.successors(current)) | set(self.graph.predecessors(current))
-                for neighbor in neighbors:
-                    options = self._edge_records(current, neighbor) + self._edge_records(neighbor, current)
+                transitions: Dict[str, List[Dict[str, Any]]] = {}
+                if direction in {"outgoing", "both", "typed"}:
+                    for neighbor in self.graph.successors(current):
+                        transitions.setdefault(neighbor, []).extend(
+                            self._edge_records(current, neighbor)
+                        )
+                if direction in {"incoming", "both"}:
+                    for neighbor in self.graph.predecessors(current):
+                        transitions.setdefault(neighbor, []).extend(
+                            self._edge_records(neighbor, current)
+                        )
+                elif direction == "typed":
+                    for neighbor in self.graph.predecessors(current):
+                        transitions.setdefault(neighbor, []).extend(
+                            edge
+                            for edge in self._edge_records(neighbor, current)
+                            if edge.get("type") in _SYMMETRIC_EDGE_TYPES
+                        )
+
+                for neighbor in sorted(transitions):
+                    options = transitions[neighbor]
                     best_edge = 0.0
                     for edge in options:
-                        valid_until = edge.get("valid_until")
-                        if skip_stale and valid_until:
-                            parsed_until = None
-                            try:
-                                parsed_until = datetime.fromisoformat(str(valid_until).replace(" ", "T"))
-                                if parsed_until.tzinfo is None:
-                                    parsed_until = parsed_until.replace(tzinfo=timezone.utc)
-                            except (TypeError, ValueError):
-                                pass
-                            if parsed_until is not None and parsed_until < now:
-                                continue
+                        if skip_stale and not self._edge_is_active(edge, reference_time):
+                            continue
 
                         edge_strength = max(0.0, min(1.0, float(edge.get("weight", 1.0))))
+                        confidence = max(0.0, min(1.0, float(edge.get("confidence", 1.0))))
+                        edge_strength *= confidence
                         if edge_type_weights:
                             edge_type = edge.get("type", "")
                             configured = edge_type_weights.get(edge_type, edge_type_weights.get(str(edge_type), 1.0))
@@ -442,6 +528,7 @@ class GraphIndex:
                             edge_strength *= self._temporal_decay(
                                 edge.get("valid_from") or edge.get("created_at"),
                                 half_life_days,
+                                as_of=reference_time,
                             )
                         best_edge = max(best_edge, edge_strength)
 
@@ -462,7 +549,12 @@ class GraphIndex:
     # ==================== Temporal Scoring ====================
 
     @staticmethod
-    def _temporal_decay(created_at_str: Optional[str], half_life_days: float = 30.0) -> float:
+    def _temporal_decay(
+        created_at_str: Optional[str],
+        half_life_days: float = 30.0,
+        *,
+        as_of: Optional[datetime] = None,
+    ) -> float:
         """
         Exponential decay weight based on edge age.
 
@@ -487,8 +579,8 @@ class GraphIndex:
                     edge_time = datetime.fromisoformat(s)
                     if edge_time.tzinfo is None:
                         edge_time = edge_time.replace(tzinfo=timezone.utc)
-            now = datetime.now(tz=timezone.utc)
-            delta_days = (now - edge_time).total_seconds() / 86400.0
+            reference_time = _parse_graph_time(as_of) or datetime.now(tz=timezone.utc)
+            delta_days = max(0.0, (reference_time - edge_time).total_seconds() / 86400.0)
             return math.exp(-math.log(2) * delta_days / half_life_days)
         except Exception:
             return 1.0
@@ -501,6 +593,8 @@ class GraphIndex:
         half_life_days: float = 30.0,
         skip_stale: bool = True,
         edge_type_weights: Optional[Dict[str, float]] = None,
+        direction: str = "typed",
+        as_of: Optional[datetime] = None,
     ) -> float:
         """
         Proximity score with temporal edge decay.
@@ -528,6 +622,8 @@ class GraphIndex:
             temporal_decay=True,
             half_life_days=half_life_days,
             skip_stale=skip_stale,
+            direction=direction,
+            as_of=as_of,
         )
 
     # ==================== Persistence ====================
@@ -556,14 +652,17 @@ class GraphIndex:
                 if isinstance(loaded, nx.MultiDiGraph)
                 else nx.MultiDiGraph(loaded)
             )
+        self._rebuild_edge_locations()
     
     def rebuild_from_edges(self, edges: List[Dict[str, Any]]):
         """
         Rebuild graph from list of edge dictionaries.
         Used when loading from SQLite.
         """
-        self.graph = nx.MultiDiGraph()
-
+        # Build and validate a complete replacement away from the live graph.
+        # A malformed row or duplicate edge ID must leave the serving index
+        # unchanged rather than exposing a half-rebuilt graph.
+        replacement = GraphIndex(index_path=None)
         for edge in edges:
             # Propagate created_at + temporal fields so temporal_decay can use them
             extra = {}
@@ -572,7 +671,7 @@ class GraphIndex:
                 if val is not None:
                     extra[field] = str(val) if isinstance(val, datetime) else val
             attrs = {**edge.get("metadata", {}), **extra}
-            self.add_edge(
+            replacement.add_edge(
                 source_id=edge["source_id"],
                 target_id=edge["target_id"],
                 edge_type=edge["type"],
@@ -580,10 +679,25 @@ class GraphIndex:
                 edge_id=edge.get("id"),
                 **attrs,
             )
+        self.graph = replacement.graph
+        self._edge_locations = replacement._edge_locations
     
     def clear(self):
         """Clear all nodes and edges."""
         self.graph = nx.MultiDiGraph()
+        self._edge_locations = {}
+
+    def _rebuild_edge_locations(self) -> None:
+        locations: Dict[str, Tuple[str, str, Any]] = {}
+        for source, target, key, data in self.graph.edges(keys=True, data=True):
+            edge_id = data.get("edge_id")
+            if edge_id is None:
+                continue
+            normalized = str(edge_id)
+            if normalized in locations:
+                raise ValueError(f"Graph contains duplicate edge ID: {normalized}")
+            locations[normalized] = (source, target, key)
+        self._edge_locations = locations
     
     # ==================== Analytics ====================
     

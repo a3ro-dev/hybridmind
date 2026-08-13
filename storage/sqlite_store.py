@@ -4,6 +4,7 @@ Stores nodes and edges with ACID guarantees.
 """
 
 import json
+import math
 import re
 import sqlite3
 import struct
@@ -14,6 +15,9 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 from contextlib import contextmanager
 import threading
+
+
+EMBEDDING_DIMENSION = 4096
 
 
 class SQLiteStore:
@@ -50,14 +54,50 @@ class SQLiteStore:
         """Context manager for database cursor."""
         conn = self._get_connection()
         cursor = conn.cursor()
+        managed_transaction = bool(getattr(self._local, "transaction_depth", 0))
         try:
             yield cursor
-            conn.commit()
+            if not managed_transaction:
+                conn.commit()
         except Exception as e:
-            conn.rollback()
-            raise e
+            if not managed_transaction:
+                conn.rollback()
+            raise
         finally:
             cursor.close()
+
+    @contextmanager
+    def transaction(self):
+        """Run nested store operations in one SQLite transaction.
+
+        Store methods normally commit independently for simple callers. API
+        workflows that update several rows plus derived indexes use this outer
+        boundary so a later failure can roll authoritative SQL state back and
+        rebuild the derived indexes from the pre-operation state.
+        """
+        conn = self._get_connection()
+        depth = int(getattr(self._local, "transaction_depth", 0))
+        savepoint = f"hybridmind_nested_{depth}" if depth else None
+        try:
+            if depth == 0:
+                conn.execute("BEGIN IMMEDIATE")
+            else:
+                conn.execute(f"SAVEPOINT {savepoint}")
+            self._local.transaction_depth = depth + 1
+            yield
+            self._local.transaction_depth = depth
+            if depth == 0:
+                conn.commit()
+            else:
+                conn.execute(f"RELEASE SAVEPOINT {savepoint}")
+        except Exception:
+            self._local.transaction_depth = depth
+            if depth == 0:
+                conn.rollback()
+            else:
+                conn.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
+                conn.execute(f"RELEASE SAVEPOINT {savepoint}")
+            raise
     
     def _init_schema(self):
         """Initialize database schema."""
@@ -133,6 +173,56 @@ class SQLiteStore:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_nodes_event_time ON nodes(event_time)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_nodes_memory_kind ON nodes(memory_kind)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_nodes_archived ON nodes(archived_at)")
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_nodes_session_turn "
+                "ON nodes(json_extract(metadata, '$.session_id'), "
+                "CAST(json_extract(metadata, '$.turn_index') AS INTEGER))"
+            )
+
+            # Immutable bitemporal history. ``valid_*`` describes modeled
+            # reality; ``asserted_*`` describes when HybridMind knew a version.
+            # Embeddings remain in the current-state table because duplicating
+            # 4096-float vectors per assertion would not improve temporal truth.
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS node_versions (
+                    node_id TEXT NOT NULL,
+                    version INTEGER NOT NULL,
+                    text TEXT NOT NULL,
+                    metadata TEXT NOT NULL,
+                    event_time TEXT DEFAULT NULL,
+                    valid_from TEXT DEFAULT NULL,
+                    valid_until TEXT DEFAULT NULL,
+                    memory_kind TEXT DEFAULT NULL,
+                    confidence REAL NOT NULL DEFAULT 1.0,
+                    asserted_from TEXT NOT NULL,
+                    asserted_until TEXT DEFAULT NULL,
+                    operation TEXT NOT NULL,
+                    PRIMARY KEY (node_id, version)
+                )
+            """)
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_node_versions_asserted "
+                "ON node_versions(node_id, asserted_from, asserted_until)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_node_versions_valid "
+                "ON node_versions(node_id, valid_from, valid_until)"
+            )
+            cursor.execute("""
+                INSERT INTO node_versions (
+                    node_id, version, text, metadata, event_time, valid_from,
+                    valid_until, memory_kind, confidence, asserted_from,
+                    asserted_until, operation
+                )
+                SELECT n.id, 1, n.text, n.metadata, n.event_time, n.valid_from,
+                       n.valid_until, n.memory_kind, COALESCE(n.confidence, 1.0),
+                       COALESCE(CAST(n.created_at AS TEXT), CURRENT_TIMESTAMP),
+                       CAST(n.deleted_at AS TEXT), 'bootstrap'
+                FROM nodes AS n
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM node_versions AS v WHERE v.node_id = n.id
+                )
+            """)
 
             # Normalized entity mentions avoid full-table JSON scans and make
             # entity co-occurrence edges deterministic across ingest paths.
@@ -165,20 +255,161 @@ class SQLiteStore:
     # ==================== Embedding Serialization ====================
     
     @staticmethod
-    def _serialize_embedding(embedding: np.ndarray) -> bytes:
-        """Serialize numpy array to bytes."""
+    def _validate_embedding(embedding: np.ndarray, *, label: str) -> np.ndarray:
+        """Validate the storage invariant before a vector crosses the SQL boundary."""
         if embedding is None:
             return None
-        return embedding.astype(np.float32).tobytes()
+        array = np.asarray(embedding, dtype=np.float32)
+        if array.shape != (EMBEDDING_DIMENSION,):
+            raise ValueError(
+                f"{label} must have shape ({EMBEDDING_DIMENSION},), got {array.shape}"
+            )
+        if not np.isfinite(array).all():
+            raise ValueError(f"{label} contains NaN or infinite values")
+        return np.ascontiguousarray(array)
+
+    @classmethod
+    def _serialize_embedding(cls, embedding: np.ndarray) -> bytes:
+        """Serialize one validated native-width float32 embedding."""
+        if embedding is None:
+            return None
+        return cls._validate_embedding(embedding, label="embedding").tobytes()
     
-    @staticmethod
-    def _deserialize_embedding(data: bytes, dimension: int = 4096) -> Optional[np.ndarray]:
-        """Deserialize bytes to numpy array."""
+    @classmethod
+    def _deserialize_embedding(cls, data: bytes, dimension: int = EMBEDDING_DIMENSION) -> Optional[np.ndarray]:
+        """Deserialize and validate persisted vector bytes; corruption fails loudly."""
         if data is None:
             return None
-        return np.frombuffer(data, dtype=np.float32)
+        if dimension != EMBEDDING_DIMENSION:
+            raise ValueError(
+                f"HybridMind storage only supports {EMBEDDING_DIMENSION}-dimensional embeddings"
+            )
+        expected_bytes = EMBEDDING_DIMENSION * np.dtype(np.float32).itemsize
+        if len(data) != expected_bytes:
+            raise ValueError(
+                f"persisted embedding has {len(data)} bytes; expected {expected_bytes}"
+            )
+        return cls._validate_embedding(
+            np.frombuffer(data, dtype=np.float32).copy(),
+            label="persisted embedding",
+        )
     
     # ==================== Node Operations ====================
+
+    @staticmethod
+    def _validate_confidence(value: float, *, label: str) -> float:
+        try:
+            confidence = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{label} must be numeric") from exc
+        if not math.isfinite(confidence) or not 0.0 <= confidence <= 1.0:
+            raise ValueError(f"{label} must be finite and in [0, 1]")
+        return confidence
+
+    @staticmethod
+    def canonicalize_temporal_value(
+        value: Optional[Any], *, label: str
+    ) -> Optional[str]:
+        """Validate one complete ISO-8601 value and store it canonically in UTC.
+
+        Ingest-time storage must not use the query parser, which deliberately
+        recognizes dates embedded in natural-language questions. Persisted
+        temporal values are data, so trailing prose and partial matches fail.
+        Naive ISO values are interpreted as UTC; date-only values denote UTC
+        midnight.
+        """
+        if value is None or value == "":
+            return None
+        if isinstance(value, datetime):
+            parsed = value
+        else:
+            text = str(value).strip()
+            if not text:
+                return None
+            try:
+                parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"{label} must be a complete ISO-8601 value") from exc
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        else:
+            parsed = parsed.astimezone(timezone.utc)
+        return parsed.isoformat()
+
+    @classmethod
+    def normalize_temporal_fields(
+        cls,
+        *,
+        event_time: Optional[Any] = None,
+        valid_from: Optional[Any] = None,
+        valid_until: Optional[Any] = None,
+    ) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+        """Return canonical event/valid values after half-open interval checks."""
+        event = cls.canonicalize_temporal_value(event_time, label="event_time")
+        start = cls.canonicalize_temporal_value(valid_from, label="valid_from")
+        end = cls.canonicalize_temporal_value(valid_until, label="valid_until")
+        if start is not None and end is not None:
+            if datetime.fromisoformat(start) >= datetime.fromisoformat(end):
+                raise ValueError("valid_from must be earlier than valid_until")
+        return event, start, end
+
+    @staticmethod
+    def _assertion_time() -> str:
+        return datetime.now(timezone.utc).isoformat()
+
+    @staticmethod
+    def _record_node_version(
+        cursor: sqlite3.Cursor,
+        *,
+        node_id: str,
+        text: str,
+        metadata: Dict[str, Any],
+        event_time: Optional[str],
+        valid_from: Optional[str],
+        valid_until: Optional[str],
+        memory_kind: Optional[str],
+        confidence: float,
+        asserted_from: str,
+        operation: str,
+    ) -> None:
+        cursor.execute(
+            "SELECT COALESCE(MAX(version), 0) + 1 FROM node_versions WHERE node_id = ?",
+            (node_id,),
+        )
+        version = int(cursor.fetchone()[0])
+        cursor.execute(
+            """INSERT INTO node_versions (
+                   node_id, version, text, metadata, event_time, valid_from,
+                   valid_until, memory_kind, confidence, asserted_from,
+                   asserted_until, operation
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)""",
+            (
+                node_id,
+                version,
+                text,
+                json.dumps(metadata),
+                event_time,
+                valid_from,
+                valid_until,
+                memory_kind,
+                confidence,
+                asserted_from,
+                operation,
+            ),
+        )
+
+    @staticmethod
+    def _close_node_versions(
+        cursor: sqlite3.Cursor, node_ids: List[str], asserted_until: str
+    ) -> None:
+        if not node_ids:
+            return
+        placeholders = ",".join("?" for _ in node_ids)
+        cursor.execute(
+            f"""UPDATE node_versions SET asserted_until = ?
+                WHERE node_id IN ({placeholders}) AND asserted_until IS NULL""",
+            (asserted_until, *node_ids),
+        )
     
     def create_node(
         self,
@@ -195,6 +426,13 @@ class SQLiteStore:
     ) -> Dict[str, Any]:
         """Create a new node."""
         now = datetime.utcnow()
+        asserted_from = self._assertion_time()
+        confidence = self._validate_confidence(confidence, label="node confidence")
+        event_time, valid_from, valid_until = self.normalize_temporal_fields(
+            event_time=event_time,
+            valid_from=valid_from,
+            valid_until=valid_until,
+        )
         embedding_blob = self._serialize_embedding(embedding)
         raw_embedding_blob = self._serialize_embedding(raw_embedding) if raw_embedding is not None else embedding_blob
         
@@ -220,6 +458,19 @@ class SQLiteStore:
                 now,
                 now
             ))
+            self._record_node_version(
+                cursor,
+                node_id=node_id,
+                text=text,
+                metadata=metadata,
+                event_time=event_time,
+                valid_from=valid_from,
+                valid_until=valid_until,
+                memory_kind=memory_kind,
+                confidence=confidence,
+                asserted_from=asserted_from,
+                operation="create",
+            )
         
         return {
             "id": node_id,
@@ -271,11 +522,70 @@ class SQLiteStore:
                 "created_at": row["created_at"],
                 "updated_at": row["updated_at"]
             }
+
+    def get_node_version(
+        self,
+        node_id: str,
+        *,
+        valid_at: Optional[str] = None,
+        asserted_at: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Return the fact version valid and known at the requested times."""
+        from engine.temporal import parse_datetime
+
+        valid_reference = parse_datetime(valid_at) if valid_at is not None else None
+        asserted_reference = (
+            parse_datetime(asserted_at)
+            if asserted_at is not None
+            else datetime.now(timezone.utc)
+        )
+        if asserted_reference is None:
+            raise ValueError("asserted_at must be an ISO-8601 timestamp")
+        if valid_at is not None and valid_reference is None:
+            raise ValueError("valid_at must be an ISO-8601 timestamp")
+        asserted_iso = asserted_reference.isoformat()
+        valid_iso = valid_reference.isoformat() if valid_reference is not None else None
+        with self._cursor() as cursor:
+            cursor.execute(
+                """SELECT node_id, version, text, metadata, event_time,
+                          valid_from, valid_until, memory_kind, confidence,
+                          asserted_from, asserted_until, operation
+                   FROM node_versions
+                   WHERE node_id = ?
+                     AND asserted_from <= ?
+                     AND (asserted_until IS NULL OR ? < asserted_until)
+                     AND (
+                         ? IS NULL OR (
+                             (valid_from IS NULL OR valid_from <= ?)
+                             AND (valid_until IS NULL OR ? < valid_until)
+                         )
+                     )
+                   ORDER BY version DESC
+                   LIMIT 1""",
+                (
+                    node_id,
+                    asserted_iso,
+                    asserted_iso,
+                    valid_iso,
+                    valid_iso,
+                    valid_iso,
+                ),
+            )
+            row = cursor.fetchone()
+        if row is None:
+            return None
+        result = dict(row)
+        result["id"] = result.pop("node_id")
+        result["metadata"] = json.loads(result["metadata"])
+        return result
             
     def get_latest_node_by_session(
         self,
         session_id: str,
         exclude_node_id: Optional[str] = None,
+        *,
+        container_tag: Optional[str] = None,
+        before_turn_index: Optional[int] = None,
     ) -> Optional[Dict[str, Any]]:
         """Get the most recently created node for a given session ID."""
         with self._cursor() as cursor:
@@ -287,10 +597,44 @@ class SQLiteStore:
                     json_extract(metadata, '$.sessionId') = ?
                     OR json_extract(metadata, '$.session_id') = ?
                 )
+                AND (
+                    (
+                        ? IS NULL
+                        AND COALESCE(json_extract(metadata, '$.containerTag'), '') = ''
+                        AND COALESCE(json_extract(metadata, '$.container_tag'), '') = ''
+                    )
+                    OR (
+                        ? IS NOT NULL
+                        AND (
+                            json_extract(metadata, '$.containerTag') = ?
+                            OR json_extract(metadata, '$.container_tag') = ?
+                        )
+                    )
+                )
+                AND (
+                    ? IS NULL
+                    OR CAST(json_extract(metadata, '$.turn_index') AS INTEGER) < ?
+                )
                 AND (? IS NULL OR id != ?)
                 AND deleted_at IS NULL
-                ORDER BY created_at DESC LIMIT 1
-            """, (session_id, session_id, exclude_node_id, exclude_node_id))
+                ORDER BY
+                    CASE WHEN json_extract(metadata, '$.turn_index') IS NULL THEN 1 ELSE 0 END,
+                    CAST(json_extract(metadata, '$.turn_index') AS INTEGER) DESC,
+                    created_at DESC,
+                    id DESC
+                LIMIT 1
+            """, (
+                session_id,
+                session_id,
+                container_tag,
+                container_tag,
+                container_tag,
+                container_tag,
+                before_turn_index,
+                before_turn_index,
+                exclude_node_id,
+                exclude_node_id,
+            ))
             row = cursor.fetchone()
             if not row:
                 return None
@@ -299,6 +643,170 @@ class SQLiteStore:
                 "metadata": json.loads(row["metadata"]),
                 "created_at": row["created_at"]
             }
+
+    def get_sentence_children(self, parent_id: str) -> List[Dict[str, Any]]:
+        """Return live sentence chunks owned by a parent in stable chunk order."""
+        with self._cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, text, metadata, embedding, raw_embedding, event_time,
+                       valid_from, valid_until, memory_kind, confidence,
+                       created_at, updated_at
+                FROM nodes
+                WHERE json_extract(metadata, '$.parent_id') = ?
+                  AND json_extract(metadata, '$.is_sentence_chunk') = 1
+                  AND deleted_at IS NULL
+                ORDER BY CAST(COALESCE(json_extract(metadata, '$.chunk_index'), 0) AS INTEGER), id
+                """,
+                (parent_id,),
+            )
+            rows = cursor.fetchall()
+        return [
+            {
+                "id": row["id"],
+                "text": row["text"],
+                "metadata": json.loads(row["metadata"]),
+                "embedding": self._deserialize_embedding(row["embedding"]),
+                "raw_embedding": self._deserialize_embedding(row["raw_embedding"]),
+                "event_time": row["event_time"],
+                "valid_from": row["valid_from"],
+                "valid_until": row["valid_until"],
+                "memory_kind": row["memory_kind"],
+                "confidence": row["confidence"] if row["confidence"] is not None else 1.0,
+                "created_at": row["created_at"],
+                "updated_at": row["updated_at"],
+            }
+            for row in rows
+        ]
+
+    def delete_sentence_children(self, parent_id: str) -> Tuple[List[str], int]:
+        """Atomically replaceable-delete derived sentence chunks and their edges."""
+        with self._cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id FROM nodes
+                WHERE json_extract(metadata, '$.parent_id') = ?
+                  AND json_extract(metadata, '$.is_sentence_chunk') = 1
+                  AND deleted_at IS NULL
+                """,
+                (parent_id,),
+            )
+            node_ids = [row["id"] for row in cursor.fetchall()]
+            if not node_ids:
+                return [], 0
+            self._close_node_versions(cursor, node_ids, self._assertion_time())
+            placeholders = ",".join("?" for _ in node_ids)
+            cursor.execute(
+                f"SELECT COUNT(*) FROM edges WHERE source_id IN ({placeholders}) OR target_id IN ({placeholders})",
+                (*node_ids, *node_ids),
+            )
+            edges_count = int(cursor.fetchone()[0])
+            cursor.execute(
+                f"DELETE FROM edges WHERE source_id IN ({placeholders}) OR target_id IN ({placeholders})",
+                (*node_ids, *node_ids),
+            )
+            cursor.execute(f"DELETE FROM nodes WHERE id IN ({placeholders})", node_ids)
+        return node_ids, edges_count
+
+    def delete_node_family(self, node_id: str) -> Tuple[List[str], int]:
+        """Atomically soft-delete a parent and its chunks and delete their SQL edges."""
+        with self._cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id FROM nodes
+                WHERE (
+                    id = ? OR (
+                        json_extract(metadata, '$.parent_id') = ?
+                        AND json_extract(metadata, '$.is_sentence_chunk') = 1
+                    )
+                )
+                AND deleted_at IS NULL
+                """,
+                (node_id, node_id),
+            )
+            node_ids = [row["id"] for row in cursor.fetchall()]
+            if not node_ids:
+                return [], 0
+            asserted_until = self._assertion_time()
+            self._close_node_versions(cursor, node_ids, asserted_until)
+            placeholders = ",".join("?" for _ in node_ids)
+            cursor.execute(
+                f"SELECT COUNT(*) FROM edges WHERE source_id IN ({placeholders}) OR target_id IN ({placeholders})",
+                (*node_ids, *node_ids),
+            )
+            edges_count = int(cursor.fetchone()[0])
+            cursor.execute(
+                f"DELETE FROM edges WHERE source_id IN ({placeholders}) OR target_id IN ({placeholders})",
+                (*node_ids, *node_ids),
+            )
+            cursor.execute(
+                f"UPDATE nodes SET deleted_at = ? WHERE id IN ({placeholders})",
+                (asserted_until, *node_ids),
+            )
+        return node_ids, edges_count
+
+    def erase_node_family(self, node_id: str) -> Tuple[List[str], int]:
+        """Irreversibly erase a node, its chunks, edges, and version history.
+
+        This is the user-facing forget policy. Lifecycle pruning uses
+        ``soft_delete_node`` and may retain bitemporal audit history until a
+        later hard-delete compaction.
+        """
+        with self._cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id FROM nodes
+                WHERE (id = ? OR json_extract(metadata, '$.parent_id') = ?)
+                  AND deleted_at IS NULL
+                """,
+                (node_id, node_id),
+            )
+            node_ids = [row["id"] for row in cursor.fetchall()]
+            if not node_ids:
+                return [], 0
+            # A derived summary may contain the forgotten text. Without a
+            # provider call it cannot be safely rewritten, so erase every
+            # provenance descendant that was derived from the forgotten node,
+            # along with any sentence chunks owned by those derived nodes.
+            erase_ids = set(node_ids)
+            while True:
+                current = sorted(erase_ids)
+                current_placeholders = ",".join("?" for _ in current)
+                cursor.execute(
+                    f"""SELECT DISTINCT source_id FROM edges
+                        WHERE type = 'derived_from'
+                          AND target_id IN ({current_placeholders})""",
+                    current,
+                )
+                derived_ids = {str(row["source_id"]) for row in cursor.fetchall()}
+                cursor.execute(
+                    f"""SELECT id FROM nodes
+                        WHERE json_extract(metadata, '$.parent_id')
+                              IN ({current_placeholders})""",
+                    current,
+                )
+                child_ids = {str(row["id"]) for row in cursor.fetchall()}
+                expanded = erase_ids | derived_ids | child_ids
+                if expanded == erase_ids:
+                    break
+                erase_ids = expanded
+            node_ids = sorted(erase_ids)
+            placeholders = ",".join("?" for _ in node_ids)
+            cursor.execute(
+                f"SELECT COUNT(*) FROM edges WHERE source_id IN ({placeholders}) OR target_id IN ({placeholders})",
+                (*node_ids, *node_ids),
+            )
+            edges_count = int(cursor.fetchone()[0])
+            cursor.execute(
+                f"DELETE FROM edges WHERE source_id IN ({placeholders}) OR target_id IN ({placeholders})",
+                (*node_ids, *node_ids),
+            )
+            cursor.execute(
+                f"DELETE FROM node_versions WHERE node_id IN ({placeholders})",
+                node_ids,
+            )
+            cursor.execute(f"DELETE FROM nodes WHERE id IN ({placeholders})", node_ids)
+        return node_ids, edges_count
     
     def update_node(
         self,
@@ -329,12 +837,22 @@ class SQLiteStore:
         new_valid_until = valid_until if valid_until is not None else current.get("valid_until")
         new_memory_kind = memory_kind if memory_kind is not None else current.get("memory_kind")
         new_confidence = confidence if confidence is not None else current.get("confidence", 1.0)
+        new_confidence = self._validate_confidence(
+            new_confidence, label="node confidence"
+        )
+        new_event_time, new_valid_from, new_valid_until = self.normalize_temporal_fields(
+            event_time=new_event_time,
+            valid_from=new_valid_from,
+            valid_until=new_valid_until,
+        )
         now = datetime.utcnow()
+        asserted_from = self._assertion_time()
         
         embedding_blob = self._serialize_embedding(new_embedding)
         raw_embedding_blob = self._serialize_embedding(new_raw_embedding)
         
         with self._cursor() as cursor:
+            self._close_node_versions(cursor, [node_id], asserted_from)
             cursor.execute("""
                 UPDATE nodes
                 SET text = ?, metadata = ?, embedding = ?, raw_embedding = ?,
@@ -354,6 +872,21 @@ class SQLiteStore:
                 now,
                 node_id
             ))
+            if cursor.rowcount != 1:
+                raise RuntimeError("Node changed concurrently during versioned update")
+            self._record_node_version(
+                cursor,
+                node_id=node_id,
+                text=new_text,
+                metadata=new_metadata,
+                event_time=new_event_time,
+                valid_from=new_valid_from,
+                valid_until=new_valid_until,
+                memory_kind=new_memory_kind,
+                confidence=new_confidence,
+                asserted_from=asserted_from,
+                operation="update",
+            )
         
         return {
             "id": node_id,
@@ -375,6 +908,7 @@ class SQLiteStore:
         Returns (success, edges_removed).
         """
         with self._cursor() as cursor:
+            asserted_until = self._assertion_time()
             # Count edges to be removed
             cursor.execute("""
                 SELECT COUNT(*) FROM edges
@@ -388,7 +922,11 @@ class SQLiteStore:
             """, (node_id, node_id))
             
             # Soft delete node
-            cursor.execute("UPDATE nodes SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?", (node_id,))
+            self._close_node_versions(cursor, [node_id], asserted_until)
+            cursor.execute(
+                "UPDATE nodes SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL",
+                (asserted_until, node_id),
+            )
             deleted = cursor.rowcount > 0
 
         return deleted, edges_count
@@ -405,9 +943,18 @@ class SQLiteStore:
             return cursor.fetchone()[0]
             
     def hard_delete_soft_deleted_nodes(self) -> int:
-        """Permanently delete all soft-deleted nodes."""
+        """Permanently erase soft-deleted nodes and their retained history."""
         with self._cursor() as cursor:
-            cursor.execute("DELETE FROM nodes WHERE deleted_at IS NOT NULL")
+            cursor.execute("SELECT id FROM nodes WHERE deleted_at IS NOT NULL")
+            node_ids = [str(row["id"]) for row in cursor.fetchall()]
+            if not node_ids:
+                return 0
+            placeholders = ",".join("?" for _ in node_ids)
+            cursor.execute(
+                f"DELETE FROM node_versions WHERE node_id IN ({placeholders})",
+                node_ids,
+            )
+            cursor.execute(f"DELETE FROM nodes WHERE id IN ({placeholders})", node_ids)
             return cursor.rowcount
     
     def list_nodes(
@@ -654,6 +1201,17 @@ class SQLiteStore:
         """Create a new edge."""
         now = datetime.utcnow()
         metadata = metadata or {}
+        if source_id == target_id:
+            raise ValueError("Self-loop edges are not supported")
+        if not math.isfinite(float(weight)) or not 0.0 <= float(weight) <= 1.0:
+            raise ValueError("Edge weight must be finite and in [0, 1]")
+        confidence = self._validate_confidence(
+            confidence, label="edge confidence"
+        )
+        _unused_event, valid_from, valid_until = self.normalize_temporal_fields(
+            valid_from=valid_from,
+            valid_until=valid_until,
+        )
 
         with self._cursor() as cursor:
             cursor.execute("""
@@ -737,6 +1295,15 @@ class SQLiteStore:
         new_valid_until = valid_until if valid_until is not None else current.get("valid_until")
         new_superseded_by = superseded_by if superseded_by is not None else current.get("superseded_by")
         new_confidence = confidence if confidence is not None else current.get("confidence", 1.0)
+        if not math.isfinite(float(new_weight)) or not 0.0 <= float(new_weight) <= 1.0:
+            raise ValueError("Edge weight must be finite and in [0, 1]")
+        new_confidence = self._validate_confidence(
+            new_confidence, label="edge confidence"
+        )
+        _unused_event, _normalized_from, new_valid_until = self.normalize_temporal_fields(
+            valid_from=current.get("valid_from"),
+            valid_until=new_valid_until,
+        )
 
         with self._cursor() as cursor:
             cursor.execute("""

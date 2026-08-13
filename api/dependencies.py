@@ -3,9 +3,12 @@ FastAPI dependencies for HybridMind.
 Provides singleton instances of storage and engine components.
 """
 
+import asyncio
 import logging
+import threading
+from contextlib import asynccontextmanager, contextmanager
 from functools import lru_cache
-from typing import Generator
+from typing import AsyncGenerator, Generator, Iterator
 from pathlib import Path
 
 from config import settings
@@ -24,6 +27,39 @@ from engine.reranker import get_reranker
 logger = logging.getLogger(__name__)
 
 
+class ProcessMutationCoordinator:
+    """Serialize authoritative SQL and derived-index mutations in this process.
+
+    A ``threading.RLock`` cannot protect async request tasks: two tasks run on
+    the same event-loop thread and would therefore appear re-entrant while the
+    first task is suspended.  This bridge uses a non-reentrant process lock and
+    acquires it asynchronously without blocking the event loop.  Callers must
+    take the guard only at the outermost operation boundary.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+
+    @contextmanager
+    def sync(self) -> Iterator[None]:
+        self._lock.acquire()
+        try:
+            yield
+        finally:
+            self._lock.release()
+
+    @asynccontextmanager
+    async def async_(self) -> AsyncGenerator[None, None]:
+        # A non-blocking attempt plus an async backoff is cancellation-safe: a
+        # cancelled waiter can never acquire the lock in an abandoned worker.
+        while not self._lock.acquire(blocking=False):
+            await asyncio.sleep(0.001)
+        try:
+            yield
+        finally:
+            self._lock.release()
+
+
 class DatabaseManager:
     """
     Singleton manager for all database components.
@@ -32,6 +68,8 @@ class DatabaseManager:
     
     _instance = None
     _initialized = False
+    _snapshot_lock = threading.Lock()
+    _mutation_coordinator = ProcessMutationCoordinator()
     
     def __new__(cls):
         if cls._instance is None:
@@ -61,15 +99,17 @@ class DatabaseManager:
         self.sqlite_store = SQLiteStore(paths["sqlite"])
         self.vector_index = VectorIndex(
             dimension=settings.embedding_dimension,
-            index_path=paths["vector_index"]
+            # SQLite is the trusted source of truth.  Persisted index pickles
+            # are deliberately not loaded; derived indexes are rebuilt below.
+            index_path=None
         )
         
         from storage.bm25_index import create_sparse_index
         self.bm25_index = create_sparse_index(
             backend=settings.sparse_retrieval_backend,
-            index_path=str(Path(paths["root"]) / "bm25.pkl"),
+            index_path=None,
         )
-        self.graph_index = GraphIndex(index_path=paths["graph"])
+        self.graph_index = GraphIndex(index_path=None)
         
         # ColBERT per-token vectors (opt-in, off by default)
         if colbert_enabled():
@@ -113,13 +153,18 @@ class DatabaseManager:
             sqlite_store=self.sqlite_store
         )
         
-        # Initialize reranker (pre-warmed so the cross-encoder model loads at startup)
+        # Initialize the optional reranker without downloading/loading a large
+        # model unless deployment explicitly requests startup warmup.
         reranker = get_reranker()
-        try:
-            reranker.warmup()
-        except Exception as e:
-            logger.warning(f"Reranker warmup failed (continuing without reranking): {e}")
-            reranker = None
+        if settings.reranker_warmup_enabled and getattr(reranker, "enabled", False):
+            try:
+                reranker.warmup()
+            except Exception as exc:
+                logger.warning(
+                    "Reranker warmup failed; disabling it for this process (%s)",
+                    type(exc).__name__,
+                )
+                reranker = None
 
         # Initialize hybrid ranker
         self.hybrid_ranker = HybridRanker(
@@ -136,46 +181,45 @@ class DatabaseManager:
         logger.info("HybridMind database components initialized successfully")
     
     def _rebuild_indexes(self):
-        """Rebuild vector and graph indexes from SQLite."""
+        """Fully replace every derived index from authoritative live SQLite rows."""
         try:
-            # Rebuild vector index
-            embeddings = self.sqlite_store.get_all_node_embeddings()
-            if embeddings:
-                self.vector_index.rebuild_from_embeddings(embeddings)
-                logger.info(f"Vector index rebuilt with {len(embeddings)} nodes")
-            
-            # Rebuild graph index
-            edges = self.sqlite_store.get_all_edges()
-            if edges:
-                self.graph_index.rebuild_from_edges(edges)
-                logger.info(f"Graph index rebuilt with {len(edges)} edges")
-            
-            # Add orphan nodes to graph
             nodes = self.sqlite_store.list_nodes(limit=1000000)
+            live_ids = {node["id"] for node in nodes}
+            embeddings = self.sqlite_store.get_all_node_embeddings(
+                include_archived=False
+            )
+            self.vector_index.rebuild_from_embeddings(embeddings)
+            logger.info("Vector index rebuilt with %d nodes", len(embeddings))
+
+            edges = [
+                edge
+                for edge in self.sqlite_store.get_all_edges()
+                if edge["source_id"] in live_ids and edge["target_id"] in live_ids
+            ]
+            self.graph_index.rebuild_from_edges(edges)
+            logger.info("Graph index rebuilt with %d edges", len(edges))
+
             bm25_batch = []
             for node in nodes:
                 if not self.graph_index.has_node(node["id"]):
-                    self.graph_index.add_node(node["id"])
+                    self.graph_index.add_node(
+                        node["id"],
+                        event_time=node.get("event_time"),
+                        memory_kind=node.get("memory_kind"),
+                        confidence=node.get("confidence", 1.0),
+                    )
                 bm25_batch.append((node["id"], node["text"]))
             
             self.bm25_index.clear()
             self.bm25_index.add_batch(bm25_batch)
             logger.info(f"BM25 index rebuilt with {len(bm25_batch)} documents")
 
-            # Persistence retains archived provenance, while retrieval indexes
-            # must expose only active memory and its summaries.
-            archived = self.sqlite_store.list_nodes(
-                limit=1_000_000, include_archived=True
-            )
-            for node in archived:
-                if node.get("archived_at"):
-                    self.graph_index.remove_node(node["id"])
-                    
-        except Exception as e:
+        except Exception as exc:
             raise RuntimeError(
                 "Index rebuild failed. HybridMind will not start with a partial or "
-                f"dimension-inconsistent 4096-dimensional index: {e}"
-            ) from e
+                "dimension-inconsistent 4096-dimensional index "
+                f"({type(exc).__name__})"
+            ) from exc
     
     def get_stats(self) -> dict:
         """Get database statistics."""
@@ -191,47 +235,45 @@ class DatabaseManager:
             "embedding_model": settings.embedding_model,
             "embedding_dimension": settings.embedding_dimension
         }
+
+    def mutation(self):
+        """Return the synchronous process-wide mutation guard."""
+        return self._mutation_coordinator.sync()
+
+    def mutation_async(self):
+        """Return the asynchronous process-wide mutation guard."""
+        return self._mutation_coordinator.async_()
     
     def save_indexes(self):
-        """Save indexes to disk and update .mind manifest."""
-        try:
-            stats = self.get_stats()
-            self.bm25_index.save()
-            self.mind_file.create_snapshot(
-                sqlite_conn=self.sqlite_store._get_connection(),
-                vector_index=self.vector_index,
-                graph_index=self.graph_index,
-                nodes_count=stats["total_nodes"],
-                edges_count=stats["total_edges"]
-            )
-            
-            # Backup rotation
-            import os
-            from pathlib import Path
-            from datetime import datetime
-            
-            backup_dir = Path("data/backups")
-            backup_dir.mkdir(parents=True, exist_ok=True)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            export_path = str(backup_dir / f"snapshot_{timestamp}")
-            self.mind_file.export(export_path, compress=True)
-            
-            # Keep last 3
-            backups = sorted(backup_dir.glob("snapshot_*.mind.zip"))
-            if len(backups) > 3:
-                for old_backup in backups[:-3]:
+        """Create and return a verified snapshot; failures propagate to callers."""
+        with self.mutation():
+            with self._snapshot_lock:
+                stats = self.get_stats()
+                snapshot = self.mind_file.create_snapshot(
+                    sqlite_conn=self.sqlite_store._get_connection(),
+                    vector_index=self.vector_index,
+                    graph_index=self.graph_index,
+                    nodes_count=stats["total_nodes"],
+                    edges_count=stats["total_edges"],
+                    backup_dir=settings.backup_dir,
+                )
+
+                backup_dir = Path(settings.backup_dir)
+                backups = sorted(backup_dir.glob("snapshot_*.mind.zip"))
+                retention = max(1, settings.snapshot_retention)
+                for old_backup in backups[:-retention]:
                     old_backup.unlink(missing_ok=True)
-                    
-            logger.info("Indexes saved to disk and backed up")
-        except Exception as e:
-            logger.error(f"Error saving indexes: {e}")
+        logger.info("Verified snapshot created: %s", snapshot.name)
+        return snapshot
     
     def close(self, save: bool = True):
         """Close all connections."""
-        if save:
-            self.save_indexes()
-        self.sqlite_store.close()
-        logger.info("Database connections closed")
+        try:
+            if save:
+                self.save_indexes()
+        finally:
+            self.sqlite_store.close()
+            logger.info("Database connections closed")
 
 
 # Singleton instance
@@ -244,6 +286,12 @@ def get_db_manager() -> DatabaseManager:
     if _db_manager is None:
         _db_manager = DatabaseManager()
     return _db_manager
+
+
+async def coordinate_mutation() -> AsyncGenerator[None, None]:
+    """FastAPI dependency holding the process mutation guard for one request."""
+    async with get_db_manager().mutation_async():
+        yield
 
 
 # Dependency injection functions for FastAPI
