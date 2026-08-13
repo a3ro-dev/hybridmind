@@ -1,37 +1,33 @@
-# HybridMind Performance Characterization
+# HybridMind resource characterization
 
-## Abstract
-This document details the latency, throughput, and scale characteristics of HybridMind. Latency measurements confirm sub-15ms p95 latency for hybrid retrieval up to 10,000 nodes using FAISS HNSW indexing and `bm25s` lexical matching, with GPU acceleration available via self-hosted RunPod TEI endpoints.
+The only current validated performance artifact is
+`benchmarks/results/offline_resource_frontier.json`. It is a bounded synthetic
+component measurement, not an API benchmark, provider benchmark, retrieval
+quality result, or 10M–100M feasibility demonstration.
 
----
+The latest default offline run used 256 deterministic 4096-dimensional vectors,
+32 queries, and made zero network/provider calls. Its sequential local
+vector+BM25S+graph component latency was approximately p50 0.53 ms, p95 0.68 ms,
+and p99 0.80 ms on the recorded host. Serialized derived components occupied
+about 8.78 MB and observed process peak RSS was about 117 MB. Raw samples,
+versions, host details, build times, and replay hashes are in the JSON artifact.
 
-## Latency Breakdown
+These numbers exclude HTTP, remote query embedding, cross-encoder reranking,
+answer generation, concurrency, and a real corpus. Synthetic self-hit@1 is only
+an index integrity check.
 
-Measurements against a 1,000-node `.mind` database:
+At 256 source tokens per chunk, the current duplicated float32+HNSW vector
+representation has analytic lower bounds of roughly 1.29 GB at 10M source
+tokens, 5.16 GB at 40M, and 12.9 GB at 100M, before SQLite, text, BM25,
+NetworkX, mappings, allocator overhead, or build scratch. Therefore the current
+all-in-memory layout is not a validated 100M-token deployment architecture.
 
-| Operation | Mean | p50 | p95 | Backend / Engine |
-|-----------|------|-----|-----|------------------|
-| `vector_search` | 4.2ms | 3.8ms | 5.5ms | FAISS IndexHNSWFlat |
-| `bm25_search` | 1.8ms | 1.5ms | 2.4ms | bm25s (PyStemmer) |
-| `graph_traversal` (d=2) | 2.1ms | 2.0ms | 2.5ms | NetworkX DiGraph |
-| `hybrid_search_rrf` | 8.5ms | 7.9ms | 11.2ms | Tri-Signal RRF Fusion ($k=60$) |
-| `rerank_mxbai` (top-25) | 48.0ms | 42.0ms | 58.0ms | `mxbai-rerank-large-v2` |
-| `tei_embed` (remote) | 24.0ms | 18.0ms | 35.0ms | RunPod TEI (Qwen3-8B) |
+Regenerate the bounded report with:
 
----
+```powershell
+.\.venv\Scripts\python.exe scripts\offline_resource_frontier.py `
+  --output benchmarks\results\offline_resource_frontier.json
+```
 
-## Memory & Disk Footprint
-
-| Component | Per 1,000 Nodes | Growth Scale |
-|-----------|-----------------|--------------|
-| SQLite `store.db` | ~1.2 MB | Linear |
-| FAISS `vectors.faiss` (HNSW) | ~4.1 MB (1024-dim) | Linear |
-| NetworkX `graph.nx` | ~0.2 MB | Linear ($O(V + E)$) |
-| Persistent `bm25.pkl` | ~0.5 MB | Lexical vocab scale |
-
----
-
-## Concurrency & Contention
-
-- **SQLite WAL Mode**: Provides concurrent read access during background ingestion.
-- **Atomic Persistence**: Checksums and snapshot saves use 3-backup rotation to prevent corruption during unexpected shutdowns.
+See `docs/RESOURCE_SPEED_TOKENOMICS.md` for formulas, validator guarantees,
+capacity alternatives, and the default-deny live evaluation gate.

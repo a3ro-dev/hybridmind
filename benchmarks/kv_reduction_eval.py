@@ -1,9 +1,9 @@
-"""Measure the long-history quality versus KV-working-set frontier.
+"""Measure the retrieval-conditioned effective-context frontier.
 
-This benchmark does not claim that external retrieval is equivalent to a
-transformer's KV cache. It measures a necessary condition for that claim:
-whether a small retrieved context preserves answer-bearing LoCoMo evidence
-while reducing the number of prompt tokens whose KV state must be resident.
+This benchmark measures whether a smaller retrieved prompt preserves exact
+LoCoMo evidence IDs. It does not claim retrieval replaces, compresses, evicts,
+or proportionally reduces a model's realized KV cache. Answer-string overlap
+is diagnostic only and can never satisfy the quality gate.
 
 The benchmark is read-only. It joins three existing artifacts:
 
@@ -11,13 +11,14 @@ The benchmark is read-only. It joins three existing artifacts:
 * the original LoCoMo conversations and evidence annotations; and
 * the SQLite node store containing the retrieved text.
 
-Absolute KV bytes are reported only when the model architecture is supplied.
-For a standard attention cache, bytes per token are:
+An optional architecture-only allocation estimate can be reported when model
+parameters are supplied. It is explicitly labelled as the bytes that would be
+allocated *if* all counted prompt tokens were materialized in a standard
+attention cache, not a measured cache saving. Bytes per token are:
 
     2 * layers * kv_heads * head_dim * element_bytes
 
-The factor of two accounts for keys and values. Percentage KV reduction is
-the same as token reduction for a fixed model and cache representation.
+The factor of two accounts for keys and values.
 """
 from __future__ import annotations
 
@@ -107,6 +108,7 @@ class QuestionContext:
     question: str
     category: int
     full_context: str
+    evidence_ids: tuple[str, ...]
     evidence_texts: tuple[str, ...]
     unresolved_evidence_ids: tuple[str, ...]
 
@@ -115,6 +117,11 @@ def _question_id(question: str, explicit_id: Any = None) -> str:
     if explicit_id:
         return str(explicit_id)
     return hashlib.sha1(question.encode()).hexdigest()[:12]
+
+
+def _canonical_evidence_id(sample_id: str, evidence_id: Any) -> str:
+    value = str(evidence_id).strip()
+    return value if value.startswith("locomo:") else f"locomo:{sample_id}:{value}"
 
 
 def _normalize_text(text: str) -> str:
@@ -135,8 +142,8 @@ def load_question_contexts(
     id_scheme: str = "ledger",
 ) -> dict[str, deque[QuestionContext]]:
     """Load LoCoMo questions, preserving duplicate question IDs as queues."""
-    if id_scheme not in {"ledger", "memorybench"}:
-        raise ValueError("id_scheme must be 'ledger' or 'memorybench'")
+    if id_scheme not in {"ledger", "ledger_v2", "memorybench"}:
+        raise ValueError("id_scheme must be 'ledger', 'ledger_v2', or 'memorybench'")
     data = json.loads(dataset_path.read_text(encoding="utf-8"))
     by_question_id: dict[str, deque[QuestionContext]] = defaultdict(deque)
 
@@ -172,16 +179,28 @@ def load_question_contexts(
             question = str(qa.get("question", ""))
             if id_scheme == "memorybench":
                 qid = f"{sample_id}-q{question_index}"
+            elif id_scheme == "ledger_v2":
+                explicit_id = qa.get("question_id")
+                qid = (
+                    f"locomo:{sample_id}:{explicit_id}"
+                    if explicit_id
+                    else "locomo:" + hashlib.sha1(
+                        f"{sample_id}\0{question_index}\0{question}".encode()
+                    ).hexdigest()[:16]
+                )
             else:
                 qid = _question_id(question, qa.get("question_id"))
-            evidence_ids = tuple(str(item) for item in qa.get("evidence", []) if item)
+            raw_evidence_ids = tuple(str(item) for item in qa.get("evidence", []) if item)
+            evidence_ids = tuple(
+                _canonical_evidence_id(sample_id, item) for item in raw_evidence_ids
+            )
             evidence_texts = tuple(
                 evidence_by_id[evidence_id]
-                for evidence_id in evidence_ids
+                for evidence_id in raw_evidence_ids
                 if evidence_id in evidence_by_id
             )
             unresolved = tuple(
-                evidence_id for evidence_id in evidence_ids if evidence_id not in evidence_by_id
+                evidence_id for evidence_id in raw_evidence_ids if evidence_id not in evidence_by_id
             )
             by_question_id[qid].append(
                 QuestionContext(
@@ -190,6 +209,7 @@ def load_question_contexts(
                     question=question,
                     category=int(qa.get("category", 0) or 0),
                     full_context=full_context,
+                    evidence_ids=evidence_ids,
                     evidence_texts=evidence_texts,
                     unresolved_evidence_ids=unresolved,
                 )
@@ -205,9 +225,45 @@ def load_ledger(ledger_path: Path) -> list[dict[str, Any]]:
             if not line.strip():
                 continue
             try:
-                records.append(json.loads(line))
+                record = json.loads(line)
             except json.JSONDecodeError as exc:
                 raise ValueError(f"Invalid JSON on ledger line {line_number}: {exc}") from exc
+            if record.get("schema") != "hybridmind.eval-ledger/v2":
+                raise ValueError(
+                    f"Ledger line {line_number} is legacy/unattested; exact evidence-ID "
+                    "evaluation requires hybridmind.eval-ledger/v2"
+                )
+            if record.get("status") != "completed":
+                raise ValueError(
+                    f"Ledger line {line_number} has status {record.get('status')!r}; "
+                    "partial or failed runs are invalid"
+                )
+            if record.get("metric_basis") != "exact_evidence_id":
+                raise ValueError(
+                    f"Ledger line {line_number} does not declare exact_evidence_id relevance"
+                )
+            extra = record.get("extra") or {}
+            required_extra = {
+                "retrieved_evidence_ids_at_k",
+                "retrieved_result_count_at_k",
+                "evidence_tagged_result_count_at_k",
+            }
+            missing = sorted(required_extra - set(extra))
+            if missing:
+                raise ValueError(
+                    f"Ledger line {line_number} lacks exact-evidence retrieval metadata: "
+                    f"{', '.join(missing)}"
+                )
+            record["_retrieved_evidence_ids_at_k"] = extra["retrieved_evidence_ids_at_k"]
+            record["_retrieved_result_count_at_k"] = extra["retrieved_result_count_at_k"]
+            record["_evidence_tagged_result_count_at_k"] = extra[
+                "evidence_tagged_result_count_at_k"
+            ]
+            overlap = record.get("answer_overlap_metrics") or {}
+            record["answer_overlap_rank_post_rerank"] = overlap.get(
+                "gold_rank_post_rerank"
+            )
+            records.append(record)
     return records
 
 
@@ -233,6 +289,22 @@ def _is_answer_relevant(retrieved_text: str, answer: str) -> bool:
         return answer_tokens.issubset(text_tokens)
     overlap = len(answer_tokens & text_tokens)
     return overlap / len(answer_tokens) >= 0.7
+
+
+def _checkpoint_result_evidence_ids(result: dict[str, Any], sample_id: str) -> set[str]:
+    metadata = result.get("metadata") or {}
+    values: list[Any] = []
+    for key in ("evidence_id", "dia_id"):
+        value = metadata.get(key)
+        if isinstance(value, list):
+            values.extend(value)
+        elif value is not None:
+            values.append(value)
+    return {
+        _canonical_evidence_id(sample_id, value)
+        for value in values
+        if str(value).strip()
+    }
 
 
 def load_memorybench_checkpoint(
@@ -292,21 +364,39 @@ def load_memorybench_checkpoint(
                 offline_rerank_duration_ms = (time.perf_counter() - rerank_started) * 1000
             results = results[:max_k]
             answer = str(question.get("groundTruth", ""))
-            gold_rank = None
+            answer_overlap_rank = None
             for rank, result in enumerate(results, 1):
                 if _is_answer_relevant(str(result.get("text", "")), answer):
-                    gold_rank = rank
+                    answer_overlap_rank = rank
                     break
+            sample_id = str(question_id).rsplit("-q", 1)[0]
             records.append(
                 {
                     "question_id": str(question_id),
-                    "gold_rank_post_rerank": gold_rank,
+                    "answer_overlap_rank_post_rerank": answer_overlap_rank,
                     "retrieved_ids_at_k": {
                         str(k): [str(result.get("node_id") or result.get("id") or "") for result in results[:k]]
                         for k in k_values
                     },
                     "_retrieved_texts_at_k": {
                         str(k): [str(result.get("text", "")) for result in results[:k]]
+                        for k in k_values
+                    },
+                    "_retrieved_evidence_ids_at_k": {
+                        str(k): sorted(set().union(*(
+                            _checkpoint_result_evidence_ids(result, sample_id)
+                            for result in results[:k]
+                        ))) if results[:k] else []
+                        for k in k_values
+                    },
+                    "_retrieved_result_count_at_k": {
+                        str(k): len(results[:k]) for k in k_values
+                    },
+                    "_evidence_tagged_result_count_at_k": {
+                        str(k): sum(
+                            bool(_checkpoint_result_evidence_ids(result, sample_id))
+                            for result in results[:k]
+                        )
                         for k in k_values
                     },
                     "_search_duration_ms": (
@@ -525,12 +615,16 @@ def evaluate_frontier(
     k_values: Sequence[int] = DEFAULT_K_VALUES,
     hypothesis_k: int = 10,
     min_context_reduction: float = 0.90,
-    min_answer_proxy_hit: float = 0.80,
+    min_exact_evidence_recall: float = 0.80,
+    min_answer_proxy_hit: float | None = None,
     min_node_resolution: float = 0.99,
     min_exact_source_recall_improvement: float = 0.05,
     bootstrap_resamples: int = 2_000,
     seed: int = 42,
     absolute_kv_bytes_per_token: float | None = None,
+    max_retrieved_tokens: int | None = None,
+    max_search_latency_ms: float | None = None,
+    max_offline_rerank_latency_ms: float | None = None,
 ) -> dict[str, Any]:
     k_values = tuple(sorted(set(int(k) for k in k_values)))
     if not k_values or any(k <= 0 for k in k_values):
@@ -539,6 +633,10 @@ def evaluate_frontier(
         raise ValueError("hypothesis_k must be included in k_values")
     if bootstrap_resamples <= 0:
         raise ValueError("bootstrap_resamples must be positive")
+    # Backward-compatible argument name, but it now thresholds exact evidence
+    # recall. Answer overlap never controls pass/fail.
+    if min_answer_proxy_hit is not None:
+        min_exact_evidence_recall = min_answer_proxy_hit
 
     if checkpoint_path is not None:
         ledger_records = load_memorybench_checkpoint(
@@ -563,7 +661,7 @@ def evaluate_frontier(
         if ledger_path is None or database_path is None:
             raise ValueError("ledger_path and database_path are required without checkpoint_path")
         ledger_records = load_ledger(ledger_path)
-        question_queues = load_question_contexts(dataset_path, id_scheme="ledger")
+        question_queues = load_question_contexts(dataset_path, id_scheme="ledger_v2")
         requested_ids = list(_iter_retrieved_ids(ledger_records, k_values))
         node_texts = load_node_texts(database_path, requested_ids)
         source_inputs = {
@@ -583,6 +681,9 @@ def evaluate_frontier(
             "exact_source_recall": [],
             "exact_source_any_hit": [],
             "exact_source_all_hit": [],
+            "exact_evidence_id_recall": [],
+            "exact_evidence_id_any_hit": [],
+            "exact_evidence_id_all_hit": [],
         }
         for k in k_values
     }
@@ -594,6 +695,8 @@ def evaluate_frontier(
     resolved_retrieved_id_references = 0
     search_durations_ms: list[float] = []
     offline_rerank_durations_ms: list[float] = []
+    retrieved_result_references = 0
+    evidence_tagged_result_references = 0
 
     for record in ledger_records:
         qid = str(record.get("question_id", ""))
@@ -609,9 +712,12 @@ def evaluate_frontier(
             continue
         full_context_tokens.append(float(full_tokens))
 
-        gold_rank = record.get("gold_rank_post_rerank")
+        answer_overlap_rank = record.get("answer_overlap_rank_post_rerank")
         retrieved_by_k = record.get("retrieved_ids_at_k", {})
         retrieved_texts_by_k = record.get("_retrieved_texts_at_k")
+        retrieved_evidence_by_k = record.get("_retrieved_evidence_ids_at_k", {})
+        result_count_by_k = record.get("_retrieved_result_count_at_k", {})
+        tagged_count_by_k = record.get("_evidence_tagged_result_count_at_k", {})
         if record.get("_search_duration_ms") is not None:
             search_durations_ms.append(float(record["_search_duration_ms"]))
         if record.get("_offline_rerank_duration_ms") is not None:
@@ -634,7 +740,24 @@ def evaluate_frontier(
             retrieved_context = "\n".join(texts)
             retrieved_tokens = token_counter.count(retrieved_context)
             reduction = 1.0 - (retrieved_tokens / full_tokens)
-            proxy_hit = 1.0 if gold_rank is not None and int(gold_rank) <= k else 0.0
+            proxy_hit = (
+                1.0
+                if answer_overlap_rank is not None and int(answer_overlap_rank) <= k
+                else 0.0
+            )
+            gold_evidence_ids = set(context.evidence_ids)
+            retrieved_evidence_ids = {
+                str(value) for value in retrieved_evidence_by_k.get(str(k), []) if value
+            }
+            exact_evidence_hits = gold_evidence_ids & retrieved_evidence_ids
+            exact_evidence_recall = (
+                len(exact_evidence_hits) / len(gold_evidence_ids)
+                if gold_evidence_ids
+                else math.nan
+            )
+            if k == max(k_values):
+                retrieved_result_references += int(result_count_by_k.get(str(k), 0))
+                evidence_tagged_result_references += int(tagged_count_by_k.get(str(k), 0))
 
             per_k[k]["retrieved_tokens"].append(float(retrieved_tokens))
             per_k[k]["context_reduction"].append(reduction)
@@ -647,6 +770,14 @@ def evaluate_frontier(
                 per_k[k]["exact_source_recall"].append(mean(source_hits))
                 per_k[k]["exact_source_any_hit"].append(1.0 if any(source_hits) else 0.0)
                 per_k[k]["exact_source_all_hit"].append(1.0 if all(source_hits) else 0.0)
+            if gold_evidence_ids:
+                per_k[k]["exact_evidence_id_recall"].append(exact_evidence_recall)
+                per_k[k]["exact_evidence_id_any_hit"].append(
+                    1.0 if exact_evidence_hits else 0.0
+                )
+                per_k[k]["exact_evidence_id_all_hit"].append(
+                    1.0 if exact_evidence_hits == gold_evidence_ids else 0.0
+                )
 
     unmatched_dataset_questions = sum(len(queue) for queue in question_queues.values())
     node_resolution_rate = (
@@ -654,13 +785,33 @@ def evaluate_frontier(
         if total_retrieved_id_references
         else 0.0
     )
+    evidence_metadata_coverage = (
+        evidence_tagged_result_references / retrieved_result_references
+        if retrieved_result_references
+        else 0.0
+    )
+    if not ledger_records:
+        raise ValueError("Source contains no completed retrieval records")
+    if unmatched_ledger_records or matched_records != len(ledger_records):
+        raise ValueError(
+            "Question IDs do not join exactly to the dataset; refusing a partial frontier"
+        )
+    if unresolved_evidence_ids:
+        raise ValueError(
+            f"Dataset contains {unresolved_evidence_ids} unresolved gold evidence IDs"
+        )
+    if not retrieved_result_references or evidence_metadata_coverage < 1.0:
+        raise ValueError(
+            "Retrieved candidates lack complete stable evidence-ID metadata; "
+            "legacy checkpoints/ledgers are not valid for this evaluator"
+        )
 
     frontier: dict[str, Any] = {}
     for k in k_values:
         metrics = per_k[k]
         summary: dict[str, Any] = {
             "retrieved_context_tokens": _distribution(metrics["retrieved_tokens"]),
-            "context_reduction": _bootstrap_ci(
+            "retrieval_conditioned_context_token_reduction": _bootstrap_ci(
                 metrics["context_reduction"], n_resamples=bootstrap_resamples, seed=seed + k
             ),
             "answer_overlap_proxy_hit_all": _bootstrap_ci(
@@ -680,32 +831,90 @@ def evaluate_frontier(
             "exact_source_all_hit": _bootstrap_ci(
                 metrics["exact_source_all_hit"], n_resamples=bootstrap_resamples, seed=seed + 500 + k
             ),
+            "exact_evidence_id_recall": _bootstrap_ci(
+                metrics["exact_evidence_id_recall"],
+                n_resamples=bootstrap_resamples,
+                seed=seed + 600 + k,
+            ),
+            "exact_evidence_id_any_hit": _bootstrap_ci(
+                metrics["exact_evidence_id_any_hit"],
+                n_resamples=bootstrap_resamples,
+                seed=seed + 700 + k,
+            ),
+            "exact_evidence_id_all_hit": _bootstrap_ci(
+                metrics["exact_evidence_id_all_hit"],
+                n_resamples=bootstrap_resamples,
+                seed=seed + 800 + k,
+            ),
         }
         if absolute_kv_bytes_per_token is not None:
-            summary["estimated_kv_bytes"] = {
+            summary["model_kv_allocation_if_all_tokens_materialized"] = {
                 "full_context_mean": mean(full_context_tokens) * absolute_kv_bytes_per_token,
                 "retrieved_context_mean": mean(metrics["retrieved_tokens"]) * absolute_kv_bytes_per_token,
                 "bytes_per_token": absolute_kv_bytes_per_token,
+                "measured": False,
             }
         frontier[str(k)] = summary
 
     hypothesis_metrics = frontier[str(hypothesis_k)]
-    observed_reduction = hypothesis_metrics["context_reduction"]["mean"]
-    observed_proxy_hit = hypothesis_metrics[
-        "answer_overlap_proxy_hit_with_gold_evidence"
+    observed_reduction = hypothesis_metrics[
+        "retrieval_conditioned_context_token_reduction"
     ]["mean"]
-    data_valid = node_resolution_rate >= min_node_resolution
+    observed_exact_recall = hypothesis_metrics["exact_evidence_id_recall"]["mean"]
+    data_valid = (
+        node_resolution_rate >= min_node_resolution
+        and evidence_metadata_coverage == 1.0
+        and unmatched_ledger_records == 0
+        and unresolved_evidence_ids == 0
+        and matched_records == len(ledger_records)
+    )
     hypothesis_passed = (
         data_valid
         and observed_reduction >= min_context_reduction
-        and observed_proxy_hit >= min_answer_proxy_hit
+        and observed_exact_recall >= min_exact_evidence_recall
     )
+    search_latency_summary = _distribution(search_durations_ms)
+    rerank_latency_summary = _distribution(offline_rerank_durations_ms)
+    retrieved_token_summary = hypothesis_metrics["retrieved_context_tokens"]
+    budget_checks = {
+        "retrieved_tokens_p95": {
+            "cap": max_retrieved_tokens,
+            "observed": retrieved_token_summary["p95"],
+            "passed": (
+                None
+                if max_retrieved_tokens is None
+                else bool(retrieved_token_summary["n"] and retrieved_token_summary["p95"] <= max_retrieved_tokens)
+            ),
+        },
+        "search_latency_ms_p95": {
+            "cap": max_search_latency_ms,
+            "observed": search_latency_summary["p95"],
+            "passed": (
+                None
+                if max_search_latency_ms is None
+                else bool(search_latency_summary["n"] and search_latency_summary["p95"] <= max_search_latency_ms)
+            ),
+        },
+        "offline_rerank_latency_ms_p95": {
+            "cap": max_offline_rerank_latency_ms,
+            "observed": rerank_latency_summary["p95"],
+            "passed": (
+                None
+                if max_offline_rerank_latency_ms is None
+                else bool(rerank_latency_summary["n"] and rerank_latency_summary["p95"] <= max_offline_rerank_latency_ms)
+            ),
+        },
+    }
+    budget_passed = all(
+        check["passed"] is not False for check in budget_checks.values()
+    )
+    hypothesis_passed = hypothesis_passed and budget_passed
 
     limitations = [
-        "Token reduction is a prompt-side KV working-set proxy, not a measurement of model-internal cache eviction.",
+        "Context-token reduction is prompt-side only; it is not measured KV-cache eviction, compression, or replacement.",
         "The answer-text overlap signal is weaker than downstream QA accuracy.",
         "Exact-source metrics require the original annotated turn text and do not credit paraphrased extracted facts.",
-        "Latency and throughput require a live, preflight-verified inference run and are not inferred here.",
+        "Search latency is recorded only when the source checkpoint reports it; model inference latency, throughput, memory, energy, and provider cost are not inferred.",
     ]
     if checkpoint_path is not None:
         limitations.extend(
@@ -720,19 +929,21 @@ def evaluate_frontier(
         )
 
     result = {
-        "benchmark": "locomo_kv_reduction_frontier",
+        "schema": "hybridmind.retrieval-conditioned-context/v2",
+        "benchmark": "locomo_retrieval_conditioned_effective_context_frontier",
         "hypothesis": {
             "k": hypothesis_k,
             "statement": (
-                f"At k={hypothesis_k}, HybridMind preserves answer-bearing context for at least "
-                f"{min_answer_proxy_hit:.0%} of LoCoMo questions with gold evidence while reducing "
-                f"memory-context tokens and proportional KV bytes by at least "
-                f"{min_context_reduction:.0%} versus full-history prompting."
+                f"At k={hypothesis_k}, HybridMind retrieves at least "
+                f"{min_exact_evidence_recall:.0%} of exact LoCoMo evidence IDs while reducing "
+                f"retrieval-conditioned prompt tokens by at least {min_context_reduction:.0%} "
+                "versus full-history prompting."
             ),
-            "quality_metric": "answer-overlap proxy hit rate on questions with gold evidence",
-            "observed_context_reduction": observed_reduction,
-            "observed_quality": observed_proxy_hit,
+            "quality_metric": "exact evidence-ID recall",
+            "observed_context_token_reduction": observed_reduction,
+            "observed_exact_evidence_id_recall": observed_exact_recall,
             "data_valid": data_valid,
+            "budget_valid": budget_passed,
             "passed": hypothesis_passed,
         },
         "inputs": {
@@ -752,10 +963,22 @@ def evaluate_frontier(
             "unresolved_gold_evidence_ids": unresolved_evidence_ids,
             "unique_retrieved_nodes_resolved": len(node_texts),
             "retrieved_node_reference_resolution_rate": node_resolution_rate,
+            "retrieved_result_evidence_metadata_coverage": evidence_metadata_coverage,
         },
         "full_context_tokens": _distribution(full_context_tokens),
-        "search_duration_ms": _distribution(search_durations_ms),
-        "offline_rerank_duration_ms": _distribution(offline_rerank_durations_ms),
+        "search_duration_ms": search_latency_summary,
+        "offline_rerank_duration_ms": rerank_latency_summary,
+        "budget_caps": budget_checks,
+        "resource_and_cost_denominators": {
+            "questions_in_source": len(ledger_records),
+            "questions_matched": matched_records,
+            "full_context_token_observations": len(full_context_tokens),
+            "search_latency_observations": len(search_durations_ms),
+            "offline_rerank_latency_observations": len(offline_rerank_durations_ms),
+            "provider_cost": {"measured": False, "currency": None, "amount": None},
+            "peak_accelerator_memory": {"measured": False, "bytes": None},
+            "energy": {"measured": False, "joules": None},
+        },
         "frontier": frontier,
         "limitations": limitations,
     }
@@ -803,7 +1026,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--allow-tokenizer-download", action="store_true")
     parser.add_argument("--hypothesis-k", type=int, default=10)
     parser.add_argument("--min-context-reduction", type=float, default=0.90)
-    parser.add_argument("--min-answer-proxy-hit", type=float, default=0.80)
+    parser.add_argument("--min-exact-evidence-recall", type=float, default=0.80)
+    parser.add_argument(
+        "--min-answer-proxy-hit",
+        type=float,
+        dest="legacy_exact_recall_threshold",
+        help="Deprecated alias; value thresholds exact evidence-ID recall, never answer overlap",
+    )
     parser.add_argument("--min-node-resolution", type=float, default=0.99)
     parser.add_argument("--min-exact-source-recall-improvement", type=float, default=0.05)
     parser.add_argument("--bootstrap-resamples", type=int, default=2_000)
@@ -812,6 +1041,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--kv-heads", type=int)
     parser.add_argument("--head-dim", type=int)
     parser.add_argument("--element-bytes", type=float)
+    parser.add_argument("--max-retrieved-tokens", type=int)
+    parser.add_argument("--max-search-latency-ms", type=float)
+    parser.add_argument("--max-offline-rerank-latency-ms", type=float)
     return parser.parse_args()
 
 
@@ -847,19 +1079,19 @@ def _absolute_kv_bytes_per_token(args: argparse.Namespace) -> float | None:
 
 
 def _print_summary(result: dict[str, Any]) -> None:
-    print("k  context_reduction  answer_proxy_hit  exact_source_recall")
+    print("k  context_token_reduction  exact_evidence_recall  answer_overlap_diagnostic")
     for k, metrics in result["frontier"].items():
-        reduction = metrics["context_reduction"]["mean"]
+        reduction = metrics["retrieval_conditioned_context_token_reduction"]["mean"]
         proxy = metrics["answer_overlap_proxy_hit_with_gold_evidence"]["mean"]
-        source = metrics["exact_source_recall"]["mean"]
-        print(f"{int(k):>2} {reduction:>17.2%} {proxy:>17.2%} {source:>20.2%}")
+        exact = metrics["exact_evidence_id_recall"]["mean"]
+        print(f"{int(k):>2} {reduction:>23.2%} {exact:>22.2%} {proxy:>26.2%}")
     hypothesis = result["hypothesis"]
     verdict = "PASSED" if hypothesis["passed"] else "FAILED"
-    print(f"\nKV-reduction hypothesis: {verdict}")
+    print(f"\nRetrieval-conditioned context hypothesis: {verdict}")
     print(
         f"Observed at k={hypothesis['k']}: "
-        f"context reduction={hypothesis['observed_context_reduction']:.2%}, "
-        f"answer proxy hit={hypothesis['observed_quality']:.2%}"
+        f"context-token reduction={hypothesis['observed_context_token_reduction']:.2%}, "
+        f"exact evidence-ID recall={hypothesis['observed_exact_evidence_id_recall']:.2%}"
     )
     ranking_hypothesis = result.get("ranking_hypothesis")
     if ranking_hypothesis:
@@ -890,15 +1122,23 @@ def main() -> None:
         k_values=args.k_values,
         hypothesis_k=args.hypothesis_k,
         min_context_reduction=args.min_context_reduction,
-        min_answer_proxy_hit=args.min_answer_proxy_hit,
+        min_exact_evidence_recall=(
+            args.legacy_exact_recall_threshold
+            if args.legacy_exact_recall_threshold is not None
+            else args.min_exact_evidence_recall
+        ),
         min_node_resolution=args.min_node_resolution,
         min_exact_source_recall_improvement=args.min_exact_source_recall_improvement,
         bootstrap_resamples=args.bootstrap_resamples,
         seed=args.seed,
         absolute_kv_bytes_per_token=_absolute_kv_bytes_per_token(args),
+        max_retrieved_tokens=args.max_retrieved_tokens,
+        max_search_latency_ms=args.max_search_latency_ms,
+        max_offline_rerank_latency_ms=args.max_offline_rerank_latency_ms,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    with args.output.open("x", encoding="utf-8") as handle:
+        handle.write(json.dumps(result, indent=2, sort_keys=True) + "\n")
     _print_summary(result)
     print(f"\nWrote {args.output}")
 

@@ -1,0 +1,308 @@
+{
+  "classification": "measured_offline_dataset_baseline",
+  "dataset": {
+    "evidence_questions": 1977,
+    "excluded_questions_invalid_evidence_annotation": 2,
+    "excluded_questions_unresolved_evidence": 3,
+    "invalid_evidence_annotations": [
+      {
+        "invalid_fragments": [
+          "D"
+        ],
+        "question_sha256": "fcc663fb11478ce32d4801ccecec5890927c8abae3bc16479be0382a5cd61603",
+        "sample_id": "conv-42"
+      },
+      {
+        "invalid_fragments": [
+          "D:11:26"
+        ],
+        "question_sha256": "9385966b38c18d7e48820ccb6b0128c03b3bcca805df1e42aa9ff7abb2f462c5",
+        "sample_id": "conv-43"
+      }
+    ],
+    "path": "D:\\hybridmind\\memorybench\\data\\benchmarks\\locomo\\locomo10.json",
+    "questions_total": 1986,
+    "samples": 10,
+    "sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+    "source_tokens_regex_proxy": 139594,
+    "turns": 5882,
+    "unresolved_evidence_annotations": [
+      {
+        "question_sha256": "21eff128baf58a4929e82dac2faafaf2ad62ba8606a49f9c5126abb2db1afc7c",
+        "sample_id": "conv-42",
+        "unresolved_evidence_ids": [
+          "locomo:conv-42:D10:19"
+        ]
+      },
+      {
+        "question_sha256": "a4f13be49b996cae41ff3249e29331e85877880a45708773d4c7f5d97c77a9e9",
+        "sample_id": "conv-47",
+        "unresolved_evidence_ids": [
+          "locomo:conv-47:D4:36"
+        ]
+      },
+      {
+        "question_sha256": "8931590881f7fe4356c5fbf2f5453314d5918b29f16abb28b979eaa02172692c",
+        "sample_id": "conv-50",
+        "unresolved_evidence_ids": [
+          "locomo:conv-50:D30:05"
+        ]
+      }
+    ]
+  },
+  "elapsed_seconds": 4.12071190000097,
+  "execution": {
+    "actual_external_cost_usd": 0.0,
+    "embedding_calls": 0,
+    "external_network_calls": 0,
+    "reader_calls": 0,
+    "reranker_calls": 0
+  },
+  "generated_at": "2026-08-13T17:50:58.622868+00:00",
+  "host": {
+    "platform": "Windows-11-10.0.26100-SP0",
+    "python": "3.13.5"
+  },
+  "interpretation_limits": [
+    "This is a real LoCoMo exact-evidence sparse baseline, not a HybridMind end-to-end result.",
+    "It excludes the API, dense embeddings, graph, cross-encoder, decomposition, salience, and reader.",
+    "Regex token counts are a prompt-source proxy, not model tokenizer counts or KV-cache allocation.",
+    "No answer accuracy is measured."
+  ],
+  "metrics": {
+    "at_k": {
+      "1": {
+        "exact_evidence_all_hit": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.26150733434496715,
+          "ci95_low": 0.2240768841679312,
+          "mean": 0.24178047546788062,
+          "n": 1977
+        },
+        "exact_evidence_any_hit": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.29742033383915023,
+          "ci95_low": 0.25796661608497723,
+          "mean": 0.278199291856348,
+          "n": 1977
+        },
+        "exact_evidence_recall": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.27500644131903623,
+          "ci95_low": 0.2383881082667122,
+          "mean": 0.2565995236708438,
+          "n": 1977
+        },
+        "prompt_source_reduction_regex_token_proxy": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.9982961942722978,
+          "ci95_low": 0.9982025682247573,
+          "mean": 0.9982487438023772,
+          "n": 1977
+        }
+      },
+      "10": {
+        "exact_evidence_all_hit": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.5280728376327769,
+          "ci95_low": 0.48103186646433993,
+          "mean": 0.503793626707132,
+          "n": 1977
+        },
+        "exact_evidence_any_hit": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.616590794132524,
+          "ci95_low": 0.5735963581183612,
+          "mean": 0.5948406676783005,
+          "n": 1977
+        },
+        "exact_evidence_recall": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.5661617621405177,
+          "ci95_low": 0.5241684667209785,
+          "mean": 0.5446963848209756,
+          "n": 1977
+        },
+        "prompt_source_reduction_regex_token_proxy": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.9833908938788707,
+          "ci95_low": 0.9829756824071265,
+          "mean": 0.9831857047507496,
+          "n": 1977
+        }
+      },
+      "100": {
+        "exact_evidence_all_hit": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.7405159332321699,
+          "ci95_low": 0.7005563985837127,
+          "mean": 0.7212948912493677,
+          "n": 1977
+        },
+        "exact_evidence_any_hit": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.8426909458775923,
+          "ci95_low": 0.8088012139605463,
+          "mean": 0.8254931714719271,
+          "n": 1977
+        },
+        "exact_evidence_recall": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.7903823077950544,
+          "ci95_low": 0.7569028496941368,
+          "mean": 0.7738354630287947,
+          "n": 1977
+        },
+        "prompt_source_reduction_regex_token_proxy": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.8286976969008901,
+          "ci95_low": 0.8249750449378708,
+          "mean": 0.8268692328495726,
+          "n": 1977
+        }
+      },
+      "25": {
+        "exact_evidence_all_hit": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.6125442589782498,
+          "ci95_low": 0.5690440060698028,
+          "mean": 0.5907941325240263,
+          "n": 1977
+        },
+        "exact_evidence_any_hit": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.7152250885179565,
+          "ci95_low": 0.6757713707637835,
+          "mean": 0.6960040465351542,
+          "n": 1977
+        },
+        "exact_evidence_recall": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.6598019146976898,
+          "ci95_low": 0.6195843469743318,
+          "mean": 0.6398942781248743,
+          "n": 1977
+        },
+        "prompt_source_reduction_regex_token_proxy": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.9578488363255689,
+          "ci95_low": 0.9568465575506302,
+          "mean": 0.9573325692502691,
+          "n": 1977
+        }
+      },
+      "3": {
+        "exact_evidence_all_hit": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.4026302478502782,
+          "ci95_low": 0.35912999494183107,
+          "mean": 0.3798684876074861,
+          "n": 1977
+        },
+        "exact_evidence_any_hit": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.46231664137582196,
+          "ci95_low": 0.417298937784522,
+          "mean": 0.4395548811330298,
+          "n": 1977
+        },
+        "exact_evidence_recall": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.42762001107979863,
+          "ci95_low": 0.3861882427132806,
+          "mean": 0.4065437597304062,
+          "n": 1977
+        },
+        "prompt_source_reduction_regex_token_proxy": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.9949885034746527,
+          "ci95_low": 0.9948078303072967,
+          "mean": 0.9948976236763896,
+          "n": 1977
+        }
+      },
+      "5": {
+        "exact_evidence_all_hit": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.4532119372787051,
+          "ci95_low": 0.40870005058168946,
+          "mean": 0.4309559939301973,
+          "n": 1977
+        },
+        "exact_evidence_any_hit": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.5275670207384927,
+          "ci95_low": 0.48356095093576124,
+          "mean": 0.5042994436014163,
+          "n": 1977
+        },
+        "exact_evidence_recall": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.4842498426597141,
+          "ci95_low": 0.4420443669065984,
+          "mean": 0.4639087775538538,
+          "n": 1977
+        },
+        "prompt_source_reduction_regex_token_proxy": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.9917043801672766,
+          "ci95_low": 0.9914428601016346,
+          "mean": 0.991574661182481,
+          "n": 1977
+        }
+      },
+      "50": {
+        "exact_evidence_all_hit": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.6772888214466363,
+          "ci95_low": 0.6358118361153262,
+          "mean": 0.6565503287809813,
+          "n": 1977
+        },
+        "exact_evidence_any_hit": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.78199291856348,
+          "ci95_low": 0.7455741021750126,
+          "mean": 0.7642893272635306,
+          "n": 1977
+        },
+        "exact_evidence_recall": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.7274501663790013,
+          "ci95_low": 0.6885516371202771,
+          "mean": 0.708225899979871,
+          "n": 1977
+        },
+        "prompt_source_reduction_regex_token_proxy": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.9145880940150012,
+          "ci95_low": 0.9126627823998116,
+          "mean": 0.9136281838435234,
+          "n": 1977
+        }
+      }
+    },
+    "mrr_first_exact_evidence": {
+      "bootstrap_samples": 2000,
+      "ci95_high": 0.40364993983139924,
+      "ci95_low": 0.36756101263929936,
+      "mean": 0.38547807742054224,
+      "n": 1977
+    },
+    "query_latency_ms": {
+      "mean": 0.5184644410275993,
+      "p50": 0.36470000122790225,
+      "p95": 0.677699999869219,
+      "p99": 1.0282000002916902,
+      "samples": 1977
+    }
+  },
+  "retriever": {
+    "documents": "raw turn text only",
+    "name": "BM25SBackend",
+    "query": "question text only",
+    "relevance": "exact canonical evidence ID",
+    "scope": "one index per LoCoMo conversation"
+  },
+  "schema_version": "hybridmind-offline-locomo-sparse/v1"
+}

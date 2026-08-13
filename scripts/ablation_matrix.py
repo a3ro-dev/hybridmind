@@ -1,11 +1,10 @@
 """Deterministic retrieval/lifecycle ablation plans and ledger provenance.
 
-This module deliberately does not start services or call an embedding provider.
-It creates a reproducible matrix of configurations for an already warmed,
-4096-dimensional HybridMind deployment.  The resulting plan files are safe to
-review before a remote evaluation.  Once an evaluator has produced a standard
-``eval_ledger.LedgerWriter`` JSONL file, this script can copy it with immutable
-ablation provenance attached to every row.
+This module never starts or reconfigures the server under test. It creates a
+reproducible matrix of client requests for an already warmed, 4096-dimensional
+HybridMind deployment and can launch retrieval-only evaluator clients. Client
+manifests attest request parameters and artifact integrity; they do not attest
+the external server's commit, boot environment, or index snapshot.
 
 Examples
 --------
@@ -31,6 +30,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -48,6 +49,7 @@ from eval_ledger import DEFAULT_K_LIST, DEFAULT_SEED, config_hash
 
 PLAN_SCHEMA = "hybridmind.ablation-plan/v1"
 LEDGER_SCHEMA = "hybridmind.ablation-ledger/v1"
+CLIENT_REQUEST_ATTESTED = "client_request_attested_not_server_runtime_attested"
 REQUIRED_LEDGER_FIELDS = {
     "question_id",
     "retrieved_ids_at_k",
@@ -133,6 +135,25 @@ MODES: tuple[AblationMode, ...] = (
 )
 MODE_BY_NAME = {mode.name: mode for mode in MODES}
 
+# These conditions change server/ingestion state or need an externally defined
+# graph anchor policy. The current evaluator can attest request parameters, but
+# it cannot prove a remote server's boot settings or that lifecycle processing
+# was rerun on a fresh snapshot. They remain reviewable plans, never results.
+_PLAN_ONLY_REQUIREMENTS: dict[str, list[str]] = {
+    "graph_only": ["gold-independent graph-anchor manifest"],
+    "hybrid": ["server runtime-settings receipt"],
+    "temporal": ["server runtime-settings receipt", "fresh temporal-edge snapshot receipt"],
+    "salience": ["server runtime-settings receipt", "deterministic access-state snapshot receipt"],
+    "structured_facts": ["fact-extraction ingestion receipt", "derived snapshot checksum"],
+    "compression": ["lifecycle execution receipt", "derived snapshot checksum"],
+}
+
+_EVALUATOR_SCRIPTS = {
+    "locomo": "eval_locomo_retrieval.py",
+    "longmemeval": "eval_longmemeval_retrieval.py",
+    "musique": "eval_musique_retrieval.py",
+}
+
 
 def _redact_config(values: Mapping[str, Any]) -> dict[str, Any]:
     """Keep plans auditable without serializing provider credentials."""
@@ -150,6 +171,7 @@ def _environment_value(value: Any) -> str:
 
 def resolve_mode(mode: AblationMode, *, benchmark: str, seed: int = DEFAULT_SEED) -> dict[str, Any]:
     """Resolve one mode against current Settings without changing process state."""
+    required_artifacts = _PLAN_ONLY_REQUIREMENTS.get(mode.name, [])
     resolved = Settings().model_dump()
     resolved.update(_CONTROLLED_BASE)
     resolved.update(mode.feature_overrides)
@@ -163,10 +185,12 @@ def resolve_mode(mode: AblationMode, *, benchmark: str, seed: int = DEFAULT_SEED
         "graph_only": "graph_only",
     }.get(mode.name, "hybrid")
     request_parameters = {
+        "top_k": 20 if benchmark == "musique" else 15,
         "vector_weight": mode.vector_weight,
         "graph_weight": mode.graph_weight,
         "bm25_boost_weight": mode.sparse_weight,
-        "rerank_pool": 1,
+        "rerank_pool": 0,
+        "fusion_mode": "rrf",
         "search_mode": search_mode,
         "route_weights": False,
         "track_access": bool(resolved["access_tracking_enabled"]),
@@ -180,6 +204,9 @@ def resolve_mode(mode: AblationMode, *, benchmark: str, seed: int = DEFAULT_SEED
         "resolved_settings": _redact_config(resolved),
     }
     plan_hash = config_hash(hashed_config)
+    resolved_settings_sha256 = hashlib.sha256(
+        json.dumps(hashed_config["resolved_settings"], sort_keys=True, default=str).encode("utf-8")
+    ).hexdigest()
     output_ledger = (
         Path("ledgers") / benchmark / mode.name / f"ledger_{benchmark}_{plan_hash}.jsonl"
     )
@@ -195,14 +222,16 @@ def resolve_mode(mode: AblationMode, *, benchmark: str, seed: int = DEFAULT_SEED
     environment["RERANK_MODE"] = _environment_value(resolved["rerank_mode"])
     environment["HYBRIDMIND_ABLATION_MODE"] = mode.name
     environment["HYBRIDMIND_ABLATION_CONFIG_HASH"] = plan_hash
+    environment["HYBRIDMIND_ABLATION_SETTINGS_SHA256"] = resolved_settings_sha256
     return {
         **hashed_config,
         "plan_hash": plan_hash,
+        "resolved_settings_sha256": resolved_settings_sha256,
         "ledger_target": str(output_ledger),
         "evaluator_parameters": {
-            "graph_anchor_strategy": "vector_top1" if mode.name == "graph_only" else "explicit",
+            "graph_anchor_strategy": "explicit",
         },
-        "environment": dict(sorted(environment.items())),
+        "server_boot_environment": dict(sorted(environment.items())),
         "protocol": {
             "preflight_required": "python scripts/preflight.py",
             "embedding_dimension_required": 4096,
@@ -210,6 +239,15 @@ def resolve_mode(mode: AblationMode, *, benchmark: str, seed: int = DEFAULT_SEED
             "k_values": list(DEFAULT_K_LIST),
             "reranker": "off (controlled ablation)",
             "result_status": "planned; no benchmark result recorded",
+            "result_eligibility": (
+                "plan_only_missing_external_attestation"
+                if required_artifacts
+                else CLIENT_REQUEST_ATTESTED
+            ),
+            "attestation_scope": "client_request_and_artifact_integrity_only",
+            "server_runtime_attested": False,
+            "server_boot_environment_applied_by_executor": False,
+            "required_external_artifacts": required_artifacts,
         },
     }
 
@@ -249,13 +287,100 @@ def _validate_ledger_row(row: Mapping[str, Any], line_number: int) -> None:
         raise ValueError(f"Ledger line {line_number} retrieved_ids_at_k must be an object")
 
 
-def annotate_ledger(source: Path, destination: Path, plan: Mapping[str, Any]) -> int:
+def _manifest_path_for(source: Path) -> Path:
+    return source.with_name(f"{source.stem}.manifest.json")
+
+
+def _completion_path_for(source: Path) -> Path:
+    return source.with_name(f"{source.stem}.completion.json")
+
+
+def verify_native_ledger_attestation(source: Path, plan: Mapping[str, Any]) -> dict[str, Any]:
+    """Verify that a native v2 run manifest attests this exact ablation."""
+    if plan.get("protocol", {}).get("result_eligibility") != CLIENT_REQUEST_ATTESTED:
+        required = ", ".join(
+            plan.get("protocol", {}).get("required_external_artifacts", [])
+        )
+        raise ValueError(
+            f"Ablation mode {plan.get('mode')!r} is plan-only until the harness "
+            f"can verify: {required}"
+        )
+    manifest_path = _manifest_path_for(source)
+    if not manifest_path.is_file():
+        raise ValueError(
+            f"Ablation ledger requires its immutable run manifest: {manifest_path}"
+        )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    claimed_manifest_hash = manifest.get("manifest_sha256")
+    manifest_payload = {key: value for key, value in manifest.items() if key != "manifest_sha256"}
+    actual_manifest_hash = hashlib.sha256(
+        json.dumps(
+            manifest_payload, sort_keys=True, separators=(",", ":"), default=str
+        ).encode("utf-8")
+    ).hexdigest()
+    if claimed_manifest_hash != actual_manifest_hash:
+        raise ValueError("Native ledger manifest checksum is invalid")
+    completion_path = _completion_path_for(source)
+    if not completion_path.is_file():
+        raise ValueError(
+            f"Ablation ledger requires an immutable successful completion receipt: "
+            f"{completion_path}"
+        )
+    completion = json.loads(completion_path.read_text(encoding="utf-8"))
+    if completion.get("status") != "completed":
+        raise ValueError("Failed or incomplete runs cannot become ablation results")
+    if (
+        completion.get("run_id") != manifest.get("run_id")
+        or completion.get("manifest_sha256") != claimed_manifest_hash
+    ):
+        raise ValueError("Completion receipt does not match the run manifest")
+    if completion.get("ledger_sha256") != hashlib.sha256(source.read_bytes()).hexdigest():
+        raise ValueError("Completed ledger checksum does not match its receipt")
+    row_count = sum(bool(line.strip()) for line in source.read_text(encoding="utf-8").splitlines())
+    if completion.get("row_count") != row_count or row_count <= 0:
+        raise ValueError("Completed ledger row count does not match its receipt")
+    config = manifest.get("config") or {}
+    attestation = config.get("ablation") or {}
+    expected = {
+        "plan_hash": plan["plan_hash"],
+        "mode": plan["mode"],
+        "resolved_settings_sha256": plan["resolved_settings_sha256"],
+    }
+    if any(attestation.get(key) != value for key, value in expected.items()):
+        raise ValueError(
+            "Native ledger manifest does not attest this client ablation plan/request"
+        )
+    request_projection = {
+        "top_k": config.get("top_k"),
+        "vector_weight": config.get("vector_weight"),
+        "graph_weight": config.get("graph_weight"),
+        "bm25_boost_weight": config.get("bm25_boost"),
+        "rerank_pool": config.get("rerank_pool"),
+        "fusion_mode": config.get("fusion_mode"),
+        "search_mode": config.get("search_mode"),
+        "route_weights": config.get("route_weights"),
+        "track_access": config.get("track_access"),
+    }
+    if request_projection != plan["request_parameters"]:
+        raise ValueError("Native ledger request parameters do not match the ablation plan")
+    return manifest
+
+
+def annotate_ledger(
+    source: Path,
+    destination: Path,
+    plan: Mapping[str, Any],
+    *,
+    require_attestation: bool = False,
+) -> int:
     """Copy a completed native ledger with mode/config provenance.
 
     The retrieval and judgment values are not modified.  ``config_hash`` is
     replaced by the full controlled-plan hash, while the evaluator's original
     value remains available as ``source_config_hash``.
     """
+    manifest = verify_native_ledger_attestation(source, plan) if require_attestation else None
+    source_sha256 = hashlib.sha256(source.read_bytes()).hexdigest()
     rows: list[dict[str, Any]] = []
     for line_number, line in enumerate(source.read_text(encoding="utf-8").splitlines(), 1):
         if not line.strip():
@@ -265,6 +390,18 @@ def annotate_ledger(source: Path, destination: Path, plan: Mapping[str, Any]) ->
         except json.JSONDecodeError as exc:
             raise ValueError(f"Invalid JSON in {source} line {line_number}: {exc}") from exc
         _validate_ledger_row(row, line_number)
+        if manifest is not None:
+            if row.get("run_id") != manifest.get("run_id"):
+                raise ValueError(f"Ledger line {line_number} run_id does not match its manifest")
+            if row.get("manifest_sha256") != manifest.get("manifest_sha256"):
+                raise ValueError(
+                    f"Ledger line {line_number} manifest checksum does not match its manifest"
+                )
+            if row.get("status") != "completed":
+                raise ValueError(
+                    f"Ledger line {line_number} has status {row.get('status')!r}; "
+                    "failed/partial runs cannot become ablation results"
+                )
         source_hash = row.get("config_hash")
         row["source_config_hash"] = source_hash
         row["config_hash"] = plan["plan_hash"]
@@ -272,19 +409,128 @@ def annotate_ledger(source: Path, destination: Path, plan: Mapping[str, Any]) ->
             "schema": LEDGER_SCHEMA,
             "mode": plan["mode"],
             "plan_hash": plan["plan_hash"],
-            "resolved_settings_sha256": hashlib.sha256(
-                json.dumps(plan["resolved_settings"], sort_keys=True, default=str).encode("utf-8")
-            ).hexdigest(),
+            "resolved_settings_sha256": plan["resolved_settings_sha256"],
             "request_parameters": plan["request_parameters"],
+            "verification_status": (
+                CLIENT_REQUEST_ATTESTED
+                if manifest is not None
+                else "unverified_legacy_annotation_not_benchmark_evidence"
+            ),
+            "source_run_id": manifest.get("run_id") if manifest else row.get("run_id"),
+            "source_ledger_sha256": source_sha256,
         }
         rows.append(row)
     if not rows:
         raise ValueError(f"Ledger {source} contains no rows")
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows), encoding="utf-8"
-    )
+    with destination.open("x", encoding="utf-8") as handle:
+        handle.write("".join(json.dumps(row, sort_keys=True) + "\n" for row in rows))
     return len(rows)
+
+
+def execute_request_attested_plan(
+    plan: Mapping[str, Any],
+    output_dir: Path,
+    *,
+    base_url: str = "http://127.0.0.1:8000",
+    question_limit: int = 5,
+    timeout_seconds: float = 1800.0,
+) -> Path:
+    """Execute and verify one request-isolated retrieval ablation.
+
+    Only vector-only, sparse-only, and vector+sparse conditions qualify. The
+    evaluator pins every request-level isolation control, including RRF fusion.
+    This receipt proves what the client requested, not which server build or
+    snapshot honored it. Conditions depending on server boot state or a derived
+    corpus remain rejected until an external receipt can attest that state.
+
+    This function performs retrieval API calls but never enables answering or
+    query decomposition, so it cannot invoke a paid LLM through the evaluator.
+    """
+    if question_limit < 1:
+        raise ValueError("question_limit must be positive")
+    if plan.get("protocol", {}).get("result_eligibility") != CLIENT_REQUEST_ATTESTED:
+        required = ", ".join(plan.get("protocol", {}).get("required_external_artifacts", []))
+        raise ValueError(
+            f"Ablation mode {plan.get('mode')!r} is plan-only until verified: {required}"
+        )
+    benchmark = str(plan.get("benchmark") or "")
+    try:
+        evaluator = PROJECT_ROOT / _EVALUATOR_SCRIPTS[benchmark]
+    except KeyError as exc:
+        raise ValueError(f"No evaluator registered for benchmark {benchmark!r}") from exc
+
+    request = plan["request_parameters"]
+    run_dir = output_dir / "native_runs" / benchmark / plan["mode"] / plan["plan_hash"]
+    run_dir.mkdir(parents=True, exist_ok=True)
+    if any(run_dir.iterdir()):
+        raise FileExistsError(
+            f"Refusing to mix or overwrite an existing ablation run directory: {run_dir}"
+        )
+
+    env = os.environ.copy()
+    # These values attest the evaluator artifact only. Feature settings in
+    # ``server_boot_environment`` are intentionally not injected here because
+    # they cannot reconfigure an already-running external API process.
+    server_boot_environment = plan["server_boot_environment"]
+    for key in (
+        "HYBRIDMIND_ABLATION_MODE",
+        "HYBRIDMIND_ABLATION_CONFIG_HASH",
+        "HYBRIDMIND_ABLATION_SETTINGS_SHA256",
+    ):
+        env[key] = str(server_boot_environment[key])
+    env["HYBRIDMIND_EVAL_RESULTS_DIR"] = str(run_dir.resolve())
+    env["HYBRIDMIND_BASE_URL"] = base_url.rstrip("/")
+    max_queries = question_limit * 5 if benchmark == "locomo" else question_limit
+    command = [
+        sys.executable,
+        str(evaluator),
+        "--execute",
+        "--n", str(question_limit),
+        "--top-k", str(request["top_k"]),
+        "--vector-weight", str(request["vector_weight"]),
+        "--graph-weight", str(request["graph_weight"]),
+        "--bm25-boost", str(request["bm25_boost_weight"]),
+        "--rerank-pool", str(request["rerank_pool"]),
+        "--fusion-mode", str(request["fusion_mode"]),
+        "--search-mode", str(request["search_mode"]),
+        "--no-route-weights",
+        "--no-track-access",
+        "--max-queries", str(max_queries),
+        "--max-wall-seconds", str(timeout_seconds),
+    ]
+    if benchmark in {"longmemeval", "musique"}:
+        command.extend(["--base-url", base_url.rstrip("/")])
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=PROJECT_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds + 30.0,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError("Ablation evaluator exceeded its declared wall-time budget") from exc
+    if completed.returncode != 0:
+        raise RuntimeError(
+            f"Ablation evaluator failed with exit code {completed.returncode}; "
+            f"inspect the isolated run directory {run_dir}"
+        )
+
+    completions = list(run_dir.glob("*.completion.json"))
+    if len(completions) != 1:
+        raise RuntimeError(
+            f"Expected one completion receipt in {run_dir}, found {len(completions)}"
+        )
+    completion = json.loads(completions[0].read_text(encoding="utf-8"))
+    source = run_dir / str(completion.get("ledger_file") or "")
+    if not source.is_file():
+        raise RuntimeError("Completion receipt does not name an existing ledger")
+    destination = output_dir / plan["ledger_target"]
+    annotate_ledger(source, destination, plan, require_attestation=True)
+    return destination
 
 
 def _parse_annotation(value: str) -> tuple[str, Path]:
@@ -305,6 +551,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, default=Path("benchmarks/results/ablation_matrix"))
     parser.add_argument("--list", action="store_true", help="List modes only; do not write")
     parser.add_argument("--dry-run", action="store_true", help="Print resolved plans; do not write")
+    parser.add_argument(
+        "--execute-client-request-attested",
+        "--execute-request-attested",
+        dest="execute_client_request_attested",
+        action="store_true",
+        help=(
+            "Run client-request-attested vector/sparse evaluations against an "
+            "existing API; this does not attest the server runtime or snapshot"
+        ),
+    )
+    parser.add_argument("--base-url", default="http://127.0.0.1:8000")
+    parser.add_argument("--questions", type=int, default=5)
+    parser.add_argument("--timeout-seconds", type=float, default=1800.0)
     parser.add_argument(
         "--annotate-ledger",
         action="append",
@@ -335,6 +594,17 @@ def main() -> int:
     for path in written:
         print(f"wrote plan: {path}")
 
+    if args.execute_client_request_attested:
+        for plan in plans:
+            result_path = execute_request_attested_plan(
+                plan,
+                args.output_dir,
+                base_url=args.base_url,
+                question_limit=args.questions,
+                timeout_seconds=args.timeout_seconds,
+            )
+            print(f"wrote client-request-attested ledger: {result_path}")
+
     plan_by_mode = {plan["mode"]: plan for plan in plans}
     for mode_name, source in args.annotate_ledger or []:
         if mode_name not in plan_by_mode:
@@ -343,7 +613,7 @@ def main() -> int:
             raise SystemExit(f"Completed ledger not found: {source}")
         plan = plan_by_mode[mode_name]
         destination = args.output_dir / plan["ledger_target"]
-        count = annotate_ledger(source, destination, plan)
+        count = annotate_ledger(source, destination, plan, require_attestation=True)
         print(f"wrote annotated ledger ({count} rows): {destination}")
     return 0
 

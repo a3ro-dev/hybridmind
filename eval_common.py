@@ -15,8 +15,13 @@ can't recur here.
 """
 import json
 import logging
+import math
 import os
 import re
+import time
+from contextlib import contextmanager
+from contextvars import ContextVar
+from dataclasses import dataclass
 from pathlib import Path
 
 from config import settings
@@ -73,14 +78,315 @@ def _is_llm_available(model: str | None = None) -> bool:
 def _call(payload: dict) -> str | None:
     """Call canonical Z.AI, or the explicitly selected research-only proxy."""
     preferred = "research_proxy" if settings.allow_research_proxy else "zai"
-    return llm_client.chat_completion(
-        payload.get("messages", []),
-        max_tokens=payload.get("max_tokens", 512),
-        temperature=payload.get("temperature", 0.0),
-        model=settings.qa_model,
-        response_format=payload.get("response_format"),
-        preferred=preferred,
-        allow_fallback=False,
+    # A CLI --answer-model override is a Z.AI model override.  Research-proxy
+    # model selection remains config-owned so a GLM model name can never leak
+    # across provider boundaries.
+    requested_model = (
+        settings.qa_model
+        if preferred == "research_proxy"
+        else payload.get("model") or settings.qa_model
+    )
+    messages = payload.get("messages", [])
+    max_tokens = int(payload.get("max_tokens", 512))
+    budget = active_budget()
+    reserved_output_tokens = (
+        budget.before_llm(messages, max_tokens) if budget is not None else 0
+    )
+    content = None
+    try:
+        content = llm_client.chat_completion(
+            messages,
+            max_tokens=max_tokens,
+            temperature=payload.get("temperature", 0.0),
+            model=requested_model,
+            response_format=payload.get("response_format"),
+            preferred=preferred,
+            allow_fallback=False,
+        )
+    finally:
+        if budget is not None:
+            budget.after_llm(content, reserved_output_tokens)
+    if content is None:
+        raise AnswerProviderError(f"{preferred} returned no completion")
+    return content
+
+
+class AnswerProviderError(RuntimeError):
+    """Configured answer provider failed or returned an unusable response."""
+
+
+@dataclass(frozen=True)
+class AnswerResult:
+    answer: str
+    prompt_version: str
+    status: str
+    error: str | None = None
+
+
+class EvaluationBudgetExceeded(RuntimeError):
+    """A live evaluation crossed a predeclared resource or spend ceiling."""
+
+
+def validate_rerank_pool(*, top_k: int, rerank_pool: int) -> None:
+    """Validate the evaluator/API reranking window contract.
+
+    A positive pool is a hard upper bound on cross-encoder work and must still
+    contain every requested final result.  Zero is the only disabled value.
+    """
+    if top_k < 1:
+        raise ValueError("top_k must be at least 1")
+    if rerank_pool < 0:
+        raise ValueError("rerank_pool must be non-negative; use 0 to disable reranking")
+    if 0 < rerank_pool < top_k:
+        raise ValueError(
+            "positive rerank_pool must be greater than or equal to top_k; "
+            "use 0 to disable reranking"
+        )
+
+
+@dataclass
+class EvaluationBudget:
+    max_queries: int
+    max_llm_calls: int
+    max_embedding_texts: int
+    max_input_tokens: int
+    max_output_tokens: int
+    max_wall_seconds: float
+    max_estimated_spend_usd: float
+    input_cost_per_million_tokens: float = 0.0
+    output_cost_per_million_tokens: float = 0.0
+    embedding_cost_per_text_usd: float | None = None
+    allow_unpriced_embedding: bool = False
+    queries: int = 0
+    llm_calls: int = 0
+    embedding_texts: int = 0
+    input_tokens_estimated: int = 0
+    output_tokens_estimated: int = 0
+    started_monotonic: float = 0.0
+
+    def __post_init__(self) -> None:
+        for name in (
+            "max_queries", "max_llm_calls", "max_embedding_texts",
+            "max_input_tokens", "max_output_tokens",
+        ):
+            if getattr(self, name) < 0:
+                raise ValueError(f"{name} must be non-negative")
+        if self.embedding_cost_per_text_usd is not None and self.embedding_cost_per_text_usd < 0:
+            raise ValueError("embedding_cost_per_text_usd must be non-negative")
+        for name in (
+            "max_wall_seconds", "max_estimated_spend_usd",
+            "input_cost_per_million_tokens", "output_cost_per_million_tokens",
+        ):
+            if getattr(self, name) < 0:
+                raise ValueError(f"{name} must be non-negative")
+        self.started_monotonic = time.monotonic()
+
+    @staticmethod
+    def estimate_tokens_from_chars(characters: int) -> int:
+        return math.ceil(max(0, characters) / 4)
+
+    def _wall_seconds(self) -> float:
+        return time.monotonic() - self.started_monotonic
+
+    def _estimated_spend(self, input_tokens: int | None = None, output_tokens: int | None = None) -> float:
+        inputs = self.input_tokens_estimated if input_tokens is None else input_tokens
+        outputs = self.output_tokens_estimated if output_tokens is None else output_tokens
+        token_spend = (
+            inputs * self.input_cost_per_million_tokens
+            + outputs * self.output_cost_per_million_tokens
+        ) / 1_000_000
+        embedding_spend = self.embedding_texts * (self.embedding_cost_per_text_usd or 0.0)
+        return token_spend + embedding_spend
+
+    def _check_wall(self) -> None:
+        if self._wall_seconds() > self.max_wall_seconds:
+            raise EvaluationBudgetExceeded(
+                f"wall-time budget exceeded ({self.max_wall_seconds}s)"
+            )
+
+    def record_query(self, *, embedding_texts: int = 1) -> None:
+        self._check_wall()
+        if (
+            embedding_texts
+            and self.embedding_cost_per_text_usd is None
+            and not self.allow_unpriced_embedding
+        ):
+            raise EvaluationBudgetExceeded(
+                "embedding spend is unpriced; set --embedding-cost-per-text-usd "
+                "or explicitly --allow-unpriced-embedding"
+            )
+        if self.queries + 1 > self.max_queries:
+            raise EvaluationBudgetExceeded("retrieval-query budget exceeded")
+        if self.embedding_texts + embedding_texts > self.max_embedding_texts:
+            raise EvaluationBudgetExceeded("embedding-text budget exceeded")
+        self.queries += 1
+        self.embedding_texts += embedding_texts
+        if self._estimated_spend() > self.max_estimated_spend_usd:
+            # Counts remain recorded because the query budget reservation has
+            # occurred, but the external request has not yet been sent.
+            raise EvaluationBudgetExceeded("estimated provider-spend budget exceeded")
+
+    def before_llm(self, messages: list[dict], max_output_tokens: int) -> int:
+        self._check_wall()
+        input_chars = sum(len(str(message.get("content", ""))) for message in messages)
+        input_tokens = self.estimate_tokens_from_chars(input_chars)
+        prospective_inputs = self.input_tokens_estimated + input_tokens
+        prospective_outputs = self.output_tokens_estimated + max_output_tokens
+        if self.llm_calls + 1 > self.max_llm_calls:
+            raise EvaluationBudgetExceeded("LLM-call budget exceeded")
+        if prospective_inputs > self.max_input_tokens:
+            raise EvaluationBudgetExceeded("estimated LLM input-token budget exceeded")
+        if prospective_outputs > self.max_output_tokens:
+            raise EvaluationBudgetExceeded("conservative LLM output-token budget exceeded")
+        if self._estimated_spend(prospective_inputs, prospective_outputs) > self.max_estimated_spend_usd:
+            raise EvaluationBudgetExceeded("estimated provider-spend budget exceeded")
+        self.llm_calls += 1
+        self.input_tokens_estimated = prospective_inputs
+        return max_output_tokens
+
+    def after_llm(self, content: str | None, reserved_output_tokens: int) -> None:
+        actual = self.estimate_tokens_from_chars(len(content or ""))
+        # The pre-call check reserved the provider's max_tokens. Usage records
+        # the conservative reservation so actual spend cannot exceed the cap.
+        self.output_tokens_estimated += reserved_output_tokens
+        self._check_wall()
+
+    def ceilings(self) -> dict:
+        return {
+            "max_queries": self.max_queries,
+            "max_llm_calls": self.max_llm_calls,
+            "max_embedding_texts": self.max_embedding_texts,
+            "max_input_tokens": self.max_input_tokens,
+            "max_output_tokens": self.max_output_tokens,
+            "max_wall_seconds": self.max_wall_seconds,
+            "max_estimated_spend_usd": self.max_estimated_spend_usd,
+            "input_cost_per_million_tokens": self.input_cost_per_million_tokens,
+            "output_cost_per_million_tokens": self.output_cost_per_million_tokens,
+            "embedding_cost_per_text_usd": self.embedding_cost_per_text_usd,
+            "allow_unpriced_embedding": self.allow_unpriced_embedding,
+        }
+
+    def usage(self) -> dict:
+        return {
+            "queries": self.queries,
+            "llm_calls": self.llm_calls,
+            "embedding_texts": self.embedding_texts,
+            "input_tokens_estimated": self.input_tokens_estimated,
+            "output_tokens_conservative": self.output_tokens_estimated,
+            "wall_seconds": self._wall_seconds(),
+            "estimated_spend_usd_conservative": self._estimated_spend(),
+        }
+
+    @contextmanager
+    def activate(self):
+        token = _ACTIVE_EVAL_BUDGET.set(self)
+        try:
+            yield self
+        finally:
+            _ACTIVE_EVAL_BUDGET.reset(token)
+
+
+_ACTIVE_EVAL_BUDGET: ContextVar[EvaluationBudget | None] = ContextVar(
+    "active_eval_budget", default=None
+)
+
+
+def active_budget() -> EvaluationBudget | None:
+    return _ACTIVE_EVAL_BUDGET.get()
+
+
+def record_retrieval_query(*, embedding_texts: int = 1) -> None:
+    budget = active_budget()
+    if budget is not None:
+        budget.record_query(embedding_texts=embedding_texts)
+
+
+def live_request_timeout(default_seconds: float) -> float:
+    budget = active_budget()
+    if budget is None:
+        return default_seconds
+    budget._check_wall()
+    remaining = budget.max_wall_seconds - budget._wall_seconds()
+    if remaining <= 0:
+        raise EvaluationBudgetExceeded("wall-time budget exceeded")
+    return max(0.001, min(default_seconds, remaining))
+
+
+def record_retrieval_response() -> None:
+    budget = active_budget()
+    if budget is not None:
+        budget._check_wall()
+
+
+def active_budget_provenance() -> dict | None:
+    budget = active_budget()
+    return None if budget is None else {"ceilings": budget.ceilings(), "usage": budget.usage()}
+
+
+def api_headers() -> dict[str, str]:
+    api_key = str(settings.api_key or "").strip()
+    return {"X-HybridMind-API-Key": api_key} if api_key else {}
+
+
+def sanitized_error(exc: BaseException) -> str:
+    status_code = getattr(getattr(exc, "response", None), "status_code", None)
+    return f"{type(exc).__name__} (HTTP {status_code})" if status_code else type(exc).__name__
+
+
+def enforce_priced_llm_budget(
+    args, *, answer_requested: bool = False, decomposition_requested: bool = False
+) -> None:
+    """Reject live paid-provider paths whose spend cannot be bounded.
+
+    QA is pinned to Z.AI outside explicit research mode. Decomposition uses
+    the automatic provider chain, so Z.AI pricing is required whenever that
+    chain could fall through to Z.AI, even if a self-hosted RunPod is first.
+    """
+    paid_possible = (
+        answer_requested and not settings.allow_research_proxy
+    ) or (
+        decomposition_requested
+        and "zai" in llm_client.provider_chain()
+    )
+    if paid_possible and (
+        args.input_cost_per_million_tokens <= 0
+        or args.output_cost_per_million_tokens <= 0
+    ):
+        raise SystemExit(
+            "Paid LLM evaluation requires explicit input/output token prices "
+            "for spend enforcement"
+        )
+
+
+def add_budget_arguments(parser) -> None:
+    """Add safe live-evaluation ceilings to an argparse parser."""
+    parser.add_argument("--execute", action="store_true", help="Perform live API/provider calls (default: dry plan only)")
+    parser.add_argument("--max-queries", type=int, default=100)
+    parser.add_argument("--max-llm-calls", type=int, default=0)
+    parser.add_argument("--max-embedding-texts", type=int, default=100)
+    parser.add_argument("--max-input-tokens", type=int, default=0)
+    parser.add_argument("--max-output-tokens", type=int, default=0)
+    parser.add_argument("--max-wall-seconds", type=float, default=900.0)
+    parser.add_argument("--max-estimated-spend-usd", type=float, default=0.0)
+    parser.add_argument("--input-cost-per-million-tokens", type=float, default=0.0)
+    parser.add_argument("--output-cost-per-million-tokens", type=float, default=0.0)
+    parser.add_argument("--embedding-cost-per-text-usd", type=float)
+    parser.add_argument("--allow-unpriced-embedding", action="store_true")
+
+
+def budget_from_args(args) -> EvaluationBudget:
+    return EvaluationBudget(
+        max_queries=args.max_queries,
+        max_llm_calls=args.max_llm_calls,
+        max_embedding_texts=args.max_embedding_texts,
+        max_input_tokens=args.max_input_tokens,
+        max_output_tokens=args.max_output_tokens,
+        max_wall_seconds=args.max_wall_seconds,
+        max_estimated_spend_usd=args.max_estimated_spend_usd,
+        input_cost_per_million_tokens=args.input_cost_per_million_tokens,
+        output_cost_per_million_tokens=args.output_cost_per_million_tokens,
+        embedding_cost_per_text_usd=args.embedding_cost_per_text_usd,
+        allow_unpriced_embedding=args.allow_unpriced_embedding,
     )
 
 def llm_answer(question: str, snippets: list[str], question_date: str = "", model: str | None = None) -> str:
@@ -306,6 +612,46 @@ def answer_question(
     )
 
 
+def answer_question_with_status(
+    question: str,
+    snippets: list[str],
+    question_type: str = "default",
+    question_date: str = "",
+    model: str | None = None,
+) -> AnswerResult:
+    """Generate an answer without collapsing infrastructure failures into zero.
+
+    ``abstained`` is a model outcome and may legitimately count as an incorrect
+    answer. ``provider_unavailable`` and ``provider_error`` are run failures;
+    evaluators must ledger them and fail closed instead of adding a zero to the
+    accuracy denominator.
+    """
+    prompt_version = (
+        QA_PROMPT_VERSION
+        if LEGACY_ANSWERING
+        else QA_MULTIHOP_PROMPT_VERSION
+        if question_type == "multihop"
+        else QA_CITATION_PROMPT_VERSION
+    )
+    if not snippets:
+        return AnswerResult("", prompt_version, "no_context")
+    if not _is_llm_available(model):
+        return AnswerResult("", prompt_version, "provider_unavailable")
+    try:
+        answer, actual_prompt_version = answer_question(
+            question,
+            snippets,
+            question_type=question_type,
+            question_date=question_date,
+            model=model,
+        )
+    except AnswerProviderError as exc:
+        return AnswerResult("", prompt_version, "provider_error", str(exc))
+    if is_abstention(answer):
+        return AnswerResult(answer, actual_prompt_version, "abstained")
+    return AnswerResult(answer, actual_prompt_version, "completed")
+
+
 # --------------------------------------------------------------------- #
 # 6.1(b): deterministic answer normalization, applied BEFORE judging.
 # Pure Python — never delegated to the LLM, so it can't itself hallucinate.
@@ -394,12 +740,33 @@ def retrieve_with_decomposition(
     the guards inside decompose_query() (RunPod not configured, degenerates
     to <=1 sub-question, or all sub-questions rejected for novel entities).
     """
-    from engine.query_decomposition import decompose_query
+    from engine.query_decomposition import _DECOMPOSE_SYSTEM_PROMPT, decompose_query
 
     if question_type != "multihop":
         return post_fn(query_text)
 
-    sub_questions = decompose_query(query_text, model=model, enabled=decompose_enabled)
+    budget = active_budget()
+    reserved_output_tokens = 0
+    decomposition_will_call = bool(
+        decompose_enabled
+        and query_text.strip()
+        and len(query_text.strip()) <= 2_000
+        and llm_client.is_configured()
+    )
+    if budget is not None and decomposition_will_call:
+        reserved_output_tokens = budget.before_llm(
+            [
+                {"role": "system", "content": _DECOMPOSE_SYSTEM_PROMPT},
+                {"role": "user", "content": query_text},
+            ],
+            300,
+        )
+    try:
+        sub_questions = decompose_query(query_text, model=model, enabled=decompose_enabled)
+    finally:
+        if budget is not None and decomposition_will_call:
+            rendered = json.dumps(locals().get("sub_questions", []))
+            budget.after_llm(rendered, reserved_output_tokens)
     if not sub_questions:
         return post_fn(query_text)
 
@@ -437,12 +804,12 @@ def export_training_record(path: str, query_id: str, query_type: str, candidates
 
 
 def judge_correct(hypothesis: str, gold_answer: str) -> bool:
-    """Deterministic overlap-based judge — no extra LLM call, cheap and repeatable."""
+    """Deterministic answer-overlap heuristic; this is not an LLM judge."""
     return judge_correct_with_rationale(hypothesis, gold_answer)[0]
 
 
 def judge_correct_with_rationale(hypothesis: str, gold_answer: str) -> tuple[bool, str]:
-    """Same verdict as judge_correct(), plus the rule that fired (for the ledger)."""
+    """Return the deterministic answer-overlap verdict and rule that fired."""
     if not hypothesis or not gold_answer:
         return False, "empty hypothesis or gold answer"
     hyp_l, gold_l = hypothesis.lower(), gold_answer.lower()

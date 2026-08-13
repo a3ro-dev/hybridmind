@@ -1,0 +1,33 @@
+{
+  "schema_version": "hybridmind-live-canary-result/v1",
+  "completed_at": "2026-08-13T23:35:48.8561574+05:30",
+  "classification": "measured_live_negative_result",
+  "plan_path": "benchmarks/results/live_tei_canary_plan.json",
+  "plan_sha256": "97950f2e893ea297e7e11c24cb0fd5a29e5f632a13ba10771b67efb2259d79a6",
+  "offline_report_sha256": "c9e54ad77e3827ac571c3618b62435879025c649a20660f48d0596467a459efe",
+  "provider": "tei",
+  "expected_embedding_dimension": 4096,
+  "outcome": "read_timeout",
+  "successful_embedding_response": false,
+  "observed_embedding_dimension": null,
+  "request_attempts": 1,
+  "request_timeout_seconds": 60,
+  "observed_command_wall_seconds": 62.1,
+  "usage_actual": {
+    "embedding_calls": 1,
+    "embedding_input_tokens_accounting_upper_bound": 8,
+    "llm_calls": 0,
+    "reranker_calls": 0
+  },
+  "cost": {
+    "actual_provider_invoice_cost_usd": null,
+    "modeled_rate_usd_per_second": 0.0027722222222222224,
+    "modeled_plan_ceiling_usd": 0.16633333333333333,
+    "modeled_max_spend_usd": 0.17
+  },
+  "fallback_used": false,
+  "retry_used": false,
+  "evaluation_admitted": false,
+  "interpretation": "The configured RunPod TEI path did not return a vector within the one-call live plan. This result establishes unavailability for this canary only; it does not establish embedding quality or dimension correctness.",
+  "post_run_hardening": "The preflight now leaves a one-second teardown margin and reports provider-check wall time; no second live call was made."
+}
