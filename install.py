@@ -72,6 +72,11 @@ RUNPOD_TEI_EMBEDDING_URL=
 RUNPOD_API_KEY=
 RUNPOD_LLM_ENDPOINT_ID=
 HYBRIDMIND_EMBEDDING_DIMENSION=4096
+HYBRIDMIND_HOST=127.0.0.1
+HYBRIDMIND_API_KEY=
+HYBRIDMIND_ALLOW_UNAUTHENTICATED_LOCALHOST=true
+HYBRIDMIND_CORS_ALLOWED_ORIGINS=http://127.0.0.1:8501,http://localhost:8501
+HYBRIDMIND_HEALTH_REMOTE_CHECKS=false
 HYBRIDMIND_ALLOW_RESEARCH_PROXY=false
 HC_API_KEY=
 FACT_EXTRACTION_ENABLED=false
@@ -162,10 +167,20 @@ def generate_openapi_schema():
         },
         "servers": [
             {
-                "url": "https://your-ngrok-or-tunnel-url.ngrok-free.app",
-                "description": "Publicly exposed tunnel URL to your local HybridMind instance"
+                "url": "http://127.0.0.1:8000",
+                "description": "Local-only HybridMind instance"
             }
         ],
+        "components": {
+            "securitySchemes": {
+                "HybridMindApiKey": {
+                    "type": "apiKey",
+                    "in": "header",
+                    "name": "X-HybridMind-API-Key"
+                }
+            }
+        },
+        "security": [{"HybridMindApiKey": []}],
         "paths": {
             "/nodes": {
                 "post": {

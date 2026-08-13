@@ -20,6 +20,7 @@ import logging
 import sys
 import time
 from pathlib import Path
+import numpy as np
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -93,18 +94,21 @@ def main():
     embeddings = embedding_engine.embed_batch(
         texts,
     )
-    if embeddings.ndim != 2 or embeddings.shape[1] != 4096:
+    expected_shape = (total, 4096)
+    if embeddings.shape != expected_shape:
         raise RuntimeError(
             f"Embedding backend returned shape {embeddings.shape}; reindexing requires "
-            "exactly 4096 dimensions and will not coerce the result."
+            f"exactly {expected_shape} and will not accept missing/extra rows."
         )
+    if not np.all(np.isfinite(embeddings)):
+        raise RuntimeError("Embedding backend returned non-finite values; refusing reindex")
     elapsed = time.perf_counter() - t0
     logger.info(f"Embedding done: {total} nodes in {elapsed:.1f}s ({total/elapsed:.1f} nodes/s)")
     logger.info(f"Embedding shape: {embeddings.shape}")
 
     logger.info("Writing embeddings to SQLite...")
     for node_id, emb in zip(node_ids, embeddings):
-        sqlite_store.update_node(node_id, embedding=emb)
+        sqlite_store.update_node(node_id, embedding=emb, raw_embedding=emb)
 
     logger.info("Rebuilding FAISS index...")
     pairs = list(zip(node_ids, embeddings))

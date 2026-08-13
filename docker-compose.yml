@@ -5,11 +5,17 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - hybridmind_data:/app/data
     environment:
       - HYBRIDMIND_DEVICE=auto
+      - HYBRIDMIND_HOST=0.0.0.0
+      - HYBRIDMIND_API_KEY=${HYBRIDMIND_API_KEY:-}
+      # The host port is loopback-only. This permits the bundled UI container;
+      # set HYBRIDMIND_API_KEY and disable this flag for shared Docker networks.
+      - HYBRIDMIND_ALLOW_UNAUTHENTICATED_PRIVATE_NETWORKS=true
+      - HYBRIDMIND_TRUSTED_HOSTS=api,localhost,127.0.0.1
       # Uncomment to pin a specific device:
       # - HYBRIDMIND_DEVICE=cpu
     healthcheck:
@@ -36,9 +42,11 @@ services:
       dockerfile: Dockerfile
     command: ["streamlit", "run", "ui/app.py", "--server.port", "8501", "--server.address", "0.0.0.0"]
     ports:
-      - "8501:8501"
+      - "127.0.0.1:8501:8501"
     environment:
       - API_URL=http://api:8000
+      # Set the same value on both services when API authentication is enabled.
+      - HYBRIDMIND_API_KEY=${HYBRIDMIND_API_KEY:-}
     depends_on:
       api:
         condition: service_healthy

@@ -8,6 +8,7 @@ configuration opt-in is enabled.
 """
 import json
 import logging
+from datetime import datetime
 from typing import Optional
 
 from config import settings
@@ -26,7 +27,7 @@ RULES:
 2. Each fact MUST be self-contained — readable without any context
 3. Resolve relative dates (e.g. "last Friday" → actual date if known)
 4. Include minor details — they may be queried later
-5. Extract 5-20 facts per conversation session
+5. Return an empty facts array when the input contains no durable, answerable facts
 6. Tag external facts as world, first-person events as experience, direct perceptions as observation, and preferences/beliefs as opinion
 7. Confidence measures extraction certainty, not importance
 8. Add caused_by only for explicit cause/effect statements and reference exact fact strings from this output
@@ -35,6 +36,10 @@ RULES:
 Example output:
 [{"fact": "Alice works as a software engineer at Google", "entities": ["Alice", "Google"], "date": "", "memory_kind": "world", "confidence": 0.95, "caused_by": []}, {"fact": "Alice moved to San Francisco in 2023", "entities": ["Alice", "San Francisco"], "date": "2023-01-01", "memory_kind": "experience", "confidence": 0.9, "caused_by": []}]
 """
+
+
+class FactExtractionError(RuntimeError):
+    """Fact extraction was requested but could not be completed faithfully."""
 
 
 def extract_facts_from_session(turns: list[dict]) -> list[dict]:
@@ -48,21 +53,21 @@ def extract_facts_from_session(turns: list[dict]) -> list[dict]:
 
     Returns:
         List of dicts: {fact: str, entities: list[str], date: str}
-        Returns [] on any failure — caller must handle gracefully.
+        Returns [] only for empty/factless input. Provider and parse failures
+        raise ``FactExtractionError`` so callers cannot report false success.
     """
     # Quick check: fact extraction must be explicitly enabled
     if not settings.fact_extraction_enabled:
-        return []
+        raise FactExtractionError("fact extraction is disabled by configuration")
 
     if not turns:
         return []
 
     if not llm_client.is_configured():
-        logger.warning("No policy-allowed LLM is configured — fact extraction disabled")
-        return []
+        raise FactExtractionError("no policy-allowed fact extraction provider is configured")
 
     # Build the conversation text with date and speaker context
-    lines = []
+    lines: list[str] = []
     for t in turns:
         date = t.get("date", "").strip()
         speaker = t.get("speaker", "").strip()
@@ -72,10 +77,35 @@ def extract_facts_from_session(turns: list[dict]) -> list[dict]:
         prefix = f"[{date}] " if date else ""
         lines.append(f"{prefix}{speaker}: {text}")
 
-    conversation = "\n".join(lines)[:16000]  # ~12k tokens max (increased from 8000)
-
-    if not conversation.strip():
+    if not lines:
         return []
+
+    max_chars = int(getattr(settings, "fact_extraction_max_chars_per_request", 12_000))
+    max_requests = int(getattr(settings, "fact_extraction_max_requests_per_session", 8))
+    if max_chars < 1 or max_requests < 1:
+        raise FactExtractionError("fact extraction request ceilings must be positive")
+
+    conversations: list[str] = []
+    current: list[str] = []
+    current_chars = 0
+    for line in lines:
+        if len(line) > max_chars:
+            raise FactExtractionError(
+                f"one conversation turn exceeds the {max_chars}-character request ceiling"
+            )
+        projected = current_chars + len(line) + (1 if current else 0)
+        if current and projected > max_chars:
+            conversations.append("\n".join(current))
+            current = []
+            current_chars = 0
+        current.append(line)
+        current_chars += len(line) + (1 if len(current) > 1 else 0)
+    if current:
+        conversations.append("\n".join(current))
+    if len(conversations) > max_requests:
+        raise FactExtractionError(
+            f"session requires {len(conversations)} extraction requests; ceiling is {max_requests}"
+        )
 
     _FACT_JSON_SCHEMA = {
         "name": "facts",
@@ -103,39 +133,23 @@ def extract_facts_from_session(turns: list[dict]) -> list[dict]:
         "strict": True,
     }
 
-    messages = [
-        {"role": "system", "content": _SYSTEM_PROMPT},
-        {"role": "user", "content": conversation},
-    ]
     response_format = {"type": "json_schema", "json_schema": _FACT_JSON_SCHEMA}
 
     logger.info(
-        f"fact_extractor: extracting facts for {len(turns)} turns ({len(conversation)} chars)"
+        "fact_extractor: extracting facts for %d turns in %d bounded request(s)",
+        len(turns),
+        len(conversations),
     )
-    content = _call_llm(messages, max_tokens=1536, response_format=response_format)
-    if content is None:
-        return []
-
-    cleaned = _parse_facts_content(content)
-
-    # Retry if we got 0 facts — rephrase to elicit at least a few
-    if not cleaned and turns:
-        logger.info("fact_extractor: 0 facts extracted, retrying with rephrased prompt")
-        retry_messages = [
-            {
-                "role": "system",
-                "content": (
-                    "You extract facts from conversations. "
-                    "Return a JSON array of at least 3 short facts. "
-                    'Format: [{"fact":"...","entities":[],"date":"","memory_kind":"world","confidence":0.9}]. '
-                    "Return ONLY the JSON array."
-                ),
-            },
-            {"role": "user", "content": conversation[:8000]},
+    cleaned: list[dict] = []
+    for conversation in conversations:
+        messages = [
+            {"role": "system", "content": _SYSTEM_PROMPT},
+            {"role": "user", "content": conversation},
         ]
-        retry_content = _call_llm(retry_messages, max_tokens=1024)
-        if retry_content:
-            cleaned.extend(_parse_facts_content(retry_content))
+        content = _call_llm(messages, max_tokens=1536, response_format=response_format)
+        if content is None:
+            raise FactExtractionError("fact extraction provider returned no usable response")
+        cleaned.extend(_parse_facts_content(content))
 
     logger.info(f"fact_extractor: extracted {len(cleaned)} facts from {len(turns)} turns")
     return cleaned
@@ -157,11 +171,11 @@ def _call_llm(
 
 
 def _parse_facts_content(content: str) -> list[dict]:
-    """Parse+clean one LLM response into a validated facts list. Returns [] on any failure."""
+    """Parse and validate a response; raise on malformed provider output."""
     if not content:
-        return []
+        raise FactExtractionError("empty fact extraction response")
     try:
-        logger.debug(f"fact_extractor: raw response ({len(content)} chars): {content[:500]}")
+        logger.debug("fact_extractor: received response chars=%d", len(content))
 
         # Parse: try json_schema envelope first, then raw array fallback
         parsed = json.loads(content)
@@ -176,12 +190,10 @@ def _parse_facts_content(content: str) -> list[dict]:
             if start >= 0 and end > start:
                 raw_facts = json.loads(content[start:end])
             else:
-                logger.warning(f"fact_extractor: unparseable response: {content[:300]}")
-                return []
+                raise FactExtractionError("fact extraction response contains no JSON facts array")
 
         if not isinstance(raw_facts, list):
-            logger.warning(f"fact_extractor: facts is not a list: {type(raw_facts)}")
-            return []
+            raise FactExtractionError("fact extraction response field 'facts' is not an array")
 
         cleaned = []
         for item in raw_facts:
@@ -190,18 +202,47 @@ def _parse_facts_content(content: str) -> list[dict]:
             fact_text = str(item.get("fact", "")).strip()
             if not fact_text:
                 continue
+            memory_kind = str(item.get("memory_kind", "world")).strip().lower()
+            if memory_kind not in {"world", "experience", "observation", "opinion"}:
+                raise FactExtractionError("fact extraction returned an invalid memory_kind")
+            entities = item.get("entities", [])
+            caused_by = item.get("caused_by", [])
+            if not isinstance(entities, list) or not all(isinstance(value, str) for value in entities):
+                raise FactExtractionError("fact extraction returned invalid entities")
+            if not isinstance(caused_by, list) or not all(isinstance(value, str) for value in caused_by):
+                raise FactExtractionError("fact extraction returned invalid caused_by")
+            try:
+                confidence = float(item.get("confidence", 1.0))
+            except (TypeError, ValueError) as exc:
+                raise FactExtractionError("fact extraction returned invalid confidence") from exc
+            if not 0.0 <= confidence <= 1.0:
+                raise FactExtractionError("fact extraction confidence is outside [0, 1]")
+            date_value = str(item.get("date", "")).strip()
+            if date_value:
+                try:
+                    # Validate the complete provider value.  The permissive temporal
+                    # query parser is intentionally not used here because extracted
+                    # dates are persisted as event/valid time.
+                    datetime.fromisoformat(date_value.replace("Z", "+00:00"))
+                except ValueError as exc:
+                    raise FactExtractionError(
+                        "fact extraction returned an invalid ISO-8601 date"
+                    ) from exc
             cleaned.append({
                 "fact": fact_text,
-                "entities": item.get("entities", []) if isinstance(item.get("entities"), list) else [],
-                "date": str(item.get("date", "")).strip(),
-                "memory_kind": str(item.get("memory_kind", "world")).strip().lower(),
-                "confidence": max(0.0, min(1.0, float(item.get("confidence", 1.0)))),
-                "caused_by": item.get("caused_by", []) if isinstance(item.get("caused_by"), list) else [],
+                "entities": entities,
+                "date": date_value,
+                "memory_kind": memory_kind,
+                "confidence": confidence,
+                "caused_by": caused_by,
             })
         return cleaned
 
     except json.JSONDecodeError as e:
-        logger.error(f"fact_extractor JSON parse error: {e}. Raw content: {content[:500]}")
+        logger.error("fact_extractor JSON parse error type=%s", type(e).__name__)
+        raise FactExtractionError("fact extraction returned malformed JSON") from e
+    except FactExtractionError:
+        raise
     except Exception as e:
-        logger.error(f"fact_extractor unexpected error ({type(e).__name__}): {e}")
-    return []
+        logger.error("fact_extractor validation error type=%s", type(e).__name__)
+        raise FactExtractionError("fact extraction response validation failed") from e

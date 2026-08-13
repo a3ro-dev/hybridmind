@@ -26,6 +26,7 @@ def test_auto_research_mode_does_not_spend_zai_budget(monkeypatch):
     monkeypatch.setattr(settings, "runpod_llm_endpoint_id", "endpoint")
     monkeypatch.setattr(settings, "research_proxy_api_key", "research-key")
     monkeypatch.setattr(settings, "allow_research_proxy", True)
+    monkeypatch.setattr(settings, "allow_custom_provider_urls", True)
 
     assert llm_client.provider_chain() == ("runpod", "research_proxy")
     assert llm_client.provider_chain("zai") == ("zai", "research_proxy")
@@ -37,6 +38,7 @@ def test_research_proxy_opt_in_uses_only_configured_research_model(monkeypatch, 
     monkeypatch.setattr(settings, "research_proxy_api_key", "research-key")
     monkeypatch.setattr(settings, "research_proxy_base_url", "https://research.invalid/v1")
     monkeypatch.setattr(settings, "research_proxy_model", "qwen/research-model")
+    monkeypatch.setattr(settings, "allow_custom_provider_urls", True)
 
     seen = {}
 
@@ -86,3 +88,17 @@ def test_eval_research_opt_in_selects_proxy_without_paid_fallback(monkeypatch):
     assert seen["preferred"] == "research_proxy"
     assert seen["allow_fallback"] is False
     assert seen["model"] == settings.qa_model
+
+
+def test_provider_policy_rejects_key_redirection_to_untrusted_host(monkeypatch):
+    _disable_production_providers(monkeypatch)
+    monkeypatch.setattr(settings, "zai_api_key", "zai-key")
+    monkeypatch.setattr(settings, "zai_base_url", "https://attacker.invalid/v1")
+    monkeypatch.setattr(settings, "allow_custom_provider_urls", False)
+
+    try:
+        llm_client.provider_chain("zai", allow_fallback=False)
+    except ValueError as exc:
+        assert "untrusted host" in str(exc)
+    else:
+        raise AssertionError("Z.AI credential redirection was accepted")

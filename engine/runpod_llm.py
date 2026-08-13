@@ -108,8 +108,11 @@ def chat_completion(
         # Retry the submit itself: a scale-from-zero endpoint can 429/503 the
         # /run call while workers spin up, which is transient, not terminal.
         job_id = retry_transient(_submit, label="runpod_llm /run")
-    except Exception as e:
-        logger.error(f"runpod_llm: submit failed after retries: {e}")
+    except Exception as exc:
+        logger.error(
+            "runpod_llm: submit failed after retries type=%s",
+            type(exc).__name__,
+        )
         return None
 
     deadline = time.monotonic() + timeout_s
@@ -121,7 +124,9 @@ def chat_completion(
         except Exception as e:
             # Transient poll error (network blip, brief 5xx) — keep polling until
             # the deadline rather than abandoning an in-flight job.
-            logger.warning(f"runpod_llm: status poll error (will retry): {e}")
+            logger.warning(
+                "runpod_llm: status poll error; will retry type=%s", type(e).__name__
+            )
             time.sleep(_POLL_INTERVAL_S)
             continue
 
@@ -133,7 +138,7 @@ def chat_completion(
             return content
         elif status in ("FAILED", "CANCELLED", "TIMED_OUT"):
             # Terminal server-side states — no cleanup needed, the job is over.
-            logger.error(f"runpod_llm: job {job_id} ended {status}: {str(data.get('error'))[:300]}")
+            logger.error("runpod_llm: job ended status=%s", status)
             return None
         elif status in ("IN_QUEUE", "IN_PROGRESS"):
             time.sleep(_POLL_INTERVAL_S)
@@ -157,7 +162,9 @@ def _extract_content(data: dict, job_id: str) -> Optional[str]:
         content = choice["choices"][0]["message"]["content"]
         return content if content else None
     except Exception as e:
-        logger.error(f"runpod_llm: unexpected COMPLETED payload shape ({e}): {str(data)[:300]}")
+        logger.error(
+            "runpod_llm: unexpected completed payload type=%s", type(e).__name__
+        )
         return None
 
 
@@ -175,8 +182,12 @@ def cancel(job_id: str) -> bool:
         if not ok:
             logger.warning(f"runpod_llm: cancel {job_id} returned HTTP {r.status_code}")
         return ok
-    except Exception as e:
-        logger.warning(f"runpod_llm: cancel {job_id} failed: {e}")
+    except Exception as exc:
+        logger.warning(
+            "runpod_llm: cancel failed job=%s type=%s",
+            job_id,
+            type(exc).__name__,
+        )
         return False
 
 
@@ -192,8 +203,10 @@ def health() -> Optional[dict]:
         r = _get_client().get(f"{_base_url()}/health", timeout=15)
         r.raise_for_status()
         return r.json()
-    except Exception as e:
-        logger.warning(f"runpod_llm: health check failed: {e}")
+    except Exception as exc:
+        logger.warning(
+            "runpod_llm: health check failed type=%s", type(exc).__name__
+        )
         return None
 
 

@@ -1,74 +1,16 @@
-import urllib.request
-import json
-import os
+"""Compatibility command: keep one warm worker on every RunPod endpoint."""
 
-API_KEY = os.environ["RUNPOD_API_KEY"]
-GRAPHQL_URL = f"https://api.runpod.io/graphql?api_key={API_KEY}"
+try:
+    from scripts.runpod_endpoint_admin import set_all_workers_min
+except ModuleNotFoundError:  # direct ``python scripts/set_min_workers.py`` execution
+    from runpod_endpoint_admin import set_all_workers_min
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Content-Type": "application/json"
-}
 
-query = """
-query {
-  myself {
-    endpoints {
-      id
-      name
-      templateId
-      gpuIds
-      idleTimeout
-      scalerType
-      scalerValue
-      workersMin
-      workersMax
-      gpuCount
-    }
-  }
-}
-"""
+def main() -> int:
+    for endpoint_id, name, actual in set_all_workers_min(1):
+        print(f"{name} ({endpoint_id}): workersMin={actual}")
+    return 0
 
-req = urllib.request.Request(
-    GRAPHQL_URL,
-    data=json.dumps({"query": query}).encode('utf-8'),
-    headers=HEADERS
-)
 
-with urllib.request.urlopen(req) as resp:
-    data = json.loads(resp.read().decode('utf-8'))
-    endpoints = data["data"]["myself"]["endpoints"]
-
-for ep in endpoints:
-    ep_id = ep["id"]
-    mutation = f"""
-    mutation {{
-        saveEndpoint(input: {{
-            id: "{ep_id}",
-            name: "{ep['name']}",
-            templateId: "{ep['templateId']}",
-            gpuIds: "{ep['gpuIds']}",
-            idleTimeout: {ep['idleTimeout']},
-            scalerType: "{ep['scalerType']}",
-            scalerValue: {ep['scalerValue']},
-            workersMin: 1,
-            workersMax: {ep['workersMax']},
-            gpuCount: {ep['gpuCount']}
-        }}) {{
-            id
-            name
-            workersMin
-        }}
-    }}
-    """
-    req_mut = urllib.request.Request(
-        GRAPHQL_URL,
-        data=json.dumps({"query": mutation}).encode('utf-8'),
-        headers=HEADERS
-    )
-    try:
-        with urllib.request.urlopen(req_mut) as resp_mut:
-            res = json.loads(resp_mut.read().decode('utf-8'))
-            print(f"Successfully set workersMin=1 for {ep['name']} ({ep_id}):", res)
-    except Exception as e:
-        print(f"Error updating {ep_id}:", e)
+if __name__ == "__main__":
+    raise SystemExit(main())

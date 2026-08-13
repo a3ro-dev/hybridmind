@@ -81,8 +81,11 @@ class RemoteImageEmbeddingEngine:
                 logger.warning("image_embedding: server returned no patch_vectors")
                 return None
             return np.asarray(patch_vectors, dtype=np.float32)
-        except Exception as e:
-            logger.error(f"image_embedding: embed_image failed: {e}")
+        except Exception as exc:
+            logger.error(
+                "image_embedding: embed_image failed type=%s",
+                type(exc).__name__,
+            )
             return None
 
     def embed_query(self, query_text: str) -> Optional[np.ndarray]:
@@ -98,8 +101,11 @@ class RemoteImageEmbeddingEngine:
                 logger.warning("image_embedding: server returned no query_vectors")
                 return None
             return np.asarray(query_vectors, dtype=np.float32)
-        except Exception as e:
-            logger.error(f"image_embedding: embed_query failed: {e}")
+        except Exception as exc:
+            logger.error(
+                "image_embedding: embed_query failed type=%s",
+                type(exc).__name__,
+            )
             return None
 
     def health(self) -> bool:
@@ -136,5 +142,5 @@ def get_image_embedding_engine() -> Optional[RemoteImageEmbeddingEngine]:
             api_key=api_key,
         )
         _INSTANCE_KEY = key
-        logger.info(f"image_embedding: engine initialized -> {base_url}")
+        logger.info("image_embedding: remote engine initialized")
     return _INSTANCE

@@ -24,8 +24,8 @@ Env vars:
 """
 
 import logging
-import os
 import time
+import hashlib
 from typing import Dict, List, Optional
 import numpy as np
 
@@ -337,6 +337,8 @@ class RemoteEmbeddingEngine:
 
     def __init__(self, base_url: str, api_key: str, dimension: int = 4096, model: str = "qwen/qwen3-embedding-8b"):
         import httpx
+        if dimension != 4096:
+            raise ValueError("RemoteEmbeddingEngine requires dimension=4096")
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self._dimension = dimension
@@ -346,7 +348,11 @@ class RemoteEmbeddingEngine:
             limits=httpx.Limits(max_connections=8, max_keepalive_connections=4),
             timeout=httpx.Timeout(connect=10.0, read=300.0, write=10.0, pool=10.0),
         )
-        logger.info(f"RemoteEmbeddingEngine: {self.base_url} model={model} dim={dimension} (no local fallback)")
+        logger.info(
+            "RemoteEmbeddingEngine initialized model=%s dim=%d (no local fallback)",
+            model,
+            dimension,
+        )
 
     @property
     def dimension(self) -> int:
@@ -376,23 +382,38 @@ class RemoteEmbeddingEngine:
                 data = resp.json()["data"]
                 data.sort(key=lambda x: x["index"])
                 vecs = np.array([d["embedding"] for d in data], dtype=np.float32)
-                if vecs.ndim != 2 or vecs.shape[1] != self._dimension:
+                expected_shape = (len(texts), self._dimension)
+                if vecs.shape != expected_shape:
                     raise RuntimeError(
                         f"RemoteEmbeddingEngine: endpoint returned shape {vecs.shape}, "
-                        f"expected (*, {self._dimension}). Wrong model? Refusing to corrupt index."
+                        f"expected {expected_shape}. Wrong model or incomplete response? "
+                        "Refusing to corrupt index."
                     )
+                if not np.all(np.isfinite(vecs)):
+                    raise RuntimeError("RemoteEmbeddingEngine: endpoint returned non-finite values")
                 norms = np.linalg.norm(vecs, axis=1, keepdims=True)
                 norms = np.where(norms > 0, norms, 1)
                 return vecs / norms
             except Exception as e:
                 last_exc = e
-                logger.error(f"RemoteEmbeddingEngine API error (attempt {attempt+1}/{max_retries}): {e}")
+                if not is_transient(e):
+                    raise RuntimeError(
+                        "RemoteEmbeddingEngine rejected a terminal provider response "
+                        f"({type(e).__name__})"
+                    ) from e
+                logger.error(
+                    "RemoteEmbeddingEngine API error (attempt %d/%d): %s",
+                    attempt + 1,
+                    max_retries,
+                    type(e).__name__,
+                )
                 if attempt < max_retries - 1:
                     import time
                     time.sleep(min(30.0, 2.0 * (attempt + 1)))
         raise RuntimeError(
             f"RemoteEmbeddingEngine {self._dimension}-dim API call failed after {max_retries} attempts. "
-            f"No local fallback — bring the endpoint up first. Last error: {last_exc}"
+            f"No local fallback — bring the endpoint up first. Last error type: "
+            f"{type(last_exc).__name__}"
         )
 
     def embed(self, text: str, normalize: bool = True) -> np.ndarray:
@@ -433,6 +454,10 @@ class RemoteEmbeddingEngine:
         norms = np.where(norms > 0, norms, 1)
         return np.dot(embeddings / norms, q)
 
+    def close(self) -> None:
+        """Release the persistent HTTP connection pool."""
+        self._client.close()
+
     @property
     def model(self):
         return self
@@ -462,6 +487,8 @@ class TEIEmbeddingEngine:
 
     def __init__(self, base_url: str, api_key: str, dimension: int = 4096):
         import httpx
+        if dimension != 4096:
+            raise ValueError("TEIEmbeddingEngine requires dimension=4096")
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self._dimension = dimension
@@ -476,7 +503,9 @@ class TEIEmbeddingEngine:
         # dimension (4096), and any other model would emit a different dimension
         # that silently corrupts every similarity score. A failed remote call
         # raises loudly so the caller stops rather than poisons retrieval.
-        logger.info(f"TEIEmbeddingEngine: {self.base_url} dim={dimension} (no fallback)")
+        logger.info(
+            "TEIEmbeddingEngine initialized dim=%d (no fallback)", dimension
+        )
 
     @property
     def dimension(self) -> int:
@@ -531,25 +560,28 @@ class TEIEmbeddingEngine:
             resp = self._client.post(f"{self.base_url}/embed", json={"inputs": texts})
             resp.raise_for_status()
             vecs = np.array(resp.json(), dtype=np.float32)
-            if vecs.ndim != 2 or vecs.shape[1] != self._dimension:
+            expected_shape = (len(texts), self._dimension)
+            if vecs.shape != expected_shape:
                 raise RuntimeError(
                     f"TEI endpoint returned {vecs.shape} vectors; expected "
-                    f"(*, {self._dimension}). Wrong model deployed at "
-                    f"{self.base_url}? Refusing to corrupt the index."
+                    f"{expected_shape}. Wrong model or incomplete response; "
+                    "refusing to corrupt the index."
                 )
+            if not np.all(np.isfinite(vecs)):
+                raise RuntimeError("TEI endpoint returned non-finite values")
             norms = np.linalg.norm(vecs, axis=1, keepdims=True)
             norms = np.where(norms > 0, norms, 1)
             return vecs / norms
 
         try:
             return retry_transient(_once, label="TEI /embed")
-        except Exception as e:
+        except Exception as exc:
             raise RuntimeError(
-                f"TEI embedding endpoint {self.base_url} unreachable after "
-                f"retries ({type(e).__name__}: {e}). No fallback by design — the "
+                "TEI embedding endpoint unreachable after retries "
+                f"({type(exc).__name__}). No fallback by design — the "
                 f"corpus is {self._dimension}-dim. Bring the RunPod endpoint up "
                 f"(`python scripts/preflight.py`) before retrying."
-            ) from e
+            ) from exc
 
     def warmup(self, timeout_s: float = 180.0) -> np.ndarray:
         """
@@ -563,7 +595,14 @@ class TEIEmbeddingEngine:
             t = min(15.0, max(2.0, deadline - time.monotonic()))
             resp = self._client.post(f"{self.base_url}/embed", json={"inputs": ["warmup"]}, timeout=t)
             resp.raise_for_status()
-            return np.array(resp.json(), dtype=np.float32)[0]
+            vecs = np.array(resp.json(), dtype=np.float32)
+            expected_shape = (1, self._dimension)
+            if vecs.shape != expected_shape or not np.all(np.isfinite(vecs)):
+                raise RuntimeError(
+                    f"TEI warmup returned invalid shape/values: {vecs.shape}; "
+                    f"expected finite {expected_shape}"
+                )
+            return vecs[0]
 
         attempt = 0
         while True:
@@ -624,6 +663,56 @@ class TEIEmbeddingEngine:
 
 # Singleton instance for shared use
 _embedding_engine = None
+_embedding_engine_config = None
+
+
+def _remote_embedding_credentials(hc_url: str, runpod_url: str) -> tuple[str, str]:
+    """Resolve a remote endpoint without crossing research/production keys."""
+    from config import settings
+    from engine.provider_policy import validate_provider_url
+
+    if hc_url:
+        if not settings.allow_research_proxy:
+            raise RuntimeError(
+                "HC_EMBEDDING_URL is a research proxy and requires "
+                "HYBRIDMIND_ALLOW_RESEARCH_PROXY=true"
+            )
+        api_key = settings.research_proxy_api_key.strip()
+        if not api_key:
+            raise RuntimeError("HC_EMBEDDING_URL requires HC_API_KEY")
+        return validate_provider_url(
+            hc_url,
+            "research_proxy",
+            allow_custom=settings.allow_custom_provider_urls,
+        ), api_key
+
+    api_key = settings.runpod_api_key.strip()
+    if runpod_url and not api_key:
+        raise RuntimeError("RUNPOD_EMBEDDING_URL requires RUNPOD_API_KEY")
+    return validate_provider_url(
+        runpod_url,
+        "runpod",
+        allow_custom=settings.allow_custom_provider_urls,
+    ), api_key
+
+
+def _runpod_tei_credentials(url: str) -> tuple[str, str]:
+    """Bind the TEI URL to the RunPod credential before constructing a client."""
+    from config import settings
+    from engine.provider_policy import validate_provider_url
+
+    api_key = settings.runpod_api_key.strip()
+    if not api_key:
+        raise RuntimeError("RUNPOD_TEI_EMBEDDING_URL requires RUNPOD_API_KEY")
+    return validate_provider_url(
+        url,
+        "runpod",
+        allow_custom=settings.allow_custom_provider_urls,
+    ), api_key
+
+
+def _credential_fingerprint(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
 def get_embedding_engine(model_name: str = _DEFAULT_MODEL, device: Optional[str] = None):
@@ -636,26 +725,41 @@ def get_embedding_engine(model_name: str = _DEFAULT_MODEL, device: Optional[str]
     There is no local or lower-dimensional fallback. HybridMind's persisted
     vector contract is exactly 4096 dimensions in every environment.
     """
-    global _embedding_engine
+    global _embedding_engine, _embedding_engine_config
+    from config import settings
 
-    tei_url = os.getenv("RUNPOD_TEI_EMBEDDING_URL", "").strip()
+    tei_url = settings.runpod_tei_embedding_url.strip()
     if tei_url:
-        if not isinstance(_embedding_engine, TEIEmbeddingEngine):
-            api_key = os.getenv("RUNPOD_API_KEY", "")
-            dim = int(os.getenv("HYBRIDMIND_EMBEDDING_DIMENSION", "4096"))
+        tei_url, api_key = _runpod_tei_credentials(tei_url)
+        dim = settings.embedding_dimension
+        resolved = ("tei", tei_url, _credential_fingerprint(api_key), dim)
+        if not isinstance(_embedding_engine, TEIEmbeddingEngine) or _embedding_engine_config != resolved:
+            if _embedding_engine is not None and hasattr(_embedding_engine, "close"):
+                _embedding_engine.close()
             _embedding_engine = TEIEmbeddingEngine(base_url=tei_url, api_key=api_key, dimension=dim)
+            _embedding_engine_config = resolved
         return _embedding_engine
 
-    remote_url = (
-        os.getenv("HC_EMBEDDING_URL", "").strip()
-        or os.getenv("RUNPOD_EMBEDDING_URL", "").strip()
-    )
+    hc_url = settings.research_embedding_url.strip()
+    runpod_url = settings.runpod_embedding_url.strip()
+    remote_url = hc_url or runpod_url
     if remote_url:
-        if not isinstance(_embedding_engine, RemoteEmbeddingEngine):
-            api_key = os.getenv("HC_API_KEY") or os.getenv("RUNPOD_API_KEY", "")
-            dim = int(os.getenv("HYBRIDMIND_EMBEDDING_DIMENSION", "4096"))
-            remote_model = os.getenv("HYBRIDMIND_REMOTE_EMBEDDING_MODEL", "qwen/qwen3-embedding-8b")
+        remote_url, api_key = _remote_embedding_credentials(hc_url, runpod_url)
+        dim = settings.embedding_dimension
+        remote_model = settings.remote_embedding_model
+        provider = "research_proxy" if hc_url else "runpod"
+        resolved = (
+            provider,
+            remote_url,
+            _credential_fingerprint(api_key),
+            dim,
+            remote_model,
+        )
+        if not isinstance(_embedding_engine, RemoteEmbeddingEngine) or _embedding_engine_config != resolved:
+            if _embedding_engine is not None and hasattr(_embedding_engine, "close"):
+                _embedding_engine.close()
             _embedding_engine = RemoteEmbeddingEngine(base_url=remote_url, api_key=api_key, dimension=dim, model=remote_model)
+            _embedding_engine_config = resolved
         return _embedding_engine
 
     raise RuntimeError(

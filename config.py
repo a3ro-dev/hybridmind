@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     # The .mind extension is HybridMind's native database format
     # It bundles SQLite + FAISS + NetworkX into a single directory
     mind_file_path: str = "data/hybridmind.mind"
+    backup_dir: str = "data/backups"
+    snapshot_retention: int = 3
     
     # Legacy paths (for backward compatibility)
     database_path: str = "data/hybridmind.mind/store.db"
@@ -46,9 +48,30 @@ class Settings(BaseSettings):
     # start without a remote backend capable of exact 4096-dimensional output.
     embedding_model: str = "Qwen/Qwen3-Embedding-8B"
     embedding_dimension: int = 4096
-    use_graph_conditioned_embeddings: bool = True
+    # Experimental and history-dependent: opt in explicitly. Conditioning a
+    # node on already-indexed neighbors makes results depend on ingest order.
+    use_graph_conditioned_embeddings: bool = False
     embedding_timeout_seconds: int = 30
     embedding_batch_size: int = 32  # per-batch size for model.encode()
+    runpod_tei_embedding_url: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "RUNPOD_TEI_EMBEDDING_URL", "HYBRIDMIND_RUNPOD_TEI_EMBEDDING_URL"
+        ),
+    )
+    runpod_embedding_url: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "RUNPOD_EMBEDDING_URL", "HYBRIDMIND_RUNPOD_EMBEDDING_URL"
+        ),
+    )
+    research_embedding_url: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "HC_EMBEDDING_URL", "HYBRIDMIND_RESEARCH_EMBEDDING_URL"
+        ),
+    )
+    remote_embedding_model: str = "qwen/qwen3-embedding-8b"
 
     # Search Defaults (tuned for LoCoMo-style factoid queries)
     default_top_k: int = 10
@@ -67,9 +90,13 @@ class Settings(BaseSettings):
     # mxbai-rerank-large-v2: Apache 2.0, ~84% Hit@1 vs 77% bge-reranker-v2-m3, 8x faster
     reranker_model: str = "mixedbread-ai/mxbai-rerank-large-v2"
     rerank_mode: str = Field(
-        default="cross",
+        default="off",
         validation_alias=AliasChoices("RERANK_MODE", "HYBRIDMIND_RERANK_MODE"),
     )
+    reranker_warmup_enabled: bool = False
+    reranker_max_pairs: int = Field(default=100, ge=1, le=100)
+    reranker_max_query_chars: int = Field(default=4_096, ge=1, le=32_768)
+    reranker_max_text_chars: int = Field(default=8_192, ge=1, le=65_536)
     rerank_rrf_weight: float = 0.70
     rerank_cross_encoder_weight: float = 0.30
 
@@ -103,9 +130,10 @@ class Settings(BaseSettings):
     query_decomposition_enabled: bool = False
     rerank_pool_size: int = 25  # Phase 6.2.4 candidate pool size knob
 
-    # Lightweight query-local lexical reranking. The 500-candidate LoCoMo
-    # checkpoint replay improved exact-source Recall@10 at ~61ms mean cost.
-    local_lexical_rerank_enabled: bool = True
+    # Lightweight query-local lexical reranking. A retrospective partial
+    # checkpoint suggested a gain, but it was not a held-out/current run; keep
+    # this off until confirmatory evidence-ID evaluation establishes the tradeoff.
+    local_lexical_rerank_enabled: bool = False
     local_lexical_rerank_weight: float = 0.5
     local_lexical_rerank_pool_size: int = 500
     local_lexical_term_cache_size: int = 20_000
@@ -131,10 +159,8 @@ class Settings(BaseSettings):
 
     # Auto-edge inference (Phase 3)
     auto_edges_enabled: bool = False
-    # 0.70/10 (lowered from 0.75/5): ablation showed too-sparse auto-edges yield
-    # zero graph signal on graph-dependent queries — a slightly looser threshold
-    # and higher per-node cap keeps precision reasonable while actually producing
-    # enough edges for graph traversal/proximity scoring to matter.
+    # Untuned opt-in defaults. Do not describe these values as benchmark-backed
+    # until a request/server/corpus-attested threshold sweep is completed.
     auto_edge_cosine_threshold: float = 0.70
     auto_edge_max_per_node: int = 10
     auto_edge_entity_enabled: bool = False  # requires spaCy or fact entities
@@ -148,6 +174,11 @@ class Settings(BaseSettings):
     # Memory lifecycle & Visual memory
     fact_contradiction_threshold: float = 0.85
     image_embedding_url: Optional[str] = None
+    image_ingest_max_base64_chars: int = Field(default=12_000_000, ge=1)
+    image_ingest_max_caption_chars: int = Field(default=50_000, ge=1)
+    image_ingest_max_patch_vectors: int = Field(default=4_096, ge=1)
+    image_ingest_max_patch_dimension: int = Field(default=4_096, ge=1)
+    image_ingest_max_patch_bytes: int = Field(default=64 * 1024 * 1024, ge=1)
 
     # Structured ingestion and observer/reflector lifecycle. Z.AI is the
     # production hosted provider; RunPod is self-hosted; Hack Club is available
@@ -159,6 +190,12 @@ class Settings(BaseSettings):
         ),
     )
     fact_model: str = "glm-4.6"
+    # Hard tokenomics guardrails: long sessions are losslessly split across
+    # bounded requests and rejected before inference if this call ceiling would
+    # be exceeded.
+    fact_extraction_max_chars_per_request: int = 12_000
+    fact_extraction_max_requests_per_session: int = 8
+    fact_extraction_cache_max_entries: int = 256
     consolidation_model: str = "glm-4.6"
     memory_compression_enabled: bool = False
     memory_compression_archive_sources: bool = False
@@ -200,14 +237,29 @@ class Settings(BaseSettings):
     )
     research_proxy_base_url: str = "https://ai.hackclub.com/proxy/v1"
     research_proxy_model: str = "qwen/qwen3.5-9b"
+    allow_custom_provider_urls: bool = False
 
     # Performance
     batch_size: int = 32            # legacy alias; use embedding_batch_size for new code
     cache_size: int = 1000
     
     # API
-    host: str = "0.0.0.0"
+    # Local-only by default.  Remote binds are protected by the API-key
+    # middleware in main.py and should be an explicit deployment choice.
+    host: str = "127.0.0.1"
     port: int = 8000
+    api_key: str = ""
+    allow_unauthenticated_localhost: bool = True
+    allow_unauthenticated_private_networks: bool = False
+    cors_allowed_origins: str = "http://127.0.0.1:8501,http://localhost:8501"
+    trusted_hosts: str = "localhost,127.0.0.1,[::1],testserver"
+    request_rate_limit_per_minute: int = 120
+    expensive_rate_limit_per_minute: int = 10
+    health_remote_checks: bool = False
+    # Starting the API must not silently wake billable serverless workers.
+    # Live evaluations opt in only after the resource/spend plan passes.
+    startup_embedding_warmup_enabled: bool = False
+    startup_embedding_warmup_seconds: float = Field(default=45.0, gt=0.0, le=300.0)
 
     @field_validator("embedding_dimension")
     @classmethod

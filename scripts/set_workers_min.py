@@ -1,34 +1,38 @@
-import os
-import sys
-import dotenv
-import httpx
+"""Set warm workers for explicitly configured HybridMind RunPod endpoints."""
 
-dotenv.load_dotenv()
-key = os.getenv("RUNPOD_API_KEY")
-target = int(sys.argv[1]) if len(sys.argv) > 1 else 1
+from __future__ import annotations
 
-query = """
-mutation SaveEndpoint($input: EndpointInput!) {
-  saveEndpoint(input: $input) {
-    id
-    name
-    workersMin
-    workersMax
-  }
-}
-"""
+import argparse
 
-url = "https://api.runpod.io/graphql"
-headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+try:
+    from scripts.runpod_endpoint_admin import configured_endpoint_ids, set_workers_min
+except ModuleNotFoundError:  # direct script execution
+    from runpod_endpoint_admin import configured_endpoint_ids, set_workers_min
 
-endpoints = [
-    {"id": "ahsqb1dyttja8o", "name": "qwen3-embedding-8b", "workersMin": target, "workersMax": 3, "idleTimeout": 5},
-    {"id": "e4vphzghmbvt7j", "name": "Qwen3.5-9B", "workersMin": target, "workersMax": 2, "idleTimeout": 5},
-]
 
-for ep in endpoints:
-    resp = httpx.post(url, headers=headers, json={
-        "query": query,
-        "variables": {"input": ep}
-    }, timeout=15)
-    print(f"Endpoint {ep['id']}:", resp.status_code, resp.json())
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("workers_min", type=int)
+    parser.add_argument("endpoint_ids", nargs="*")
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    endpoint_ids = args.endpoint_ids or configured_endpoint_ids()
+    if not endpoint_ids:
+        raise SystemExit(
+            "No endpoint IDs supplied; configure RUNPOD_TEI_ENDPOINT_ID or "
+            "RUNPOD_LLM_ENDPOINT_ID"
+        )
+    for endpoint_id in endpoint_ids:
+        result = set_workers_min(endpoint_id, args.workers_min)
+        print(
+            f"{result.get('name', endpoint_id)} ({endpoint_id}): "
+            f"workersMin={result.get('workersMin', args.workers_min)}"
+        )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

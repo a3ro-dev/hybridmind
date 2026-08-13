@@ -1,38 +1,21 @@
-import urllib.request
-import json
-import urllib.error
-import os
+"""List RunPod endpoints without printing credentials or full provider payloads."""
 
-API_KEY = os.environ["RUNPOD_API_KEY"]
-GRAPHQL_URL = f"https://api.runpod.io/graphql?api_key={API_KEY}"
-
-query = """
-query {
-  myself {
-    endpoints {
-      id
-      name
-      templateId
-      gpuIds
-      idleTimeout
-      scalerType
-      scalerValue
-      workersMin
-      workersMax
-      gpuCount
-    }
-  }
-}
-"""
-
-req = urllib.request.Request(
-    GRAPHQL_URL,
-    data=json.dumps({"query": query}).encode('utf-8'),
-    headers={"Content-Type": "application/json"}
-)
 try:
-    with urllib.request.urlopen(req) as resp:
-        data = json.loads(resp.read().decode('utf-8'))
-        print("Query success:", data)
-except urllib.error.HTTPError as e:
-    print("HTTP Error:", e.code, e.read().decode('utf-8'))
+    from scripts.runpod_endpoint_admin import list_endpoints
+except ModuleNotFoundError:  # direct script execution
+    from runpod_endpoint_admin import list_endpoints
+
+
+def main() -> int:
+    endpoints = list_endpoints()
+    print(f"RunPod endpoints: {len(endpoints)}")
+    for endpoint in endpoints:
+        print(
+            f"{endpoint.get('name', '<unnamed>')} ({endpoint.get('id', '<missing>')}): "
+            f"workersMin={endpoint.get('workersMin')}, workersMax={endpoint.get('workersMax')}"
+        )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -22,6 +22,7 @@ import httpx
 
 from config import settings
 from engine import runpod_llm
+from engine.provider_policy import validate_provider_url, validate_runpod_endpoint_id
 
 logger = logging.getLogger(__name__)
 
@@ -58,11 +59,28 @@ def _research_proxy_configured() -> bool:
 
 def _provider_configured(provider: str) -> bool:
     if provider == "zai":
-        return bool(settings.zai_api_key.strip() and settings.zai_base_url.strip())
+        configured = bool(settings.zai_api_key.strip() and settings.zai_base_url.strip())
+        if configured:
+            validate_provider_url(
+                settings.zai_base_url,
+                "zai",
+                allow_custom=settings.allow_custom_provider_urls,
+            )
+        return configured
     if provider == "runpod":
-        return runpod_llm.is_configured()
+        configured = runpod_llm.is_configured()
+        if configured:
+            validate_runpod_endpoint_id(settings.runpod_llm_endpoint_id)
+        return configured
     if provider == "research_proxy":
-        return _research_proxy_configured()
+        configured = _research_proxy_configured()
+        if configured:
+            validate_provider_url(
+                settings.research_proxy_base_url,
+                "research_proxy",
+                allow_custom=settings.allow_custom_provider_urls,
+            )
+        return configured
     return False
 
 
@@ -148,7 +166,11 @@ def chat_completion(
         elif provider == "zai":
             content = _openai_compatible_completion(
                 provider="Z.AI",
-                base_url=settings.zai_base_url,
+                base_url=validate_provider_url(
+                    settings.zai_base_url,
+                    "zai",
+                    allow_custom=settings.allow_custom_provider_urls,
+                ),
                 api_key=settings.zai_api_key,
                 model=model or settings.qa_model,
                 messages=messages,
@@ -163,7 +185,11 @@ def chat_completion(
             )
             content = _openai_compatible_completion(
                 provider="research proxy",
-                base_url=settings.research_proxy_base_url,
+                base_url=validate_provider_url(
+                    settings.research_proxy_base_url,
+                    "research_proxy",
+                    allow_custom=settings.allow_custom_provider_urls,
+                ),
                 api_key=settings.research_proxy_api_key,
                 model=settings.research_proxy_model,
                 messages=messages,
@@ -225,8 +251,7 @@ def _openai_compatible_completion(
             if status in _RETRYABLE_STATUS and attempt < _MAX_ATTEMPTS - 1:
                 _sleep_backoff(attempt, provider, f"HTTP {status}")
                 continue
-            body = exc.response.text[:500] if exc.response is not None else ""
-            logger.error("%s completion failed: HTTP %s %s", provider, status, body)
+            logger.error("%s completion failed: HTTP %s", provider, status)
             return None
         except (
             httpx.ConnectError,
@@ -239,10 +264,19 @@ def _openai_compatible_completion(
             if attempt < _MAX_ATTEMPTS - 1:
                 _sleep_backoff(attempt, provider, type(exc).__name__)
                 continue
-            logger.error("%s completion failed after %s attempts: %s", provider, _MAX_ATTEMPTS, exc)
+            logger.error(
+                "%s completion failed after %s attempts type=%s",
+                provider,
+                _MAX_ATTEMPTS,
+                type(exc).__name__,
+            )
             return None
         except (KeyError, TypeError, ValueError) as exc:
-            logger.error("%s returned an invalid completion payload: %s", provider, exc)
+            logger.error(
+                "%s returned an invalid completion payload type=%s",
+                provider,
+                type(exc).__name__,
+            )
             return None
     return None
 

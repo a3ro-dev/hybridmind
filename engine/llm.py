@@ -26,6 +26,38 @@ class ExtractedData:
     language: str
 
 
+class LLMOutputError(RuntimeError):
+    """The configured provider returned output that cannot be stored safely."""
+
+
+def _bounded_text(text: str, *, operation: str, max_chars: int) -> str:
+    clean = str(text).strip()
+    if not clean:
+        raise ValueError(f"{operation} requires non-empty text")
+    if len(clean) > max_chars:
+        raise ValueError(
+            f"{operation} input has {len(clean)} characters; maximum is {max_chars}. "
+            "Split the source explicitly so provenance and provider cost remain visible."
+        )
+    return clean
+
+
+def _json_content(content: str):
+    """Parse one JSON value without treating malformed model output as data."""
+    clean = content.strip()
+    if clean.startswith("```"):
+        lines = clean.splitlines()
+        if lines and lines[0].strip().lower() in {"```", "```json"}:
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        clean = "\n".join(lines).strip()
+    try:
+        return json.loads(clean)
+    except json.JSONDecodeError as exc:
+        raise LLMOutputError("provider returned malformed JSON") from exc
+
+
 class LLMEngine:
     """
     LLM-powered engine for processing unstructured data.
@@ -75,10 +107,11 @@ class LLMEngine:
         Returns:
             ExtractedData with entities, topics, relationships, etc.
         """
+        text = _bounded_text(text, operation="metadata extraction", max_chars=4_000)
         prompt = f"""Analyze the following text and extract structured information.
 
 TEXT:
-{text[:4000]}
+{text}
 
 Return a JSON object with these fields:
 {{
@@ -113,35 +146,21 @@ Return ONLY valid JSON, no markdown or explanation."""
             max_tokens=2000
         )
 
-        # Clean up response (remove markdown if present)
-        if content.startswith("```"):
-            content = content.split("```")[1]
-            if content.startswith("json"):
-                content = content[4:]
-        content = content.strip()
-
-        try:
-            data = json.loads(content)
-            return ExtractedData(
-                summary=data.get("summary", ""),
-                entities=data.get("entities", []),
-                topics=data.get("topics", []),
-                relationships=data.get("relationships", []),
-                key_facts=data.get("key_facts", []),
-                sentiment=data.get("sentiment", "neutral"),
-                language=data.get("language", "en")
-            )
-        except json.JSONDecodeError:
-            # Fallback for malformed responses
-            return ExtractedData(
-                summary=text[:200],
-                entities=[],
-                topics=[],
-                relationships=[],
-                key_facts=[],
-                sentiment="neutral",
-                language="en"
-            )
+        data = _json_content(content)
+        if not isinstance(data, dict):
+            raise LLMOutputError("metadata extraction response must be a JSON object")
+        for field in ("entities", "topics", "relationships", "key_facts"):
+            if not isinstance(data.get(field, []), list):
+                raise LLMOutputError(f"metadata extraction field {field!r} must be an array")
+        return ExtractedData(
+            summary=str(data.get("summary", "")),
+            entities=data.get("entities", []),
+            topics=data.get("topics", []),
+            relationships=data.get("relationships", []),
+            key_facts=data.get("key_facts", []),
+            sentiment=str(data.get("sentiment", "neutral")),
+            language=str(data.get("language", "en")),
+        )
 
     def process_unstructured(self, text: str) -> dict:
         """
@@ -153,12 +172,13 @@ Return ONLY valid JSON, no markdown or explanation."""
         Returns:
             Dict with 'nodes' and 'edges' ready for import
         """
+        text = _bounded_text(text, operation="knowledge graph extraction", max_chars=12_000)
         prompt = f"""You are a knowledge graph extraction system. Analyze this text and extract:
 1. Knowledge nodes (distinct concepts, facts, entities)
 2. Relationships between nodes
 
 TEXT:
-{text[:12000]}
+{text}
 
 Return a JSON object with this exact structure:
 {{
@@ -208,27 +228,34 @@ Return ONLY valid JSON."""
             max_tokens=4000
         )
 
-        # Clean up response
-        if content.startswith("```"):
-            lines = content.split("\n")
-            content = "\n".join(lines[1:-1] if lines[-1] == "```" else lines[1:])
-            if content.startswith("json"):
-                content = content[4:]
-        content = content.strip()
-
-        try:
-            return json.loads(content)
-        except json.JSONDecodeError as e:
-            return {
-                "nodes": [{"text": text[:1000], "metadata": {"type": "raw", "error": str(e)}}],
-                "edges": [],
-                "summary": "Failed to parse - raw text stored"
-            }
+        data = _json_content(content)
+        if not isinstance(data, dict):
+            raise LLMOutputError("knowledge graph extraction response must be a JSON object")
+        nodes = data.get("nodes")
+        edges = data.get("edges")
+        if not isinstance(nodes, list) or not isinstance(edges, list):
+            raise LLMOutputError("knowledge graph extraction requires nodes and edges arrays")
+        for index, node in enumerate(nodes):
+            if not isinstance(node, dict) or not isinstance(node.get("text"), str) or not node["text"].strip():
+                raise LLMOutputError(f"knowledge graph node {index} has invalid text")
+            if not isinstance(node.get("metadata", {}), dict):
+                raise LLMOutputError(f"knowledge graph node {index} has invalid metadata")
+        for index, edge in enumerate(edges):
+            if not isinstance(edge, dict):
+                raise LLMOutputError(f"knowledge graph edge {index} is not an object")
+            source = edge.get("source_index")
+            target = edge.get("target_index")
+            if not isinstance(source, int) or not isinstance(target, int):
+                raise LLMOutputError(f"knowledge graph edge {index} has invalid endpoints")
+            if not 0 <= source < len(nodes) or not 0 <= target < len(nodes):
+                raise LLMOutputError(f"knowledge graph edge {index} references a missing node")
+        return {"nodes": nodes, "edges": edges, "summary": str(data.get("summary", ""))}
 
     def smart_chunk(self, text: str, max_chunk_size: int = 1500) -> list[dict]:
         """
         Intelligently chunk text based on semantic boundaries.
         """
+        text = _bounded_text(text, operation="semantic chunking", max_chars=8_000)
         prompt = f"""Divide the following text into semantically meaningful chunks.
 Each chunk should:
 - Be self-contained and focus on a single topic/concept
@@ -236,7 +263,7 @@ Each chunk should:
 - Preserve context and meaning
 
 TEXT:
-{text[:8000]}
+{text}
 
 Return a JSON array:
 [
@@ -264,19 +291,13 @@ Return ONLY valid JSON."""
             max_tokens=4000
         )
 
-        if content.startswith("```"):
-            lines = content.split("\n")
-            content = "\n".join(lines[1:-1] if lines[-1] == "```" else lines[1:])
-            if content.startswith("json"):
-                content = content[4:]
-        content = content.strip()
-
-        try:
-            return json.loads(content)
-        except json.JSONDecodeError:
-            paragraphs = text.split("\n\n")
-            return [{"text": p.strip(), "topic": "", "entities": []}
-                    for p in paragraphs if len(p.strip()) > 50]
+        chunks = _json_content(content)
+        if not isinstance(chunks, list):
+            raise LLMOutputError("semantic chunking response must be a JSON array")
+        for index, chunk in enumerate(chunks):
+            if not isinstance(chunk, dict) or not isinstance(chunk.get("text"), str):
+                raise LLMOutputError(f"semantic chunk {index} has invalid text")
+        return chunks
 
     def chat(self, message: str, context: Optional[str] = None) -> str:
         """Simple chat interface for ad-hoc queries."""
