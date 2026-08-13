@@ -1,6 +1,6 @@
 """
 HybridMind - Vector + Graph Native Database
-Research-grade hybrid retrieval system with CRS algorithm
+Local hybrid retrieval interface
 Includes comparison mode for HybridMind vs Neo4j vs ChromaDB
 """
 
@@ -219,17 +219,19 @@ st.markdown("""
 # Configuration - use environment variable for Docker, fallback to localhost for local dev
 DEFAULT_API_URL = os.environ.get("API_URL", "http://localhost:8000")
 API_URL = st.sidebar.text_input("API", value=DEFAULT_API_URL, label_visibility="collapsed")
+API_KEY = os.environ.get("HYBRIDMIND_API_KEY", "").strip()
 
 
 def api_call(endpoint: str, method: str = "GET", data: dict = None, timeout: int = 30):
     """Execute API request with timing."""
     try:
         url = f"{API_URL}{endpoint}"
+        headers = {"X-HybridMind-API-Key": API_KEY} if API_KEY else None
         start = time.perf_counter()
         if method == "GET":
-            response = requests.get(url, params=data, timeout=timeout)
+            response = requests.get(url, params=data, headers=headers, timeout=timeout)
         else:
-            response = requests.post(url, json=data, timeout=timeout)
+            response = requests.post(url, json=data, headers=headers, timeout=timeout)
         elapsed = (time.perf_counter() - start) * 1000
         response.raise_for_status()
         result = response.json()
@@ -240,7 +242,7 @@ def api_call(endpoint: str, method: str = "GET", data: dict = None, timeout: int
     except requests.exceptions.ConnectionError:
         return None
     except Exception as e:
-        st.error(f"API Error: {str(e)}")
+        st.error(f"API request failed ({type(e).__name__})")
         return None
 
 
@@ -1074,13 +1076,13 @@ def render_components_tab():
 │              (Rate Limiting, Caching)               │
 ├─────────────────────────────────────────────────────┤
 │                   Hybrid Ranker                     │
-│          CRS(q) = αV(q) + βG(q)                     │
+│       weighted reciprocal-rank fusion               │
 ├────────────────────┬────────────────────────────────┤
 │   Vector Engine    │         Graph Engine           │
-│   FAISS + L2       │      NetworkX + BFS            │
+│  FAISS HNSW + IP   │    NetworkX typed paths        │
 ├────────────────────┴────────────────────────────────┤
 │              Embedding Engine                       │
-│         all-MiniLM-L6-v2 (384-dim)                  │
+│      configured remote model (exactly 4096-dim)     │
 ├─────────────────────────────────────────────────────┤
 │                    SQLite (WAL)                     │
 │              nodes, edges, metadata                 │
@@ -1093,7 +1095,7 @@ def render_components_tab():
         {"Component": "FAISS", "Purpose": "Vector similarity search (L2/IP)"},
         {"Component": "NetworkX", "Purpose": "Graph operations & traversal"},
         {"Component": "SQLite", "Purpose": "Persistent storage (WAL mode)"},
-        {"Component": "sentence-transformers", "Purpose": "Embedding generation"},
+        {"Component": "Remote embedding provider", "Purpose": "Exact 4096-dimensional embeddings"},
         {"Component": "FastAPI", "Purpose": "REST API framework"},
     ]
     st.dataframe(pd.DataFrame(versions), width="stretch", hide_index=True)
@@ -1197,29 +1199,11 @@ def render_unstructured_import():
         key="unstructured_input"
     )
     
-    # Advanced options in expander
-    with st.expander("Advanced Options"):
-        c1, c2 = st.columns(2)
-        with c1:
-            model = st.selectbox(
-                "Model",
-                [
-                    "qwen3.5-397b-a17b"
-                ],
-                index=0,
-                key="llm_model"
-            )
-        with c2:
-            custom_api_key = st.text_input(
-                "Custom API Key (optional)",
-                type="password",
-                placeholder="Leave empty to use default",
-                key="custom_api_key"
-            )
+    st.caption("Provider and model selection are controlled by server policy.")
     
     # Character count
     char_count = len(unstructured_text) if unstructured_text else 0
-    st.caption(f"📊 {char_count:,} characters | Max: 100,000")
+    st.caption(f"📊 {char_count:,} characters | Max: 12,000")
     
     # Process button
     col1, col2 = st.columns([1, 3])
@@ -1237,12 +1221,7 @@ def render_unstructured_import():
             return
         
         with st.spinner("🧠 AI is analyzing your text and extracting knowledge..."):
-            payload = {
-                "text": unstructured_text,
-                "model": model
-            }
-            if custom_api_key:
-                payload["api_key"] = custom_api_key
+            payload = {"text": unstructured_text}
             
             result = api_call("/bulk/unstructured", method="POST", data=payload, timeout=120)
         

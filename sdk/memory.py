@@ -14,6 +14,7 @@ Production additions:
 from __future__ import annotations
 
 import uuid
+import os
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable, Dict, Generator, List, Optional, Sequence
@@ -183,10 +184,17 @@ class HybridMemory:
         base_url: str = "http://localhost:8000",
         timeout: float = 60.0,
         client: Optional[httpx.Client] = None,
+        api_key: Optional[str] = None,
     ):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.client = client or httpx.Client(timeout=self.timeout)
+        resolved_key = os.environ.get("HYBRIDMIND_API_KEY", "") if api_key is None else api_key
+        self._auth_headers = (
+            {"X-HybridMind-API-Key": resolved_key.strip()}
+            if resolved_key and resolved_key.strip()
+            else None
+        )
         self.session = SessionAPI(self)
         self.tools = ToolSchemaAPI(self)
 
@@ -212,17 +220,23 @@ class HybridMemory:
             raise HybridMemoryError(f"HTTP {response.status_code}: {detail}")
 
     def _post(self, path: str, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        response = self.client.post(f"{self.base_url}{path}", json=payload or {})
+        response = self.client.post(
+            f"{self.base_url}{path}", json=payload or {}, headers=self._auth_headers
+        )
         self._check_response(response)
         return response.json()
 
     def _get(self, path: str, params: Optional[Dict[str, Any]] = None) -> Any:
-        response = self.client.get(f"{self.base_url}{path}", params=params)
+        response = self.client.get(
+            f"{self.base_url}{path}", params=params, headers=self._auth_headers
+        )
         self._check_response(response)
         return response.json()
 
     def _delete(self, path: str) -> Any:
-        response = self.client.delete(f"{self.base_url}{path}")
+        response = self.client.delete(
+            f"{self.base_url}{path}", headers=self._auth_headers
+        )
         self._check_response(response)
         return response.json() if response.content else None
 
