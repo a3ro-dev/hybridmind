@@ -5,7 +5,7 @@ Vector, Graph, and Hybrid search operations.
 Features:
 - Vector similarity search (semantic)
 - Graph traversal search (relational)
-- Hybrid search with CRS algorithm
+- Dense/sparse/graph fusion with optional reranking
 - Query result caching for performance
 """
 
@@ -32,6 +32,7 @@ from engine.graph_search import GraphSearchEngine
 from engine.hybrid_ranker import HybridRanker
 from engine.cache import get_query_cache
 from storage.sqlite_store import SQLiteStore
+from config import settings
 
 router = APIRouter(prefix="/search", tags=["Search"])
 
@@ -45,9 +46,9 @@ async def vector_search(
     Pure vector similarity search using cosine similarity.
 
     Returns nodes ranked by semantic similarity to the query text.
-    Uses the configured embedding model (all-MiniLM-L6-v2 by default).
+    Uses the configured exact 4096-dimensional remote embedding model.
 
-    Results are cached for 5 minutes for faster repeated queries.
+    Stateless results use the configured bounded TTL cache.
     """
     # Check cache first
     cache = get_query_cache()
@@ -148,19 +149,10 @@ async def hybrid_search(
     hybrid_ranker: HybridRanker = Depends(get_hybrid_ranker)
 ) -> SearchResponse:
     """
-    Hybrid vector + graph search using the CRS algorithm.
+    Hybrid dense, sparse, and graph retrieval with optional reranking.
 
-    Combines semantic similarity (vector) with graph proximity
-    using configurable weights:
-
-    **CRS = α * vector_score + β * graph_score**
-
-    Where α = vector_weight and β = graph_weight.
-
-    If anchor_nodes are provided, graph scores are computed relative
-    to those nodes. Otherwise, the top vector results are used as anchors.
-
-    Results are cached for 5 minutes for faster repeated queries.
+    Stateless requests may use the bounded query cache. Requests that track
+    node access always execute the ranker so access counters remain correct.
     """
     # Check cache first
     cache = get_query_cache()
@@ -184,10 +176,16 @@ async def hybrid_search(
         "track_access": request.track_access,
     }
 
-    cached = cache.get("hybrid", cache_params)
-    if cached:
-        cached_response = SearchResponse(**cached)
-        return cached_response
+    should_track_access = (
+        settings.access_tracking_enabled
+        if request.track_access is None
+        else request.track_access
+    )
+    if not should_track_access:
+        cached = cache.get("hybrid", cache_params)
+        if cached:
+            cached_response = SearchResponse(**cached)
+            return cached_response
 
     # Execute search
     results, query_time_ms, total_candidates = hybrid_ranker.search(
@@ -221,6 +219,9 @@ async def hybrid_search(
             effective_graph_score=r.get("effective_graph_score"),
             combined_score=r["combined_score"],
             rerank_score=r.get("rerank_score"),
+            rerank_attempted=r.get("rerank_attempted"),
+            rerank_applied=r.get("rerank_applied"),
+            rerank_failure_type=r.get("rerank_failure_type"),
             bm25_score=r.get("bm25_score"),
             time_score=r.get("time_score"),
             salience_score=r.get("salience_score"),
@@ -236,8 +237,10 @@ async def hybrid_search(
         search_type="hybrid"
     )
 
-    # Cache the result
-    cache.set("hybrid", cache_params, response.model_dump())
+    # Stateful searches must not be cached: a cache hit would skip the
+    # ranker's access-count update and return salience based on stale state.
+    if not should_track_access:
+        cache.set("hybrid", cache_params, response.model_dump())
 
     return response
 

@@ -1,4 +1,4 @@
-"""ACT-R-inspired, bounded memory salience scoring."""
+"""Bounded recency/access/degree heuristic for memory retrieval."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ def _decay(value, now: datetime, half_life_days: float, default: float = 0.0) ->
     return math.exp(-math.log(2.0) * age_days / max(half_life_days, 1e-6))
 
 
-def compute_salience(node: dict, graph_index, settings, now=None) -> float:
+def compute_salience(node: dict, graph_index, settings, now=None, max_degree=None) -> float:
     """Return a deterministic [0, 1] recency/frequency/centrality score."""
     now = parse_datetime(now) or datetime.now(timezone.utc)
     recency = _decay(
@@ -37,7 +37,8 @@ def compute_salience(node: dict, graph_index, settings, now=None) -> float:
 
     graph = graph_index.graph
     degree = graph.degree(node["id"]) if graph.has_node(node["id"]) else 0
-    max_degree = max((value for _, value in graph.degree()), default=1)
+    if max_degree is None:
+        max_degree = max((value for _, value in graph.degree()), default=1)
     centrality = min(1.0, float(degree) / max(float(max_degree), 1.0))
 
     weights = (

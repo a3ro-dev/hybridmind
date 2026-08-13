@@ -15,6 +15,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import math
 import os
 from typing import Dict, List, Optional, Tuple
 
@@ -43,12 +44,20 @@ def rrf_fuse(
     Returns:
         {node_id: rrf_score}  — higher is better; not bounded to [0,1].
     """
+    if not isinstance(k, int) or k < 0:
+        raise ValueError("RRF k must be a non-negative integer")
     scores: Dict[str, float] = {}
     for signal_name, items in rank_lists.items():
         if not items:
             continue
         weight = signal_weights.get(signal_name, 1.0) if signal_weights else 1.0
+        if not math.isfinite(weight) or weight < 0.0:
+            raise ValueError(f"RRF weight for {signal_name!r} must be finite and non-negative")
+        seen: set[str] = set()
         for rank, (node_id, _score) in enumerate(items, start=1):
+            if node_id in seen:
+                raise ValueError(f"RRF rank list {signal_name!r} contains duplicate ID {node_id!r}")
+            seen.add(node_id)
             scores[node_id] = scores.get(node_id, 0.0) + weight * (1.0 / (k + rank))
     return scores
 
@@ -121,8 +130,11 @@ class FusionScorer:
             self._b2 = data["b2"].astype(np.float32)
             self._loaded = True
             logger.info(f"FusionScorer: loaded checkpoint from {path}")
-        except Exception as e:
-            logger.warning(f"FusionScorer: failed to load checkpoint {path}: {e}. Using heuristic init.")
+        except Exception as exc:
+            logger.warning(
+                "FusionScorer: checkpoint load failed type=%s; using heuristic init",
+                type(exc).__name__,
+            )
             self._init_heuristic()
 
     def score(self, feature_vector: np.ndarray) -> float:

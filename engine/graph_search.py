@@ -179,13 +179,15 @@ class GraphSearchEngine:
                     max_depth,
                     half_life_days=half_life_days,
                     edge_type_weights=edge_type_weights,
+                    direction="typed",
                 )
             elif edge_type_weights:
                 score = self.graph_index.compute_weighted_proximity_score(
                     node_id,
                     reference_nodes,
                     max_depth,
-                    edge_type_weights
+                    edge_type_weights,
+                    direction="typed",
                 )
             else:
                 score = self.graph_index.compute_proximity_score(

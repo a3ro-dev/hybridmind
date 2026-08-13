@@ -23,17 +23,21 @@ class GraphSearchRequest(BaseModel):
 class HybridSearchRequest(BaseModel):
     query_text: str = Field(..., min_length=1)
     top_k: int = Field(default=10, ge=1, le=200)
-    vector_weight: float = Field(default=0.6, ge=0.0, le=1.0)
-    graph_weight: float = Field(default=0.4, ge=0.0, le=1.0)
+    vector_weight: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    graph_weight: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     anchor_nodes: Optional[List[str]] = None
     max_depth: int = Field(default=2, ge=1, le=5)
     min_score: float = Field(default=0.0, ge=0.0, le=1.0)
     filter_metadata: Optional[Dict[str, Any]] = None
     deduplicate: bool = Field(default=True, description="Deduplicate results with identical text")
-    rerank_pool: int = Field(default_factory=lambda: settings.rerank_pool_size, ge=1, le=100, description="Candidate pool size fed to the reranker before slicing top_k; set <= top_k to disable reranking. Default from settings.rerank_pool_size (Phase 6.2.4).")
-    bm25_boost_weight: float = Field(default=0.35, ge=0.0, le=2.0, description="BM25 keyword overlap boost applied on top of vector score")
+    rerank_pool: int = Field(default_factory=lambda: settings.rerank_pool_size, ge=0, le=100, description="Maximum candidate pool fed to the cross-encoder reranker; 0 disables that stage. A positive value must be at least top_k.")
+    bm25_boost_weight: Optional[float] = Field(default=None, ge=0.0, le=2.0, description="Sparse RRF weight; when omitted, query routing may select it")
     overlap_threshold: float = Field(default=0.15, ge=0.0, le=1.0, description="BM25 overlap fraction below which graph score is ramped down")
-    fusion_mode: Optional[str] = Field(default=None, description="Override config fusion_mode: 'rrf' or 'linear'")
+    fusion_mode: Optional[str] = Field(
+        default=None,
+        pattern="^(rrf|linear|mlp)$",
+        description="Override config fusion_mode: rrf, linear, or mlp",
+    )
     include_images: bool = Field(default=False, description="Include relevant visual memory images ranked by ColQwen2.5 MaxSim")
     search_mode: str = Field(
         default="hybrid",
@@ -44,9 +48,11 @@ class HybridSearchRequest(BaseModel):
     track_access: Optional[bool] = Field(default=None, description="Override config access tracking for this request")
 
     @model_validator(mode="after")
-    def graph_only_requires_anchor(self):
+    def validate_cross_field_contracts(self):
         if self.search_mode == "graph_only" and not self.anchor_nodes:
             raise ValueError("graph_only search requires at least one anchor node")
+        if 0 < self.rerank_pool < self.top_k:
+            raise ValueError("positive rerank_pool must be greater than or equal to top_k")
         return self
 
 
@@ -60,6 +66,9 @@ class SearchResult(BaseModel):
     effective_graph_score: Optional[float] = None
     combined_score: Optional[float] = None
     rerank_score: Optional[float] = None
+    rerank_attempted: Optional[bool] = None
+    rerank_applied: Optional[bool] = None
+    rerank_failure_type: Optional[str] = None
     bm25_score: Optional[float] = None
     time_score: Optional[float] = None
     salience_score: Optional[float] = None

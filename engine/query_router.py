@@ -5,7 +5,6 @@ Zero LLM calls — pure regex-based classification.
 """
 
 import re
-from typing import Optional
 
 TEMPORAL_PATTERNS = re.compile(
     r'\b(when|how long|before|after|during|date|year|month|first time|last time|'
@@ -34,12 +33,16 @@ def route_query(query_text: str) -> dict:
     Returns:
         Dict with keys:
           - "type": one of "temporal", "multihop", "entity", "default"
-          - "metadata_filter": dict or None — filter to add to the search payload
+          - "metadata_filter": reserved for a future, evidence-backed filter
     """
     if TEMPORAL_PATTERNS.search(query_text):
         return {"type": "temporal", "metadata_filter": None}
     if MULTIHOP_PATTERNS.search(query_text):
         return {"type": "multihop", "metadata_filter": None}
     if ENTITY_PATTERNS.search(query_text):
-        return {"type": "entity", "metadata_filter": {"type": "extracted_fact"}}
+        # Entity wording does not imply that raw turns are irrelevant.  Fact
+        # extraction is optional and off by default, so forcing an
+        # ``extracted_fact`` filter here can make an otherwise answerable query
+        # return an empty pool.  Callers may still provide an explicit filter.
+        return {"type": "entity", "metadata_filter": None}
     return {"type": "default", "metadata_filter": None}

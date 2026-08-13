@@ -54,31 +54,39 @@ def extract_time_range(query: str, now: Optional[datetime] = None) -> Optional[T
     """Extract a conservative absolute/relative interval from a query."""
     now = _utc(now or datetime.now(timezone.utc))
     text = query.lower()
+    explicit: Optional[TimeRange] = None
 
     match = _ISO_DATE_RE.search(query)
     if match:
         try:
             start = datetime(*(int(part) for part in match.groups()), tzinfo=timezone.utc)
-            return TimeRange(start, start + timedelta(days=1), match.group(0))
+            explicit = TimeRange(start, start + timedelta(days=1), match.group(0))
         except ValueError:
             return None
 
-    month = _MONTH_RE.search(query)
-    if month:
+    month = _MONTH_RE.search(query) if explicit is None else None
+    if month is not None:
         month_number = _MONTHS[month.group(1).lower()]
         year = int(month.group(2))
         start = datetime(year, month_number, 1, tzinfo=timezone.utc)
         end = datetime(year + (month_number == 12), 1 if month_number == 12 else month_number + 1, 1, tzinfo=timezone.utc)
-        return TimeRange(start, end, month.group(0))
+        explicit = TimeRange(start, end, month.group(0))
 
-    year = _YEAR_RE.search(query)
-    if year:
+    year = _YEAR_RE.search(query) if explicit is None else None
+    if year is not None:
         value = int(year.group(1))
-        return TimeRange(
+        explicit = TimeRange(
             datetime(value, 1, 1, tzinfo=timezone.utc),
             datetime(value + 1, 1, 1, tzinfo=timezone.utc),
             year.group(0),
         )
+
+    if explicit is not None:
+        if re.search(r"\bbefore\b", text):
+            return TimeRange(datetime.min.replace(tzinfo=timezone.utc), explicit.start, f"before {explicit.source}")
+        if re.search(r"\bafter\b", text):
+            return TimeRange(explicit.end, datetime.max.replace(tzinfo=timezone.utc), f"after {explicit.source}")
+        return explicit
 
     day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     if "yesterday" in text:
@@ -86,11 +94,25 @@ def extract_time_range(query: str, now: Optional[datetime] = None) -> Optional[T
     if "today" in text:
         return TimeRange(day_start, day_start + timedelta(days=1), "today")
     if "last week" in text:
-        return TimeRange(now - timedelta(days=7), now, "last week")
+        this_week = day_start - timedelta(days=day_start.weekday())
+        return TimeRange(this_week - timedelta(days=7), this_week, "last week")
     if "last month" in text:
-        return TimeRange(now - timedelta(days=30), now, "last month")
+        this_month = day_start.replace(day=1)
+        previous_month_end = this_month - timedelta(days=1)
+        previous_month = previous_month_end.replace(day=1)
+        return TimeRange(previous_month, this_month, "last month")
     if "last year" in text:
-        return TimeRange(now - timedelta(days=365), now, "last year")
+        return TimeRange(
+            datetime(now.year - 1, 1, 1, tzinfo=timezone.utc),
+            datetime(now.year, 1, 1, tzinfo=timezone.utc),
+            "last year",
+        )
+    if "past week" in text:
+        return TimeRange(now - timedelta(days=7), now, "past week")
+    if "past month" in text:
+        return TimeRange(now - timedelta(days=30), now, "past month")
+    if "past year" in text:
+        return TimeRange(now - timedelta(days=365), now, "past year")
     return None
 
 
@@ -120,14 +142,14 @@ def validity_relevance(node: dict, target: Optional[TimeRange], now=None) -> flo
         # [target.start, target.end). This correctly handles a fact that became
         # valid part-way through a month/year query interval.
         if valid_until is not None and valid_until <= target.start:
-            return 0.1
+            return 0.0
         if valid_from is not None and valid_from >= target.end:
-            return 0.1
+            return 0.0
         return 1.0
 
     reference = parse_datetime(now) or datetime.now(timezone.utc)
     if valid_from is not None and reference < valid_from:
-        return 0.1
+        return 0.0
     if valid_until is not None and reference >= valid_until:
-        return 0.1
+        return 0.0
     return 1.0

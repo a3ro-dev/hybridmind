@@ -96,8 +96,11 @@ class GNNReranker:
             self._model = model
             self._device = device
             logger.info(f"GNNReranker: loaded checkpoint from {self.checkpoint_path}")
-        except Exception as e:
-            logger.warning(f"GNNReranker: checkpoint load failed: {e}")
+        except Exception as exc:
+            logger.warning(
+                "GNNReranker: checkpoint load failed type=%s",
+                type(exc).__name__,
+            )
 
     def is_available(self) -> bool:
         return self._available and self._model is not None
@@ -129,8 +132,11 @@ class GNNReranker:
 
         try:
             return self._gnn_rerank(query_embedding, candidates, graph_index, top_k, sqlite_store)
-        except Exception as e:
-            logger.warning(f"GNNReranker: inference failed, falling back: {e}")
+        except Exception as exc:
+            logger.warning(
+                "GNNReranker: inference failed; returning base order type=%s",
+                type(exc).__name__,
+            )
             return candidates[:top_k] if top_k else candidates
 
     def _gnn_rerank(self, query_embedding, candidates, graph_index, top_k, sqlite_store=None):

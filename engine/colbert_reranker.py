@@ -93,6 +93,9 @@ def colbert_maxsim_rerank(
         candidates.sort(key=lambda x: -x.get("combined_score", 0.0))
         return candidates[:top_k] if top_k else candidates
 
-    except Exception as e:
-        logger.warning(f"ColBERT MaxSim rerank failed, returning unchanged: {e}")
+    except Exception as exc:
+        logger.warning(
+            "ColBERT MaxSim rerank failed; returning unchanged type=%s",
+            type(exc).__name__,
+        )
         return candidates[:top_k] if top_k else candidates
