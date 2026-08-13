@@ -2,18 +2,27 @@
 
 Last updated: 2026-08-05 (Asia/Calcutta)
 
+> Integrity notice (2026-08-13): this is a historical handoff, not current
+> benchmark evidence. The cited checkpoint and lexical replay predate stable
+> evidence IDs, corpus isolation, immutable run manifests, real reranker
+> observability, and enforced spend/resource budgets. The current evaluator
+> rejects those artifacts for pass/fail claims; see
+> `docs/RETRIEVAL_RESEARCH_PROTOCOL.md` and
+> `benchmarks/results/BENCHMARK_REPORT.md`.
+
 ## Active objective
 
-Demonstrate that HybridMind can substantially reduce or replace prompt-side
-transformer KV-cache requirements for long-horizon memory while preserving
-quality, latency, and throughput. Until full replacement is defensible, improve
-HybridMind as an empirically supported external long-term memory system.
+Demonstrate that HybridMind can reduce prompt source tokens for long-horizon
+memory while preserving quality, latency, throughput, and cost. Treat this as
+retrieval-conditioned effective context unless an experiment directly measures
+and controls a model's internal KV cache.
 
 ## Repository constraints
 
 - Use `D:\hybridmind\.venv` for Python.
 - Use Z.AI `glm-4.6` for canonical QA and judging.
-- Run `python scripts/preflight.py` before any live TEI/vLLM evaluation.
+- Run the default-deny, plan-gated `scripts/preflight.py --plan <file>` before
+  any live TEI/vLLM evaluation; validate the plan offline first.
 - Z.AI remains canonical for production. Hack Club may be used only for cost-bounded research with explicit `HYBRIDMIND_ALLOW_RESEARCH_PROXY=true`; research mode must not fall through to paid Z.AI.
 - Preserve pre-existing user edits in:
   - `engine/fact_extractor.py`
@@ -139,7 +148,8 @@ Before a live run:
 1. Make the `.venv` CUDA-capable without leaving orphaned pip processes.
 2. Verify a CUDA tensor allocation and one cached cross-encoder forward pass.
 3. Load repository `.env` for the evaluation process without printing secrets.
-4. Run `scripts/preflight.py`; do not proceed if TEI/vLLM/Z.AI checks fail.
+4. Validate a bounded live plan, then run `scripts/preflight.py --plan <file>`;
+   do not proceed if any plan-selected provider check fails.
 5. Use held-out or previously pending LoCoMo questions for an A/B comparison.
 
 Candidate next hypothesis, not yet started:

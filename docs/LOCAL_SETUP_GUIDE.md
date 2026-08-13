@@ -57,7 +57,19 @@ python main.py
 python -m uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
-Run `python scripts/preflight.py` first. Startup and requests fail rather than selecting a local or lower-dimensional embedding model.
+Before any live provider check, create the offline resource report, prepare a
+matching bounded live plan, and validate without provider calls:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\offline_resource_frontier.py `
+  --output benchmarks\results\offline_resource_frontier.json
+.\.venv\Scripts\python.exe scripts\preflight.py `
+  --plan path\to\live-plan.json --validate-only
+```
+
+Only then omit `--validate-only` to warm the providers selected by that plan.
+A bare preflight command is rejected without making provider calls. Startup and
+requests fail rather than selecting a local or lower-dimensional embedding model.
 
 - API Base URL: `http://127.0.0.1:8000`
 - Interactive OpenAPI Swagger Docs: `http://127.0.0.1:8000/docs`

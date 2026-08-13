@@ -13,9 +13,12 @@ The evaluation suite tests HybridMind across three key benchmark datasets:
 
 ---
 
-## 2. Measurement Ledger & Determinism
+## 2. Measurement Ledger & Reproducibility
 
-Evaluations produce bit-identical evaluation ledgers via `eval_ledger.py`:
+Evaluations produce immutable, provenance-bearing ledgers via `eval_ledger.py`.
+Question ordering and seeded statistical operations can be deterministic, but
+files containing timestamps, provider responses, or remote-model outputs are
+not claimed to be bit-identical:
 - **Artifact Path**: `benchmarks/results/ledger_<benchmark>_<confighash>.jsonl`
 - **Recorded Fields**:
   - `question_id` & `question_text`

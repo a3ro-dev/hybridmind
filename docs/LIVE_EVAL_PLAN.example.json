@@ -1,0 +1,56 @@
+{
+  "schema_version": "hybridmind-live-eval-plan/v1",
+  "offline_report_path": "../benchmarks/results/offline_resource_frontier.json",
+  "offline_report_sha256": "REPLACE_WITH_SHA256",
+  "providers": [
+    "tei"
+  ],
+  "preflight_usage_included": true,
+  "planned_usage": {
+    "queries": 3,
+    "embedding_calls": 4,
+    "embedding_input_tokens": 128,
+    "reranker_calls": 0,
+    "reranker_pairs": 0,
+    "reranker_input_tokens": 0,
+    "llm_calls": 0,
+    "reader_input_tokens": 0,
+    "reader_output_tokens": 0,
+    "provider_runtime_seconds": 300
+  },
+  "usage_ceiling": {
+    "queries": 3,
+    "embedding_calls": 4,
+    "embedding_input_tokens": 128,
+    "reranker_calls": 0,
+    "reranker_pairs": 0,
+    "reranker_input_tokens": 0,
+    "llm_calls": 0,
+    "reader_input_tokens": 0,
+    "reader_output_tokens": 0,
+    "provider_runtime_seconds": 300
+  },
+  "rates": {
+    "pricing_mode": "unpriced",
+    "embedding_usd_per_million_input_tokens": null,
+    "reranker_usd_per_million_input_tokens": null,
+    "reader_usd_per_million_input_tokens": null,
+    "reader_usd_per_million_output_tokens": null,
+    "fixed_usd_per_embedding_call": null,
+    "fixed_usd_per_reranker_call": null,
+    "fixed_usd_per_llm_call": null,
+    "provider_runtime_usd_per_second": null
+  },
+  "max_estimated_spend_usd": 0.0,
+  "max_wall_seconds": 300,
+  "resource_limits": {
+    "max_report_age_hours": 24,
+    "max_component_sequence_p95_ms": 100,
+    "max_component_sequence_p99_ms": 200,
+    "max_observed_peak_rss_bytes": 8589934592,
+    "max_serialized_total_bytes": 1073741824,
+    "max_total_index_build_seconds": 300,
+    "min_available_memory_bytes": 1073741824,
+    "min_free_disk_bytes": 2147483648
+  }
+}

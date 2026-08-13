@@ -188,11 +188,9 @@ The offline lexical stage costs 59.31 ms mean and 73.63 ms p95 for the
 search latency but is not negligible for a low-latency serving target. Live
 candidate counts may be lower than 500, and must be measured separately.
 
-The feature remains configuration-gated but is enabled by default because the
-observed recall effect is large, regressions are rare, the implementation is
-bounded, and the measured incremental latency is modest relative to the
-current search path. This is an engineering decision, not a claim of
-independent scientific confirmation.
+The feature remains configuration-gated and is disabled by default. The
+historical effect was selected and measured on the same partial checkpoint, so
+it cannot justify a production default or a confirmatory scientific claim.
 
 The result artifact is
 `benchmarks/results/kv_reduction_locomo_lexical_rrf.json`.
@@ -221,10 +219,14 @@ The result artifact is
 
 ## Required Next Baselines
 
-The next confirmatory experiment should complete a held-out portion of LoCoMo
-with lexical reranking disabled and enabled, then compare paired retrieval and
-Z.AI `glm-4.6` answer/judge outcomes. After that gate, compare identical
+The next confirmatory experiment should use a preregistered held-out LoCoMo
+split with lexical reranking disabled and enabled, then compare exact-evidence
+retrieval and explicitly identified reader outcomes. The current deterministic
+overlap heuristic must not be called a Z.AI or official LoCoMo judge. After
+that gate, compare identical
 questions under full history, HybridMind retrieval, and a supported
 cache-compression implementation. Record answer accuracy, prompt tokens, peak
 accelerator memory, time to first token, decode throughput, and total latency.
-RunPod TEI and vLLM must pass `scripts/preflight.py` before any live run.
+RunPod TEI and vLLM must pass the default-deny,
+`scripts/preflight.py --plan <validated-live-plan.json>` gate before any live
+run. The plan must select only required providers and include preflight usage.

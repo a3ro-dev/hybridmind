@@ -21,17 +21,22 @@ Where:
   - $w_{graph}$: Graph proximity rank weight (`graph_weight`)
 
 ### 1.2 Query-Type Weight Routing
-Signal weights are dynamically set per-query via `route_query()`:
-- **Default Queries**: `vector_weight=0.5, graph_weight=0.15, bm25_boost_weight=0.35`
-- **Multi-Hop / Structural Queries**: `vector_weight=0.2, graph_weight=0.60, bm25_boost_weight=0.20`
-- **Keyword / Exact Matches**: `vector_weight=0.2, graph_weight=0.10, bm25_boost_weight=0.70`
+`route_query()` is a regex heuristic for temporal, multi-hop, entity, and
+default wording. When routing is enabled it supplies only weights omitted by
+the caller; explicit request weights remain authoritative. The current values
+are declared in `config.py` so ledgers can hash them. They are defaults, not
+evidence of optimality.
 
 ---
 
 ## 2. Pre-trained Cross-Encoder Reranking
 
 ### 2.1 Candidate Selection & Reranking
-The top $N$ candidates (configured by `config.rerank_pool_size`, default 25) output by RRF fusion are passed to `mixedbread-ai/mxbai-rerank-large-v2`.
+When reranking is enabled, a bounded pool (configured by
+`config.rerank_pool_size`, default 25) is passed to the model named by
+`settings.reranker_model`. Controlled signal-ablation modes bypass downstream
+rerankers. Responses and evaluators record whether the cross-encoder was
+attempted and actually applied.
 
 ### 2.2 Normalized Score Blending
 To prevent text-only cross-encoders from discarding Graph-discovered candidates that lack direct query term matches, both RRF and Cross-Encoder scores are independently min-max normalized to $[0, 1]$ before linear blending:
@@ -63,15 +68,18 @@ FUNCTION decompose_multihop_query(query_text, llm_engine):
     RETURN sub_questions
 ```
 
-Sub-questions are retrieved sequentially, accumulating candidate nodes into a unified context pool before final QA execution.
+The evaluation helper retrieves the bounded sub-questions and unions candidates
+by node ID. Decomposition is optional, spends an LLM call, and is not assumed to
+improve recall without a valid ablation.
 
 ---
 
 ## 4. Answer Normalization & Citation Prompting
 
 ### 4.1 Citation Prompting
-Answering prompts require the LLM to output explicit node citations:
-`[Citation: <node_id>] Fact description... Answer: <exact_fact>`
+The answer helper requests structured snippet-index citations and an answer.
+Citations constrain the reader prompt but do not substitute for exact source
+evidence IDs in retrieval scoring.
 
 ### 4.2 Answer Normalization (`normalize_answer()`)
 Before evaluation scoring, candidate answers undergo deterministic normalization:
@@ -86,9 +94,11 @@ Before evaluation scoring, candidate answers undergo deterministic normalization
 ### 5.1 Auto-Edge Cosine Thresholding
 During node ingestion (`HYBRIDMIND_AUTO_EDGES_ENABLED=true`), cosine similarity edges (`similar_to`) are automatically inferred for vector pairs satisfying:
 
-$$\text{cos}(\mathbf{e}_i, \mathbf{e}_j) \ge \tau_{auto} \quad (\text{default } \tau_{auto} = 0.75)$$
+$$\text{cos}(\mathbf{e}_i, \mathbf{e}_j) \ge \tau_{auto} \quad (\text{default } \tau_{auto} = 0.70)$$
 
 ### 5.2 Reachability Sweeping
-`scripts/sweep_edge_threshold.py` evaluates auto-edge reachability by sweeping $\tau_{auto} \in [0.60, 0.90]$ and measuring:
+`scripts/sweep_edge_threshold.py` is a threshold-sweep tool. A sweep counts as
+evidence only with a stable corpus, gold-independent graph construction, exact
+targets, and a completed ledger; a generated plan alone is not a result. It can measure:
 1. Total edge count added to graph
 2. 2-hop graph path reachability between multi-hop entity pairs

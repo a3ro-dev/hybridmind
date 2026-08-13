@@ -1,6 +1,6 @@
 # HybridMind
 
-**HybridMind** is a local-native hybrid vector–graph database built for AI retrieval and agent long-term memory. it combines FAISS HNSW dense search, an Okapi BM25 index (`bm25s` backend with PyStemmer), a NetworkX directed graph, and SQLite into a single atomic `.mind` bundle with SHA256-verified manifests and 3-backup rotation.
+**HybridMind** is a local hybrid retrieval service for AI memory experiments. It combines FAISS HNSW dense search, an Okapi BM25 index (`bm25s` backend with PyStemmer), a NetworkX directed multigraph, and SQLite. Verified `.mind.zip` snapshots use safe JSON/JSONL derived-index components rather than executable pickle payloads.
 
 repo: [github.com/a3ro-dev/hybridmind](https://github.com/a3ro-dev/hybridmind)
 
@@ -15,17 +15,18 @@ pure vector search drops explicit structural relationships. graph-only search la
 ## Technical Architecture
 
 1. **Time-Aware Hybrid Fusion**. Reciprocal Rank Fusion ($k=60$) blends 4096-dimensional dense vectors, BM25 lexical ranks, typed graph proximity, and query-derived time relevance. Request-level `search_mode` controls make vector, sparse, graph, and hybrid ablations real rather than approximate weight changes.
-2. **Cross-Encoder Reranking**. `mixedbread-ai/mxbai-rerank-large-v2` reranks top 25 RRF candidate nodes with min-max normalized score blending (70% RRF / 30% cross-encoder).
-3. **Multi-Hop Query Decomposition**. `engine/query_decomposition.py` splits multi-step questions into sub-questions via LLM inference with single-sub-question and novel-entity guards.
+2. **Optional Cross-Encoder Reranking**. When enabled and available, `mixedbread-ai/mxbai-rerank-large-v2` reranks a bounded fusion pool with normalized score blending. Search responses expose whether it executed.
+3. **Optional Query Decomposition**. `engine/query_decomposition.py` can split a multi-step question into two or three bounded sub-questions through the centralized LLM policy. It rejects novel named entities, duplicate/oversized output, and lost temporal qualifiers; improvement remains an empirical question.
 4. **4096-Dimensional Embedding Invariant**. A remote TEI or OpenAI-compatible embedding endpoint must return exactly 4096 values. Startup, ingestion, and vector insertion fail on any mismatch; there is no local, projected, padded, or lower-dimensional fallback.
-5. **Structured Temporal Memory**. Narrative facts carry normalized entities, event time, validity, one of four memory kinds (world, experience, observation, opinion), confidence, supersession state, and optional causal/temporal relations.
-6. **Salience and Compression**. Opt-in ACT-R-inspired access/recency/centrality scoring and observer/reflector consolidation can archive source nodes from retrieval while preserving their rows and provenance edges.
+5. **Structured Fact Fields**. Narrative facts can carry entities, event time, validity, one of four memory kinds (world, experience, observation, opinion), confidence, supersession state, and optional causal/temporal relations. These fields are only credited when the selected retrieval path consumes them.
+6. **Optional Salience and Derived Summaries**. Salience is a configurable recency/access/degree score multiplier. Consolidation creates lossy, provenance-linked retrieval summaries; it is not an Observer/Reflector architecture and cannot archive or replace exact source facts.
 7. **Storage Layer (`.mind`)**:
    - SQLite (`store.db` in WAL mode) for nodes, edges, sessions, and metadata
-   - FAISS (`vectors.faiss`) for HNSW index
-   - NetworkX (`graph.nx`) binary graph pickle
-   - Persistent `bm25.pkl` index object
-   - `manifest.json` with SHA256 checksums and automated 3-backup rotation
+   - `vectors.json`, `graph.jsonl`, and `bm25.jsonl` safe derived-index data
+   - `manifest.json` with SHA256 checksums and configured backup rotation
+   - runtime FAISS, NetworkX, and BM25 indexes rebuilt from validated data
+
+This project does not replace a transformer KV cache. Its 10M–100M-token target is a preregistered research goal for **retrieval-conditioned effective context**: answer over a large external corpus while sending a bounded evidence subset to a reader. See the protocol below; corpus capacity alone is not evidence that the goal works.
 
 ---
 
@@ -36,9 +37,16 @@ python3 -m venv .venv
 # PowerShell: .\.venv\Scripts\Activate.ps1
 # Unix: source .venv/bin/activate
 pip install -r requirements.txt
-python scripts/preflight.py
+# First create an offline resource report and a matching live-plan file.
+python scripts/offline_resource_frontier.py --output benchmarks/results/offline_resource_frontier.json
+python scripts/preflight.py --plan path/to/live-plan.json --validate-only
+# Omit --validate-only only when the bounded plan is ready to spend/warm.
 python -m uvicorn main:app --host 127.0.0.1 --port 8000
 ```
+
+Preflight is deliberately default-deny: a bare command makes no provider calls.
+See `docs/RESOURCE_SPEED_TOKENOMICS.md` and
+`docs/LIVE_EVAL_PLAN.example.json`.
 
 ### Python SDK (`sdk/memory.py`)
 
@@ -65,9 +73,11 @@ python eval_stats.py compare <ledger_A> <ledger_B>
 python scripts/ablation_matrix.py --list
 python scripts/ablation_matrix.py --dry-run --benchmark locomo
 
-# execute deterministic signal ablations after preflight and server startup
-python eval_locomo_retrieval.py --search-mode vector_only --vector-weight 1 --graph-weight 0 --bm25-boost 0 --rerank-pool 1 --no-route-weights --no-track-access
-python eval_locomo_retrieval.py --search-mode graph_only --graph-anchor-strategy vector_top1 --vector-weight 0 --graph-weight 1 --bm25-boost 0 --rerank-pool 1 --no-route-weights --no-track-access
+# issue a client-request-controlled signal ablation after preflight/server startup;
+# this does not by itself attest the external server commit, config, or corpus
+python eval_locomo_retrieval.py --search-mode vector_only --vector-weight 1 --graph-weight 0 --bm25-boost 0 --rerank-pool 0 --no-route-weights --no-track-access
+# Graph-only additionally requires a gold-independent explicit anchor manifest;
+# a vector-derived anchor is not a pure graph-only ablation.
 ```
 
 ---
@@ -86,8 +96,11 @@ python eval_locomo_retrieval.py --search-mode graph_only --graph-anchor-strategy
 
 ## Documentation Index
 
-- [AGENTS.md](AGENTS.md) — system specs and developer rules
+- [AGENTS.md](AGENTS.md) — repository invariants and developer rules
+- [docs/ADVERSARIAL_AUDIT_REMEDIATION.md](docs/ADVERSARIAL_AUDIT_REMEDIATION.md) — baseline audit, remediation evidence, residual risks, and scores
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — thread safety, WAL mode, and storage engines
 - [docs/ALGORITHM.md](docs/ALGORITHM.md) — RRF fusion formulas and cross-encoder score normalization
 - [docs/KV_CACHE_RESEARCH.md](docs/KV_CACHE_RESEARCH.md) — KV working-set hypotheses and evidence
+- [docs/RETRIEVAL_RESEARCH_PROTOCOL.md](docs/RETRIEVAL_RESEARCH_PROTOCOL.md) — preregistered quality, scale, latency, resource, and cost gates
+- [docs/RESOURCE_SPEED_TOKENOMICS.md](docs/RESOURCE_SPEED_TOKENOMICS.md) — bounded local measurements and live spend admission control
 - [demos/techspec.md](demos/techspec.md) — no-code specification for six user-facing demos
