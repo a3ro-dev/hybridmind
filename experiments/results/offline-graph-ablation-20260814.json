@@ -1,0 +1,5239 @@
+{
+  "adversarial": {
+    "cross_scope_leakage": false,
+    "historical_as_of_half_open_validity_pass": true,
+    "identical_text_distinct_provenance_pass": true
+  },
+  "conditions": {
+    "graph_only": {
+      "hit_at_2": 1.0,
+      "latency_ms_mean": 0.49225
+    },
+    "vector_sparse": {
+      "hit_at_2": 0.0,
+      "latency_ms_mean": 26.86225
+    }
+  },
+  "design": {
+    "anchor_policy": "explicit query-derived anchor_key; gold-independent",
+    "cases": 40,
+    "claim_boundary": "synthetic relationship retrieval only",
+    "distractors_per_case": 8,
+    "metric_basis": "exact_evidence_id",
+    "split": "deterministic synthetic relationship invariant"
+  },
+  "generated_at_utc": "2026-08-14T16:30:26.941968+00:00",
+  "git_commit": "3422f226d5adc650802e5aeb87a0302b0765635f",
+  "hypothesis_h8_success": true,
+  "paired_effect": {
+    "bootstrap_samples": 4000,
+    "ci95_high": 1.0,
+    "ci95_low": 1.0,
+    "delta": 1.0
+  },
+  "provider_calls": 0,
+  "rows": [
+    {
+      "anchor_id": "anchor-000",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-000:anchor",
+        "synthetic:relationship-case-000:distractor:0"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-000:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-000:anchor",
+        "synthetic:relationship-case-000:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-000"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-000"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-000"
+    },
+    {
+      "anchor_id": "anchor-001",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-001:anchor",
+        "synthetic:relationship-case-001:distractor:0"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-001:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-001:anchor",
+        "synthetic:relationship-case-001:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-001"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-001"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-001"
+    },
+    {
+      "anchor_id": "anchor-002",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-002:anchor",
+        "synthetic:relationship-case-002:distractor:0"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-002:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-002:anchor",
+        "synthetic:relationship-case-002:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-002"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-002"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-002"
+    },
+    {
+      "anchor_id": "anchor-003",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-003:anchor",
+        "synthetic:relationship-case-003:distractor:0"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-003:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-003:anchor",
+        "synthetic:relationship-case-003:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-003"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-003"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-003"
+    },
+    {
+      "anchor_id": "anchor-004",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-004:anchor",
+        "synthetic:relationship-case-004:distractor:0"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-004:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-004:anchor",
+        "synthetic:relationship-case-004:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-004"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-004"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-004"
+    },
+    {
+      "anchor_id": "anchor-005",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-005:anchor",
+        "synthetic:relationship-case-005:distractor:0"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-005:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-005:anchor",
+        "synthetic:relationship-case-005:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-005"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-005"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-005"
+    },
+    {
+      "anchor_id": "anchor-006",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-006:anchor",
+        "synthetic:relationship-case-006:distractor:0"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-006:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-006:anchor",
+        "synthetic:relationship-case-006:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-006"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-006"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-006"
+    },
+    {
+      "anchor_id": "anchor-007",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-007:anchor",
+        "synthetic:relationship-case-007:distractor:0"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-007:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-007:anchor",
+        "synthetic:relationship-case-007:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-007"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-007"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-007"
+    },
+    {
+      "anchor_id": "anchor-008",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-008:anchor",
+        "synthetic:relationship-case-008:distractor:0"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-008:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-008:anchor",
+        "synthetic:relationship-case-008:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-008"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-008"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-008"
+    },
+    {
+      "anchor_id": "anchor-009",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-009:anchor",
+        "synthetic:relationship-case-009:distractor:0"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-009:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-009:anchor",
+        "synthetic:relationship-case-009:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-009"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-009"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-009"
+    },
+    {
+      "anchor_id": "anchor-010",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-010:anchor",
+        "synthetic:relationship-case-010:distractor:1"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-010:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-010:anchor",
+        "synthetic:relationship-case-010:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-010"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-010"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-010"
+    },
+    {
+      "anchor_id": "anchor-011",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-011:anchor",
+        "synthetic:relationship-case-011:distractor:1"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-011:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-011:anchor",
+        "synthetic:relationship-case-011:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-011"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-011"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-011"
+    },
+    {
+      "anchor_id": "anchor-012",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-012:anchor",
+        "synthetic:relationship-case-012:distractor:1"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-012:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-012:anchor",
+        "synthetic:relationship-case-012:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-012"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-012"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-012"
+    },
+    {
+      "anchor_id": "anchor-013",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-013:anchor",
+        "synthetic:relationship-case-013:distractor:1"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-013:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-013:anchor",
+        "synthetic:relationship-case-013:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-013"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-013"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-013"
+    },
+    {
+      "anchor_id": "anchor-014",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-014:anchor",
+        "synthetic:relationship-case-014:distractor:1"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-014:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-014:anchor",
+        "synthetic:relationship-case-014:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-014"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-014"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-014"
+    },
+    {
+      "anchor_id": "anchor-015",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-015:anchor",
+        "synthetic:relationship-case-015:distractor:1"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-015:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-015:anchor",
+        "synthetic:relationship-case-015:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-015"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-015"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-015"
+    },
+    {
+      "anchor_id": "anchor-016",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-016:anchor",
+        "synthetic:relationship-case-016:distractor:1"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-016:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-016:anchor",
+        "synthetic:relationship-case-016:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-016"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-016"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-016"
+    },
+    {
+      "anchor_id": "anchor-017",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-017:anchor",
+        "synthetic:relationship-case-017:distractor:1"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-017:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-017:anchor",
+        "synthetic:relationship-case-017:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-017"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-017"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-017"
+    },
+    {
+      "anchor_id": "anchor-018",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-018:anchor",
+        "synthetic:relationship-case-018:distractor:1"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-018:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-018:anchor",
+        "synthetic:relationship-case-018:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-018"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-018"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-018"
+    },
+    {
+      "anchor_id": "anchor-019",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-019:anchor",
+        "synthetic:relationship-case-019:distractor:1"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-019:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-019:anchor",
+        "synthetic:relationship-case-019:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-019"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-019"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-019"
+    },
+    {
+      "anchor_id": "anchor-020",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-020:anchor",
+        "synthetic:relationship-case-020:distractor:2"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-020:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-020:anchor",
+        "synthetic:relationship-case-020:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-020"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-020"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-020"
+    },
+    {
+      "anchor_id": "anchor-021",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-021:anchor",
+        "synthetic:relationship-case-021:distractor:2"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-021:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-021:anchor",
+        "synthetic:relationship-case-021:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-021"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-021"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-021"
+    },
+    {
+      "anchor_id": "anchor-022",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-022:anchor",
+        "synthetic:relationship-case-022:distractor:2"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-022:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-022:anchor",
+        "synthetic:relationship-case-022:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-022"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-022"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-022"
+    },
+    {
+      "anchor_id": "anchor-023",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-023:anchor",
+        "synthetic:relationship-case-023:distractor:2"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-023:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-023:anchor",
+        "synthetic:relationship-case-023:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-023"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-023"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-023"
+    },
+    {
+      "anchor_id": "anchor-024",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-024:anchor",
+        "synthetic:relationship-case-024:distractor:2"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-024:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-024:anchor",
+        "synthetic:relationship-case-024:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-024"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-024"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-024"
+    },
+    {
+      "anchor_id": "anchor-025",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-025:anchor",
+        "synthetic:relationship-case-025:distractor:2"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-025:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-025:anchor",
+        "synthetic:relationship-case-025:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-025"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-025"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-025"
+    },
+    {
+      "anchor_id": "anchor-026",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-026:anchor",
+        "synthetic:relationship-case-026:distractor:2"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-026:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-026:anchor",
+        "synthetic:relationship-case-026:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-026"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-026"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-026"
+    },
+    {
+      "anchor_id": "anchor-027",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-027:anchor",
+        "synthetic:relationship-case-027:distractor:2"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-027:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-027:anchor",
+        "synthetic:relationship-case-027:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-027"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-027"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-027"
+    },
+    {
+      "anchor_id": "anchor-028",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-028:anchor",
+        "synthetic:relationship-case-028:distractor:2"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-028:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-028:anchor",
+        "synthetic:relationship-case-028:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-028"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-028"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-028"
+    },
+    {
+      "anchor_id": "anchor-029",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-029:anchor",
+        "synthetic:relationship-case-029:distractor:2"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-029:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-029:anchor",
+        "synthetic:relationship-case-029:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-029"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-029"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-029"
+    },
+    {
+      "anchor_id": "anchor-030",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-030:anchor",
+        "synthetic:relationship-case-030:distractor:3"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-030:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-030:anchor",
+        "synthetic:relationship-case-030:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-030"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-030"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-030"
+    },
+    {
+      "anchor_id": "anchor-031",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-031:anchor",
+        "synthetic:relationship-case-031:distractor:3"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-031:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-031:anchor",
+        "synthetic:relationship-case-031:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-031"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-031"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-031"
+    },
+    {
+      "anchor_id": "anchor-032",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-032:anchor",
+        "synthetic:relationship-case-032:distractor:3"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-032:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-032:anchor",
+        "synthetic:relationship-case-032:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-032"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-032"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-032"
+    },
+    {
+      "anchor_id": "anchor-033",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-033:anchor",
+        "synthetic:relationship-case-033:distractor:3"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-033:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-033:anchor",
+        "synthetic:relationship-case-033:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-033"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-033"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-033"
+    },
+    {
+      "anchor_id": "anchor-034",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-034:anchor",
+        "synthetic:relationship-case-034:distractor:3"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-034:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-034:anchor",
+        "synthetic:relationship-case-034:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-034"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-034"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-034"
+    },
+    {
+      "anchor_id": "anchor-035",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-035:anchor",
+        "synthetic:relationship-case-035:distractor:3"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 9,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-035:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-035:anchor",
+        "synthetic:relationship-case-035:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-035"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-035"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-035"
+    },
+    {
+      "anchor_id": "anchor-036",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-036:anchor",
+        "synthetic:relationship-case-036:distractor:3"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 10,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-036:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-036:anchor",
+        "synthetic:relationship-case-036:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-036"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-036"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-036"
+    },
+    {
+      "anchor_id": "anchor-037",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-037:anchor",
+        "synthetic:relationship-case-037:distractor:3"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 9,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-037:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-037:anchor",
+        "synthetic:relationship-case-037:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-037"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-037"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-037"
+    },
+    {
+      "anchor_id": "anchor-038",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-038:anchor",
+        "synthetic:relationship-case-038:distractor:3"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 9,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-038:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-038:anchor",
+        "synthetic:relationship-case-038:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-038"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-038"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-038"
+    },
+    {
+      "anchor_id": "anchor-039",
+      "baseline_hit_at_2": false,
+      "baseline_retrieved_evidence_ids": [
+        "synthetic:relationship-case-039:anchor",
+        "synthetic:relationship-case-039:distractor:3"
+      ],
+      "baseline_trace": {
+        "anchor_nodes": [],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "100e51c13083cfa26af78ce527b8e33feaf9463017a3f887e5a9332354f27afb",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 0.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "vector_sparse",
+          "sparse_weight": 0.5,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.5
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "vector_sparse",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 9,
+            "executed": true,
+            "requested": true
+          },
+          "graph": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "sparse": {
+            "candidates": 10,
+            "executed": true,
+            "identity": "BM25Index",
+            "requested": true
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "gold_evidence_id": "synthetic:relationship-case-039:gold",
+      "graph_hit_at_2": true,
+      "graph_retrieved_evidence_ids": [
+        "synthetic:relationship-case-039:anchor",
+        "synthetic:relationship-case-039:gold"
+      ],
+      "graph_trace": {
+        "anchor_nodes": [
+          "anchor-039"
+        ],
+        "as_of": null,
+        "cache_hit": false,
+        "query_type": "default",
+        "resolved_config_sha256": "15d58998fd4b8b478522bff432aa818d779aa06b28f1a7bda67f66fff474576a",
+        "resolved_controls": {
+          "as_of": null,
+          "deduplicate": true,
+          "fusion_mode": "rrf",
+          "graph_weight": 1.0,
+          "max_depth": 2,
+          "query_type": "default",
+          "rerank_pool": 0,
+          "route_weights": false,
+          "rrf_k": 60,
+          "search_mode": "graph_only",
+          "sparse_weight": 0.0,
+          "time_weight": 0.0,
+          "top_k": 2,
+          "vector_weight": 0.0
+        },
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": "graph_only",
+        "stages": {
+          "cross_encoder": {
+            "applied": false,
+            "attempted": false,
+            "candidates": 0,
+            "configured": false,
+            "failure_type": null
+          },
+          "dense": {
+            "candidates": 0,
+            "executed": false,
+            "requested": false
+          },
+          "graph": {
+            "candidates": 2,
+            "executed": true,
+            "reference_nodes": [
+              "anchor-039"
+            ],
+            "requested": true
+          },
+          "sparse": {
+            "candidates": 0,
+            "executed": false,
+            "identity": "BM25Index",
+            "requested": false
+          },
+          "temporal_validity": {
+            "executed": false,
+            "filtered_candidates": 0,
+            "requested": false
+          }
+        }
+      },
+      "scope": "relationship-case-039"
+    }
+  ],
+  "schema": "hybridmind.offline-graph-ablation/v1",
+  "seed": 20260814
+}

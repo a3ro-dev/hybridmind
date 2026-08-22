@@ -1,0 +1,273 @@
+{
+  "claim_boundary": [
+    "Synthetic normalized vectors measure ANN mechanics, not semantic or exact-evidence retrieval.",
+    "The FAISS and TurboVec batch timings are local single-host observations, not vendor-neutral throughput claims.",
+    "No production backend is replaced without real native-4096 embedding and exact-evidence confirmation."
+  ],
+  "classification": "measured_offline_turbovec_synthetic_frontier",
+  "execution": {
+    "elapsed_seconds": 0.9903825000001234,
+    "embedding_calls": 0,
+    "external_network_calls": 0,
+    "provider_calls": 0,
+    "reader_calls": 0,
+    "reranker_calls": 0
+  },
+  "external_network_calls_during_experiment": 0,
+  "generated_at_utc": "2026-08-22T16:46:09.448235+00:00",
+  "oracle": [
+    {
+      "backend": "faiss.IndexFlatIP",
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 1.0,
+      "recall_at_10": 1.0,
+      "seed": 0,
+      "warm_batch_search_ms": {
+        "mean": 11.699166666666665,
+        "n": 3,
+        "p50": 11.9887,
+        "p95": 12.71212,
+        "p99": 12.776424
+      }
+    }
+  ],
+  "provenance": {
+    "dependency_versions": {
+      "faiss-cpu": "1.13.2",
+      "numpy": "2.4.3",
+      "psutil": "7.2.2",
+      "turbovec": "1.0.0"
+    },
+    "git_commit": "3422f226d5adc650802e5aeb87a0302b0765635f",
+    "git_worktree_status_sha256": "4362480a7a41ace3769c4515346ff8c5fde951e0f411b1ff846624ec2791c54d",
+    "logical_cpu_count": 12,
+    "platform": "Windows-11-10.0.26100-SP0",
+    "processor": "Intel64 Family 6 Model 186 Stepping 2, GenuineIntel",
+    "python": "3.13.5",
+    "source": {
+      "path": "D:\\hybridmind\\scripts\\offline_turbovec_frontier.py",
+      "sha256": "f0bdeaf6bc38232b14831599aaaca63afe7b32ff307b7e09a203852c80865ae3"
+    },
+    "turbovec_license": "MIT",
+    "turbovec_native_binary_sha256": {
+      "D:\\hybridmind\\.venv\\Lib\\site-packages\\turbovec\\_turbovec.pyd": "60a9ac64323ca4dcd01b90c2d28314483549acba0b3205918f9bac361d5b3e4d"
+    },
+    "turbovec_project": "https://github.com/RyanCodrai/turbovec",
+    "turbovec_release": "1.0.0"
+  },
+  "provider_calls": 0,
+  "results": [
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 2,
+      "build_ms": 68.1278,
+      "calibrated": false,
+      "calibration_ms": 0.0,
+      "calibration_rows": 0,
+      "calibration_state": "uncalibrated",
+      "compression_ratio_vs_raw_float32": 10.404418580674369,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.0035085882991552353,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.34375,
+      "recall_at_10": 0.575,
+      "retrieved_id_sha256": "9d2a970855cdc7f1d1bde687513212492bf9572ddd720155df809b15bc18b091",
+      "rss_increase_bytes": 6389760,
+      "seed": 0,
+      "serialized_index_bytes": 6450035,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 2039,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 7.023466666666667,
+        "n": 3,
+        "p50": 6.8523,
+        "p95": 7.32399,
+        "p99": 7.365918000000001
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.10974166666666667,
+        "n": 3,
+        "p50": 0.1070671875,
+        "p95": 0.11443734375,
+        "p99": 0.11509246875000001
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 2,
+      "build_ms": 43.7199,
+      "calibrated": true,
+      "calibration_ms": 13.5572,
+      "calibration_rows": 1024,
+      "calibration_state": "calibrated",
+      "compression_ratio_vs_raw_float32": 10.351828368068565,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.0033904213923960924,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.390625,
+      "recall_at_10": 0.5703125,
+      "retrieved_id_sha256": "71a56756b3ea025f9f0bdcffab496ad8373ee93d4f2df5f87fd4f3b1cd2dbefe",
+      "rss_increase_bytes": 45690880,
+      "seed": 0,
+      "serialized_index_bytes": 6482803,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 2039,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 6.862500000000001,
+        "n": 3,
+        "p50": 6.4092,
+        "p95": 7.82823,
+        "p99": 7.954366
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.10722656250000001,
+        "n": 3,
+        "p50": 0.10014375,
+        "p95": 0.12231609375,
+        "p99": 0.12428696875
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 4,
+      "build_ms": 137.7004,
+      "calibrated": false,
+      "calibration_ms": 0.0,
+      "calibration_rows": 0,
+      "calibration_state": "uncalibrated",
+      "compression_ratio_vs_raw_float32": 5.240802103853355,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.0008994335075840354,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.765625,
+      "recall_at_10": 0.8578125,
+      "retrieved_id_sha256": "5e7419775b2c2056a476f95a9c63ba3ffb50b0552ffda99adbe91aacb9c7d02c",
+      "rss_increase_bytes": 8830976,
+      "seed": 0,
+      "serialized_index_bytes": 12805075,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 1693,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 11.750166666666667,
+        "n": 3,
+        "p50": 11.7104,
+        "p95": 12.113059999999999,
+        "p99": 12.148852
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.18359635416666667,
+        "n": 3,
+        "p50": 0.182975,
+        "p95": 0.18926656249999999,
+        "p99": 0.1898258125
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 4,
+      "build_ms": 55.0256,
+      "calibrated": true,
+      "calibration_ms": 13.4019,
+      "calibration_rows": 1024,
+      "calibration_state": "calibrated",
+      "compression_ratio_vs_raw_float32": 5.227425199077446,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.0008707952802069485,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.78125,
+      "recall_at_10": 0.8546875,
+      "retrieved_id_sha256": "eb4bf35368f04fafbd32183ce41f20bb598a59ff762989a7e7dd0366b4af3bed",
+      "rss_increase_bytes": 51064832,
+      "seed": 0,
+      "serialized_index_bytes": 12837843,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 2039,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 12.825099999999999,
+        "n": 3,
+        "p50": 12.9929,
+        "p95": 13.02638,
+        "p99": 13.029356
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.20039218749999999,
+        "n": 3,
+        "p50": 0.2030140625,
+        "p95": 0.2035371875,
+        "p99": 0.2035836875
+      }
+    }
+  ],
+  "safety_gate": {
+    "budget_bytes": 536870912,
+    "estimated_working_bytes": 201392128
+  },
+  "schema_version": "hybridmind.offline-turbovec-frontier/v1",
+  "workload": {
+    "bit_widths": [
+      2,
+      4
+    ],
+    "calibration_modes": [
+      false,
+      true
+    ],
+    "dimension": 4096,
+    "mechanics_test_only": false,
+    "query_count": 64,
+    "repetitions": 3,
+    "seeds": [
+      0
+    ],
+    "top_k": 10,
+    "vector_count": 4096
+  }
+}

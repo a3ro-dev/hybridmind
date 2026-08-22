@@ -1,0 +1,45 @@
+{
+  "claim_boundary": "No retrieval metric is valid for this receipt.",
+  "classification": "failed_dataset_admission",
+  "dataset": {
+    "path": "D:\\hybridmind\\memorybench\\data\\benchmarks\\longmemeval\\longmemeval_s.json",
+    "sha256": "821a2034d219ab45846873dd14c14f12cfe7776e73527a483f9dac095d38620c"
+  },
+  "execution": {
+    "actual_external_cost_usd": 0.0,
+    "embedding_calls": 0,
+    "external_network_calls": 0,
+    "offline": true,
+    "provider_calls": 0,
+    "reader_calls": 0,
+    "reranker_calls": 0
+  },
+  "provenance": {
+    "dependencies": {
+      "PyStemmer": "3.1.0",
+      "bm25s": "0.3.9",
+      "numpy": "2.4.3"
+    },
+    "git_head": "3422f226d5adc650802e5aeb87a0302b0765635f",
+    "platform": "Windows-11-10.0.26100-SP0",
+    "python": "3.13.5",
+    "source": {
+      "path": "D:\\hybridmind\\scripts\\offline_longmemeval_session_retrieval.py",
+      "sha256": "40d5ec47eb3c5cfaabc08269b09af89353a397e668c93b6fda57a9de26a6eeed"
+    }
+  },
+  "reason": "LongMemEval file is oracle-context data, not a retrieval corpus: every haystack session is gold; there are no distractors; no example has more than top_k=10 sessions, so top-k returns the full haystack",
+  "retrieval_challenge_audit": {
+    "examples": 500,
+    "examples_with_more_than_top_k_sessions": 0,
+    "examples_with_non_gold_sessions": 0,
+    "max_haystack_sessions": 6,
+    "min_haystack_sessions": 1,
+    "top_k": 10,
+    "total_gold_sessions": 948,
+    "total_haystack_sessions": 948,
+    "total_non_gold_sessions": 0
+  },
+  "schema_version": "hybridmind.offline-longmemeval-session-retrieval-failure/v1",
+  "status": "failed"
+}

@@ -1,0 +1,330 @@
+{
+  "aggregator_provenance": {
+    "dependency_versions": {
+      "PyStemmer": "3.1.0",
+      "bm25s": "0.3.9",
+      "numpy": "2.4.3"
+    },
+    "git_commit": "3422f226d5adc650802e5aeb87a0302b0765635f",
+    "git_worktree_status_sha256": "87640339ecac2e7da452f0f57f2322e359ca9399031746d41631b8be2ef52a24",
+    "platform": "Windows-11-10.0.26100-SP0",
+    "python": "3.13.5",
+    "source": {
+      "path": "D:\\hybridmind\\scripts\\aggregate_sparse_seed_results.py",
+      "sha256": "9b29f2a91538fc61f95d999ea572d8f468c13e6db16ae0486daffabcc820b346"
+    }
+  },
+  "artifact_count": 5,
+  "artifacts": [
+    {
+      "held_out_sample_ids": [
+        "conv-26",
+        "conv-41",
+        "conv-43",
+        "conv-44",
+        "conv-49"
+      ],
+      "path": "D:\\hybridmind\\experiments\\results\\offline-locomo-sparse-20260822-v2.json",
+      "sha256": "9b538ba90383badcdba206ae81e0d0dce9bc6168ce77ee4cb02850e597cacd37",
+      "split_seed": "20260814"
+    },
+    {
+      "held_out_sample_ids": [
+        "conv-26",
+        "conv-30",
+        "conv-41",
+        "conv-42",
+        "conv-50"
+      ],
+      "path": "D:\\hybridmind\\experiments\\results\\offline-locomo-sparse-20260822-seed-20260815.json",
+      "sha256": "e2411c512cc08ea42b255133d4f79bde9ee3a9cd6f98dd9ce05126408b39eb67",
+      "split_seed": "20260815"
+    },
+    {
+      "held_out_sample_ids": [
+        "conv-30",
+        "conv-42",
+        "conv-44",
+        "conv-47",
+        "conv-50"
+      ],
+      "path": "D:\\hybridmind\\experiments\\results\\offline-locomo-sparse-20260822-seed-20260816.json",
+      "sha256": "4ea0811638d945350208c7d968cf6d9eb4ca471f1c46cd50e87ee37d58c5af8b",
+      "split_seed": "20260816"
+    },
+    {
+      "held_out_sample_ids": [
+        "conv-26",
+        "conv-30",
+        "conv-42",
+        "conv-49",
+        "conv-50"
+      ],
+      "path": "D:\\hybridmind\\experiments\\results\\offline-locomo-sparse-20260822-seed-20260817.json",
+      "sha256": "619d6d62a83b26f038589161cb2beb8c16af35638025eef65b5690eea526ad56",
+      "split_seed": "20260817"
+    },
+    {
+      "held_out_sample_ids": [
+        "conv-41",
+        "conv-43",
+        "conv-47",
+        "conv-49",
+        "conv-50"
+      ],
+      "path": "D:\\hybridmind\\experiments\\results\\offline-locomo-sparse-20260822-seed-20260818.json",
+      "sha256": "0dacdf0c5dbf74f29f3047580af97ad3dc8e0dc94ca84e6d46ccb4b625389864",
+      "split_seed": "20260818"
+    }
+  ],
+  "claim_boundary": [
+    "This aggregate is exact-evidence sparse retrieval, not answer accuracy.",
+    "It is not an LLM judge result and does not establish downstream answer quality.",
+    "It does not establish state of the art, near-state-of-the-art, or the 70-80% prompt-source substitution target.",
+    "Ten-conversation split overlap means between-seed dispersion is descriptive, not an independent-sample confidence claim."
+  ],
+  "classification": "measured_offline_sparse_seed_aggregate",
+  "counts": {
+    "adaptive_predeclared_success": 0,
+    "positive_mrr_delta": 5,
+    "positive_recall_at_10_delta": 5,
+    "quality_success": 5,
+    "representation_predeclared_success": 5
+  },
+  "external_network_calls": 0,
+  "generated_at": "2026-08-22T16:41:07.593020+00:00",
+  "held_out_delta_summary": {
+    "exact_evidence_recall_at_10": {
+      "between_seed_range": 0.00560371945651917,
+      "between_seed_stddev": 0.002308608439076941,
+      "max": 0.03239400929712348,
+      "mean": 0.029661080006074536,
+      "min": 0.02679028984060431,
+      "n_seeds": 5,
+      "per_seed": [
+        {
+          "ci95_high": 0.043747115828334106,
+          "ci95_low": 0.02030456852791878,
+          "mean": 0.031599210981116024,
+          "n": 985,
+          "split_seed": "20260814"
+        },
+        {
+          "ci95_high": 0.038611859838274934,
+          "ci95_low": 0.015731589630960698,
+          "mean": 0.02679028984060431,
+          "n": 954,
+          "split_seed": "20260815"
+        },
+        {
+          "ci95_high": 0.040867353161535384,
+          "ci95_low": 0.016276375167703378,
+          "mean": 0.028420713327409267,
+          "n": 911,
+          "split_seed": "20260816"
+        },
+        {
+          "ci95_high": 0.04158193279528334,
+          "ci95_low": 0.017636974044866357,
+          "mean": 0.029101176584119603,
+          "n": 957,
+          "split_seed": "20260817"
+        },
+        {
+          "ci95_high": 0.0446078431372549,
+          "ci95_low": 0.021405228758169935,
+          "mean": 0.03239400929712348,
+          "n": 1020,
+          "split_seed": "20260818"
+        }
+      ]
+    },
+    "mrr": {
+      "between_seed_range": 0.010201772735636497,
+      "between_seed_stddev": 0.003819666432137432,
+      "max": 0.026642486805539503,
+      "mean": 0.022262645192490476,
+      "min": 0.016440714069903006,
+      "n_seeds": 5,
+      "per_seed": [
+        {
+          "ci95_high": 0.034207384057234454,
+          "ci95_low": 0.019809192963857063,
+          "mean": 0.026642486805539503,
+          "n": 985,
+          "split_seed": "20260814"
+        },
+        {
+          "ci95_high": 0.03161458315686065,
+          "ci95_low": 0.01726639496343268,
+          "mean": 0.02439700383586862,
+          "n": 954,
+          "split_seed": "20260815"
+        },
+        {
+          "ci95_high": 0.022924272689722927,
+          "ci95_low": 0.009770890720685883,
+          "mean": 0.016440714069903006,
+          "n": 911,
+          "split_seed": "20260816"
+        },
+        {
+          "ci95_high": 0.02962392803154193,
+          "ci95_low": 0.015763876399679747,
+          "mean": 0.02240966727626333,
+          "n": 957,
+          "split_seed": "20260817"
+        },
+        {
+          "ci95_high": 0.028353391012504583,
+          "ci95_low": 0.01480212547233816,
+          "mean": 0.021423353974877914,
+          "n": 1020,
+          "split_seed": "20260818"
+        }
+      ]
+    }
+  },
+  "held_out_overlap": {
+    "any_held_out_overlap": true,
+    "pairs": [
+      {
+        "left_split_seed": "20260814",
+        "overlap_count": 2,
+        "overlap_sample_ids": [
+          "conv-26",
+          "conv-41"
+        ],
+        "right_split_seed": "20260815"
+      },
+      {
+        "left_split_seed": "20260814",
+        "overlap_count": 1,
+        "overlap_sample_ids": [
+          "conv-44"
+        ],
+        "right_split_seed": "20260816"
+      },
+      {
+        "left_split_seed": "20260814",
+        "overlap_count": 2,
+        "overlap_sample_ids": [
+          "conv-26",
+          "conv-49"
+        ],
+        "right_split_seed": "20260817"
+      },
+      {
+        "left_split_seed": "20260814",
+        "overlap_count": 3,
+        "overlap_sample_ids": [
+          "conv-41",
+          "conv-43",
+          "conv-49"
+        ],
+        "right_split_seed": "20260818"
+      },
+      {
+        "left_split_seed": "20260815",
+        "overlap_count": 3,
+        "overlap_sample_ids": [
+          "conv-30",
+          "conv-42",
+          "conv-50"
+        ],
+        "right_split_seed": "20260816"
+      },
+      {
+        "left_split_seed": "20260815",
+        "overlap_count": 4,
+        "overlap_sample_ids": [
+          "conv-26",
+          "conv-30",
+          "conv-42",
+          "conv-50"
+        ],
+        "right_split_seed": "20260817"
+      },
+      {
+        "left_split_seed": "20260815",
+        "overlap_count": 2,
+        "overlap_sample_ids": [
+          "conv-41",
+          "conv-50"
+        ],
+        "right_split_seed": "20260818"
+      },
+      {
+        "left_split_seed": "20260816",
+        "overlap_count": 3,
+        "overlap_sample_ids": [
+          "conv-30",
+          "conv-42",
+          "conv-50"
+        ],
+        "right_split_seed": "20260817"
+      },
+      {
+        "left_split_seed": "20260816",
+        "overlap_count": 2,
+        "overlap_sample_ids": [
+          "conv-47",
+          "conv-50"
+        ],
+        "right_split_seed": "20260818"
+      },
+      {
+        "left_split_seed": "20260817",
+        "overlap_count": 2,
+        "overlap_sample_ids": [
+          "conv-49",
+          "conv-50"
+        ],
+        "right_split_seed": "20260818"
+      }
+    ],
+    "warning": "LoCoMo has ten conversation clusters; split-seed aggregates are not independent replicates and overlapping held-out conversations limit generalization."
+  },
+  "provider_calls": 0,
+  "schema_version": "hybridmind.offline-locomo-sparse-aggregate/v1",
+  "shared_provenance": {
+    "dataset": {
+      "path": "D:\\hybridmind\\memorybench\\data\\benchmarks\\locomo\\locomo10.json",
+      "sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4"
+    },
+    "declared_criteria": {
+      "adaptive_success_criteria": {
+        "per_category_recall_loss_max": 0.02,
+        "recall_noninferiority_margin": -0.005,
+        "source_token_reduction_min": 0.2
+      },
+      "quality_selection_criteria": [
+        "maximize development exact-evidence recall@10",
+        "then maximize development MRR",
+        "then minimize deterministic index token footprint"
+      ],
+      "representation_success_criteria": {
+        "index_token_increase_max": 0.15,
+        "latency_gate": "not applied in this quality experiment; requires a separate repeated randomized paired benchmark",
+        "per_category_recall_loss_max": 0.02,
+        "recall_at_10_absolute_gain_min": 0.01
+      }
+    },
+    "execution_environment": {
+      "dependency_versions": {
+        "PyStemmer": "3.1.0",
+        "bm25s": "0.3.9",
+        "numpy": "2.4.3"
+      },
+      "git_commit": "3422f226d5adc650802e5aeb87a0302b0765635f",
+      "logical_cpu_count": 12,
+      "platform": "Windows-11-10.0.26100-SP0",
+      "python": "3.13.5"
+    },
+    "locked_winner": "speaker_prefix",
+    "source": {
+      "path": "D:\\hybridmind\\scripts\\offline_locomo_sparse_experiments.py",
+      "sha256": "bc0708c2ddca4a07170598ccd88b4db98852e3555397ad2820efa9e080ced430"
+    }
+  }
+}

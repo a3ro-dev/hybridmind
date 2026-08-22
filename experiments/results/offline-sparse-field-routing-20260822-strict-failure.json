@@ -1,0 +1,38 @@
+{
+  "claim_boundary": "No comparative retrieval result is valid for this receipt.",
+  "classification": "failed_validation",
+  "configuration": {
+    "split_seed": "20260822-speaker-routing",
+    "strict_evidence": true
+  },
+  "dataset": {
+    "path": "D:\\hybridmind\\memorybench\\data\\benchmarks\\locomo\\locomo10.json",
+    "sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4"
+  },
+  "execution": {
+    "actual_external_cost_usd": 0.0,
+    "embedding_calls": 0,
+    "external_network_calls": 0,
+    "provider_calls": 0,
+    "reader_calls": 0,
+    "reranker_calls": 0,
+    "strictly_offline": true
+  },
+  "provenance": {
+    "dependency_versions": {
+      "PyStemmer": "3.1.0",
+      "bm25s": "0.3.9",
+      "numpy": "2.4.3"
+    },
+    "git_commit": "3422f226d5adc650802e5aeb87a0302b0765635f",
+    "platform": "Windows-11-10.0.26100-SP0",
+    "python": "3.13.5",
+    "source": {
+      "path": "D:\\hybridmind\\scripts\\offline_sparse_field_routing.py",
+      "sha256": "401cb5de12c8c802082555202c42419507e19e48c69246ef85eb6d002e0f8ffd"
+    }
+  },
+  "reason": "invalid evidence annotation in conv-43/18: ['D:11:26']",
+  "schema_version": "hybridmind.offline-sparse-field-routing-failure/v1",
+  "status": "failed"
+}

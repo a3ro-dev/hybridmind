@@ -1,0 +1,29 @@
+{
+  "bit_exact_logical_equivalence": true,
+  "conditions": {
+    "compact_override": {
+      "database_bytes": 8908800,
+      "physical_raw_embedding_rows": 0
+    },
+    "legacy_duplicated": {
+      "database_bytes": 17297408,
+      "physical_raw_embedding_rows": 512
+    }
+  },
+  "dtype": "float32",
+  "effect": {
+    "bytes_saved_per_node": 16384.0,
+    "database_bytes_saved": 8388608,
+    "database_reduction_fraction": 0.4849632962349041,
+    "database_reduction_percent": 48.49632962349041,
+    "raw_vector_bytes_per_node": 16384
+  },
+  "embedding_dimension": 4096,
+  "generated_at_utc": "2026-08-14T16:25:52.743949+00:00",
+  "git_commit": "3422f226d5adc650802e5aeb87a0302b0765635f",
+  "logical_embedding_pair_sha256": "0739732f03468f2ff3be50c1cf4047ad154112aeeb4b4cdbab6d71b2fa6d8b63",
+  "node_count": 512,
+  "provider_calls": 0,
+  "schema": "hybridmind.offline-embedding-storage/v1",
+  "seed": 20260814
+}

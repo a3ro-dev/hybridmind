@@ -1,0 +1,555 @@
+{
+  "builder": "scripts/build_claim_ledger.py",
+  "claims": [
+    {
+      "artifact": {
+        "path": "experiments/results/offline-locomo-bgem3-mechanisms-20260822.json",
+        "sha256": "b87aa4cdc4a888bc00083279dae6de359c9b2998abc86c52d809bbcefed9fa6d"
+      },
+      "artifact_relative_path": "experiments/results/offline-locomo-bgem3-mechanisms-20260822.json",
+      "artifact_sha256": "b87aa4cdc4a888bc00083279dae6de359c9b2998abc86c52d809bbcefed9fa6d",
+      "claim_boundary": [
+        "Rejects this BGE-M3 sparse configuration on this corpus; does not reject SPLADE++, other learned-sparse models, or other datasets. The 1024-d dense output was excluded.",
+        "This is a mechanism ablation, not a production configuration or winner selection.",
+        "BGE-M3 1024-d dense output was not used and is incompatible with HybridMind's native 4096-d runtime contract.",
+        "Candidate-pool oracle recall is separate from final Recall@10/MRR@10; MaxSim cannot recover absent evidence.",
+        "No claims are made about SPLADE++, ColBERTv2, answer quality, or generalization beyond the conversation-disjoint LoCoMo split."
+      ],
+      "claim_id": "bge-learned-sparse-rejected",
+      "component_values": [
+        -0.09070394589760786
+      ],
+      "execution": {
+        "actual_external_cost_usd": 0.0,
+        "embedding_calls": 0,
+        "external_network_calls": 0,
+        "provider_calls": 0,
+        "reader_calls": 0,
+        "reranker_calls": 0
+      },
+      "external_network_calls": 0,
+      "metric": "paired_delta_learned_sparse_minus_bm25s_pre_recall_at_10",
+      "provider_calls": 0,
+      "scope": "LoCoMo held-out split; 1,136 exact-evidence questions; equal top-25 learned-sparse versus speaker-prefixed BM25S pools",
+      "status": "rejected",
+      "title": "BGE-M3 learned sparse as a LoCoMo default",
+      "value": -0.09070394589760786
+    },
+    {
+      "artifact": {
+        "path": "experiments/results/offline-locomo-bgem3-mechanisms-20260822.json",
+        "sha256": "b87aa4cdc4a888bc00083279dae6de359c9b2998abc86c52d809bbcefed9fa6d"
+      },
+      "artifact_relative_path": "experiments/results/offline-locomo-bgem3-mechanisms-20260822.json",
+      "artifact_sha256": "b87aa4cdc4a888bc00083279dae6de359c9b2998abc86c52d809bbcefed9fa6d",
+      "claim_boundary": [
+        "Positive selection-mechanism result on one corpus; not a ColBERTv2/PLAID reproduction and not promoted because token storage, encoding cost, and independent replication remain open.",
+        "This is a mechanism ablation, not a production configuration or winner selection.",
+        "BGE-M3 1024-d dense output was not used and is incompatible with HybridMind's native 4096-d runtime contract.",
+        "Candidate-pool oracle recall is separate from final Recall@10/MRR@10; MaxSim cannot recover absent evidence.",
+        "No claims are made about SPLADE++, ColBERTv2, answer quality, or generalization beyond the conversation-disjoint LoCoMo split."
+      ],
+      "claim_id": "bgem3-maxsim-fixed-pool",
+      "component_values": [
+        0.029221858931365977
+      ],
+      "execution": {
+        "actual_external_cost_usd": 0.0,
+        "embedding_calls": 0,
+        "external_network_calls": 0,
+        "provider_calls": 0,
+        "reader_calls": 0,
+        "reranker_calls": 0
+      },
+      "external_network_calls": 0,
+      "metric": "paired_delta_maxsim_exact_evidence_recall_at_10",
+      "provider_calls": 0,
+      "scope": "LoCoMo held-out split; MaxSim reranking of fixed speaker-prefixed BM25S top-25 pools",
+      "status": "measured",
+      "title": "BGE-M3 MaxSim fixed-pool selection",
+      "value": 0.029221858931365977
+    },
+    {
+      "artifact": {
+        "path": "experiments/baselines/20260814-3422f226-locomo-bm25s.json",
+        "sha256": "ad0bd46990658e5cb143132049febd91627fd3bebf178ec297fe14065e46b7e0"
+      },
+      "artifact_relative_path": "experiments/baselines/20260814-3422f226-locomo-bm25s.json",
+      "artifact_sha256": "ad0bd46990658e5cb143132049febd91627fd3bebf178ec297fe14065e46b7e0",
+      "claim_boundary": [
+        "Retrieval evidence-ID recall only; not answer accuracy, dense retrieval, graph benefit, reranker benefit, or provider cost."
+      ],
+      "claim_id": "bm25-locomo-exact-evidence-baseline",
+      "component_values": [
+        0.5446963848209756
+      ],
+      "execution": {
+        "actual_external_cost_usd": 0.0,
+        "embedding_calls": 0,
+        "external_network_calls": 0,
+        "provider_calls": 0,
+        "reader_calls": 0,
+        "reranker_calls": 0
+      },
+      "external_network_calls": 0,
+      "metric": "exact_evidence_recall_at_10",
+      "provider_calls": 0,
+      "scope": "LoCoMo; 1,977 eligible exact canonical evidence-ID questions; one BM25S index per conversation",
+      "status": "measured",
+      "title": "LoCoMo BM25S exact-evidence baseline",
+      "value": 0.5446963848209756
+    },
+    {
+      "artifact": {
+        "path": "experiments/results/offline-embedding-storage-20260814.json",
+        "sha256": "5091226b4f39895040f6ee3f50dd796dfdc2756db7a4ba35a80916baab81e7e5"
+      },
+      "artifact_relative_path": "experiments/results/offline-embedding-storage-20260814.json",
+      "artifact_sha256": "5091226b4f39895040f6ee3f50dd796dfdc2756db7a4ba35a80916baab81e7e5",
+      "claim_boundary": [
+        "Storage-layout measurement only; does not establish retrieval quality, scale feasibility, or prompt/KV-cache reduction."
+      ],
+      "claim_id": "embedding-storage-4096",
+      "component_values": [
+        0.4849632962349041
+      ],
+      "execution": {
+        "embedding_calls": 0,
+        "external_network_calls": 0,
+        "provider_calls": 0,
+        "reader_calls": 0,
+        "reranker_calls": 0
+      },
+      "external_network_calls": 0,
+      "metric": "database_reduction_fraction",
+      "provider_calls": 0,
+      "scope": "Synthetic 512-node SQLite storage comparison with native float32 4096-dimensional vectors",
+      "status": "measured",
+      "title": "4096-dimensional embedding storage deduplication",
+      "value": 0.4849632962349041
+    },
+    {
+      "artifact": null,
+      "artifact_relative_path": null,
+      "artifact_sha256": null,
+      "claim_boundary": [
+        "Open; literature mechanisms and repository adapters are not local comparative results."
+      ],
+      "claim_id": "external-architecture-pareto",
+      "component_values": [],
+      "execution": null,
+      "external_network_calls": null,
+      "metric": "quality_latency_memory_storage_update_cost_frontier",
+      "provider_calls": null,
+      "scope": "Vespa, Lucene/Tantivy, DiskANN-family, Qdrant, Milvus, LanceDB, and Elasticsearch/OpenSearch on one immutable workload",
+      "status": "open",
+      "title": "External backend architecture Pareto challenge",
+      "value": null
+    },
+    {
+      "artifact": {
+        "path": "experiments/results/offline-ann-frontier-4096-20260822-attested.json",
+        "sha256": "9aea9c49b4aa7d09b365af23d4f72a6fa28a9935351ce96e9e6dd3557eb1c6cc"
+      },
+      "artifact_relative_path": "experiments/results/offline-ann-frontier-4096-20260822-attested.json",
+      "artifact_sha256": "9aea9c49b4aa7d09b365af23d4f72a6fa28a9935351ce96e9e6dd3557eb1c6cc",
+      "claim_boundary": [
+        "Synthetic ANN mechanics and resource evidence only; not semantic or exact source-evidence quality.",
+        "synthetic ANN mechanics and resource frontier only; independent random queries do not measure semantic or exact source-evidence quality"
+      ],
+      "claim_id": "faiss-native-4096-hnsw-frontier",
+      "component_values": [
+        0.6625,
+        0.70625,
+        0.6499999999999999,
+        0.6421874999999999
+      ],
+      "execution": {
+        "embedding_calls": 0,
+        "external_network_calls": 0,
+        "provider_calls": 0,
+        "reader_calls": 0,
+        "reranker_calls": 0
+      },
+      "external_network_calls": 0,
+      "metric": "hnsw_recall_at_10_ef_search_64",
+      "provider_calls": 0,
+      "scope": "Synthetic normalized 4096-dimensional vectors; FAISS HNSW versus exact Flat; top-10 recall",
+      "status": "measured",
+      "title": "Native 4096-dimensional FAISS HNSW mechanics",
+      "value": 0.6652343749999999
+    },
+    {
+      "artifact": {
+        "path": "experiments/results/offline-ann-hnsw-threshold-4096-20260822-attested.json",
+        "sha256": "2ba14de1b7f382776d71ba53a1bac1c151eeecf08eff5bdf34633ca3384d2119"
+      },
+      "artifact_relative_path": "experiments/results/offline-ann-hnsw-threshold-4096-20260822-attested.json",
+      "artifact_sha256": "2ba14de1b7f382776d71ba53a1bac1c151eeecf08eff5bdf34633ca3384d2119",
+      "claim_boundary": [
+        "Synthetic threshold mechanics only; does not justify a production default or semantic quality claim.",
+        "synthetic ANN mechanics and resource frontier only; independent random queries do not measure semantic or exact source-evidence quality"
+      ],
+      "claim_id": "faiss-native-4096-hnsw-threshold",
+      "component_values": [
+        1.0
+      ],
+      "execution": {
+        "embedding_calls": 0,
+        "external_network_calls": 0,
+        "provider_calls": 0,
+        "reader_calls": 0,
+        "reranker_calls": 0
+      },
+      "external_network_calls": 0,
+      "metric": "hnsw_recall_at_10_ef_search_1024",
+      "provider_calls": 0,
+      "scope": "Synthetic normalized 4096-dimensional vectors; attested HNSW efSearch threshold sweep",
+      "status": "measured",
+      "title": "Native 4096-dimensional FAISS HNSW threshold sweep",
+      "value": 1.0
+    },
+    {
+      "artifact": {
+        "path": "experiments/results/offline-locomo-associative-graph-20260822-v2.json",
+        "sha256": "2d096c59fbf8fcbe4ab2853bb9fbfc5ce179daa41e38f2c84efc11b09bf4681e"
+      },
+      "artifact_relative_path": "experiments/results/offline-locomo-associative-graph-20260822-v2.json",
+      "artifact_sha256": "2d096c59fbf8fcbe4ab2853bb9fbfc5ce179daa41e38f2c84efc11b09bf4681e",
+      "claim_boundary": [
+        "Rejects a degree/popularity-only explanation for this lightweight graph; it is not a HippoRAG reproduction or evidence that graph beats BM25S."
+      ],
+      "claim_id": "graph-association-vs-degree",
+      "component_values": [
+        0.564473607566451
+      ],
+      "execution": {
+        "actual_external_cost_usd": 0.0,
+        "embedding_calls": 0,
+        "external_network_calls": 0,
+        "provider_calls": 0,
+        "reader_calls": 0,
+        "reranker_calls": 0
+      },
+      "external_network_calls": 0,
+      "metric": "paired_delta_ppr_minus_degree_sham_exact_evidence_recall_at_10",
+      "provider_calls": 0,
+      "scope": "LoCoMo held-out split; corpus/query-only PPR versus degree-preserving term-turn sham at equal candidate budget",
+      "status": "measured",
+      "title": "Associative graph signal beyond node degree",
+      "value": 0.564473607566451
+    },
+    {
+      "artifact": {
+        "path": "experiments/results/offline-locomo-associative-graph-20260822-v2.json",
+        "sha256": "2d096c59fbf8fcbe4ab2853bb9fbfc5ce179daa41e38f2c84efc11b09bf4681e"
+      },
+      "artifact_relative_path": "experiments/results/offline-locomo-associative-graph-20260822-v2.json",
+      "artifact_sha256": "2d096c59fbf8fcbe4ab2853bb9fbfc5ce179daa41e38f2c84efc11b09bf4681e",
+      "claim_boundary": [
+        "Not promoted because the clustered interval crosses zero and held-out multi-hop lift is zero; temporal-category follow-up remains open."
+      ],
+      "claim_id": "graph-promotion-rejected",
+      "component_values": [
+        0.008588043189453186
+      ],
+      "execution": {
+        "actual_external_cost_usd": 0.0,
+        "embedding_calls": 0,
+        "external_network_calls": 0,
+        "provider_calls": 0,
+        "reader_calls": 0,
+        "reranker_calls": 0
+      },
+      "external_network_calls": 0,
+      "metric": "paired_delta_ppr_minus_bm25s_exact_evidence_recall_at_10",
+      "provider_calls": 0,
+      "scope": "LoCoMo held-out split; associative PPR versus speaker-prefixed BM25S at equal top-25 pools/final top-10",
+      "status": "rejected",
+      "title": "Associative PPR as a general retrieval default",
+      "value": 0.008588043189453186
+    },
+    {
+      "artifact": null,
+      "artifact_relative_path": null,
+      "artifact_sha256": null,
+      "claim_boundary": [
+        "Open; retrieval recall is not answer quality and no live reader call has been made in this program."
+      ],
+      "claim_id": "grounded-answer-generation",
+      "component_values": [],
+      "execution": null,
+      "external_network_calls": null,
+      "metric": "supported_answer_accuracy_and_citation_correctness",
+      "provider_calls": null,
+      "scope": "Closed-book, retrieved, oracle-evidence, and full-context reader comparison under a priced approved plan",
+      "status": "open",
+      "title": "Grounded answer generation from retrieved evidence",
+      "value": null
+    },
+    {
+      "artifact": null,
+      "artifact_relative_path": null,
+      "artifact_sha256": null,
+      "claim_boundary": [
+        "Open; positive MaxSim ranking lift does not establish an independent ColBERT candidate channel or an acceptable production resource frontier."
+      ],
+      "claim_id": "late-interaction-production-default",
+      "component_values": [],
+      "execution": null,
+      "external_network_calls": null,
+      "metric": "quality_latency_storage_pareto_frontier",
+      "provider_calls": null,
+      "scope": "Compressed/pruned token-vector retrieval or selection with independent validation and production resource accounting",
+      "status": "open",
+      "title": "Late interaction as a production default",
+      "value": null
+    },
+    {
+      "artifact": {
+        "path": "experiments/results/offline-longmemeval-session-retrieval-20260822-invalidated.json",
+        "sha256": "51a94c39b910b9c604ec17162bfdd632993cd63f91046b33e42b066671892490"
+      },
+      "artifact_relative_path": "experiments/results/offline-longmemeval-session-retrieval-20260822-invalidated.json",
+      "artifact_sha256": "51a94c39b910b9c604ec17162bfdd632993cd63f91046b33e42b066671892490",
+      "claim_boundary": [
+        "This is a retained failed receipt, not a retrieval score; the prior near-perfect report is invalidated.",
+        "No retrieval metric is valid for this receipt."
+      ],
+      "claim_id": "longmemeval-oracle-context-invalidated",
+      "component_values": [],
+      "execution": {
+        "actual_external_cost_usd": 0.0,
+        "embedding_calls": 0,
+        "external_network_calls": 0,
+        "provider_calls": 0,
+        "reader_calls": 0,
+        "reranker_calls": 0
+      },
+      "external_network_calls": 0,
+      "metric": null,
+      "provider_calls": 0,
+      "scope": "Local longmemeval_s.json admission audit; oracle-context subset with no distractor retrieval corpus",
+      "status": "invalidated",
+      "title": "LongMemEval local session retrieval receipt",
+      "value": null
+    },
+    {
+      "artifact": null,
+      "artifact_relative_path": null,
+      "artifact_sha256": null,
+      "claim_boundary": [
+        "Open; implementation scaffolds and synthetic temporal invariants are not held-out memory-model evidence."
+      ],
+      "claim_id": "memory-model-factorial",
+      "component_values": [],
+      "execution": null,
+      "external_network_calls": null,
+      "metric": "exact_evidence_recall_at_10_and_temporal_correctness",
+      "provider_calls": null,
+      "scope": "Raw episodic sources crossed with provenance-linked facts/summaries and interval/supersession policy",
+      "status": "open",
+      "title": "Episodic, semantic, and temporal memory-model factorial",
+      "value": null
+    },
+    {
+      "artifact": {
+        "path": "experiments/results/offline-locomo-rerank-minilm-20260822.json",
+        "sha256": "4f21a5fa87e1dfb7f66a8304ef13ca664f34a5a8ce519162e97107667f46a17a"
+      },
+      "artifact_relative_path": "experiments/results/offline-locomo-rerank-minilm-20260822.json",
+      "artifact_sha256": "4f21a5fa87e1dfb7f66a8304ef13ca664f34a5a8ce519162e97107667f46a17a",
+      "claim_boundary": [
+        "Selection-only mechanism result on one ten-conversation corpus; candidate-pool oracle remains the ceiling and this is not answer accuracy or a BGE-reranker result.",
+        "This is an exploratory LoCoMo measurement, not a production winner selection.",
+        "Candidate-pool oracle recall is reported separately; post-rerank scores cannot recover evidence absent from the fixed pool.",
+        "The result does not establish generalization beyond this dataset and conversation-disjoint split.",
+        "No claim is made about answer quality, external providers, or embedding performance."
+      ],
+      "claim_id": "rerank-fixed-pool-recall",
+      "component_values": [
+        0.04262318104529587
+      ],
+      "execution": {
+        "actual_external_cost_usd": 0.0,
+        "embedding_calls": 0,
+        "external_network_calls": 0,
+        "provider_calls": 0,
+        "reader_calls": 0,
+        "reranker_calls": 3954
+      },
+      "external_network_calls": 0,
+      "metric": "paired_delta_exact_evidence_recall_at_10",
+      "provider_calls": 0,
+      "scope": "LoCoMo held-out split; 991 exact-evidence questions; MiniLM reranking of fixed 25-item speaker-prefixed BM25S pools",
+      "status": "measured",
+      "title": "MiniLM fixed-pool Recall@10 effect",
+      "value": 0.04262318104529587
+    },
+    {
+      "artifact": {
+        "path": "experiments/results/offline-locomo-rerank-minilm-20260822.json",
+        "sha256": "4f21a5fa87e1dfb7f66a8304ef13ca664f34a5a8ce519162e97107667f46a17a"
+      },
+      "artifact_relative_path": "experiments/results/offline-locomo-rerank-minilm-20260822.json",
+      "artifact_sha256": "4f21a5fa87e1dfb7f66a8304ef13ca664f34a5a8ce519162e97107667f46a17a",
+      "claim_boundary": [
+        "Rejects unconditional promotion because the measured multi-hop slice regresses; a gated or differently trained reranker remains open.",
+        "This is an exploratory LoCoMo measurement, not a production winner selection.",
+        "Candidate-pool oracle recall is reported separately; post-rerank scores cannot recover evidence absent from the fixed pool.",
+        "The result does not establish generalization beyond this dataset and conversation-disjoint split.",
+        "No claim is made about answer quality, external providers, or embedding performance."
+      ],
+      "claim_id": "rerank-global-default-rejected",
+      "component_values": [
+        -0.09126984126984126
+      ],
+      "execution": {
+        "actual_external_cost_usd": 0.0,
+        "embedding_calls": 0,
+        "external_network_calls": 0,
+        "provider_calls": 0,
+        "reader_calls": 0,
+        "reranker_calls": 3954
+      },
+      "external_network_calls": 0,
+      "metric": "paired_delta_multi_hop_exact_evidence_recall_at_10",
+      "provider_calls": 0,
+      "scope": "LoCoMo held-out multi-hop slice; fixed speaker-prefixed BM25S candidate pools",
+      "status": "rejected",
+      "title": "Unconditional MiniLM reranking default",
+      "value": -0.09126984126984126
+    },
+    {
+      "artifact": {
+        "path": "experiments/results/offline-sparse-field-routing-20260822.json",
+        "sha256": "557e1160ef45364f8f0052d2ffcb0bfd5848c674f174a161c875f3c6b6f3d876"
+      },
+      "artifact_relative_path": "experiments/results/offline-sparse-field-routing-20260822.json",
+      "artifact_sha256": "557e1160ef45364f8f0052d2ffcb0bfd5848c674f174a161c875f3c6b6f3d876",
+      "claim_boundary": [
+        "Rejects promotion on this measured split only; post-hoc exploratory result and not a claim about unseen datasets."
+      ],
+      "claim_id": "sparse-field-routing-rejected",
+      "component_values": [
+        0.5713649802619626
+      ],
+      "execution": {
+        "actual_external_cost_usd": 0.0,
+        "embedding_calls": 0,
+        "external_network_calls": 0,
+        "provider_calls": 0,
+        "reader_calls": 0,
+        "reranker_calls": 0
+      },
+      "external_network_calls": 0,
+      "metric": "routed_recall_at_10",
+      "provider_calls": 0,
+      "scope": "LoCoMo held-out split; raw, unconditional speaker-prefix, routed, and two-field RRF sparse arms",
+      "status": "rejected",
+      "title": "Speaker-aware sparse router",
+      "value": 0.5713649802619626
+    },
+    {
+      "artifact": {
+        "path": "experiments/results/offline-sparse-latency-20260822-v1b.json",
+        "sha256": "102ba306381aecd96daf9135a5903f2c6f5b11e2eccd00cda9e4ca5ec48c1404"
+      },
+      "artifact_relative_path": "experiments/results/offline-sparse-latency-20260822-v1b.json",
+      "artifact_sha256": "102ba306381aecd96daf9135a5903f2c6f5b11e2eccd00cda9e4ca5ec48c1404",
+      "claim_boundary": [
+        "Timing comparison only; quality was not evaluated and quantized timer observations are not an architecture gate."
+      ],
+      "claim_id": "sparse-latency-paired",
+      "component_values": [
+        -0.008955375000000002
+      ],
+      "execution": {
+        "embedding_calls": 0,
+        "external_network_calls": 0,
+        "provider_calls": 0,
+        "reader_calls": 0,
+        "reranker_calls": 0
+      },
+      "external_network_calls": 0,
+      "metric": "paired_mean_wall_ms_candidate_minus_baseline",
+      "provider_calls": 0,
+      "scope": "LoCoMo question-only repeated paired raw versus speaker-prefix timing; wall-clock decision channel",
+      "status": "measured",
+      "title": "Repeated paired sparse latency comparison",
+      "value": -0.008955375000000002
+    },
+    {
+      "artifact": {
+        "path": "experiments/results/offline-locomo-sparse-multiseed-20260822-v2.json",
+        "sha256": "5465725141c3aec316ee20af44b6dbea5128638e2d5f4e0815cfb544dc0d8973"
+      },
+      "artifact_relative_path": "experiments/results/offline-locomo-sparse-multiseed-20260822-v2.json",
+      "artifact_sha256": "5465725141c3aec316ee20af44b6dbea5128638e2d5f4e0815cfb544dc0d8973",
+      "claim_boundary": [
+        "Descriptive split robustness on ten reused conversations; not five independent datasets, answer accuracy, SOTA, or prompt-source substitution.",
+        "This aggregate is exact-evidence sparse retrieval, not answer accuracy.",
+        "It is not an LLM judge result and does not establish downstream answer quality.",
+        "It does not establish state of the art, near-state-of-the-art, or the 70-80% prompt-source substitution target.",
+        "Ten-conversation split overlap means between-seed dispersion is descriptive, not an independent-sample confidence claim."
+      ],
+      "claim_id": "sparse-locomo-multiseed",
+      "component_values": [
+        0.029661080006074536
+      ],
+      "execution": {
+        "embedding_calls": 0,
+        "external_network_calls": 0,
+        "provider_calls": 0,
+        "reader_calls": 0,
+        "reranker_calls": 0
+      },
+      "external_network_calls": 0,
+      "metric": "mean_delta_exact_evidence_recall_at_10",
+      "provider_calls": 0,
+      "scope": "LoCoMo; five reused conversation-split seeds; held-out exact evidence IDs",
+      "status": "measured",
+      "title": "Speaker-prefix sparse representation across split seeds",
+      "value": 0.029661080006074536
+    },
+    {
+      "artifact": {
+        "path": "experiments/results/offline-turbovec-frontier-4096-multiseed-20260822.json",
+        "sha256": "6cca904276fd13dc8f64513a0aa633d6f490983088c6b7235f7952646d81439f"
+      },
+      "artifact_relative_path": "experiments/results/offline-turbovec-frontier-4096-multiseed-20260822.json",
+      "artifact_sha256": "6cca904276fd13dc8f64513a0aa633d6f490983088c6b7235f7952646d81439f",
+      "claim_boundary": [
+        "Compression and synthetic ANN mechanics are measured; tested recall loss blocks promotion and this is not conversational evidence or a latency win.",
+        "Synthetic normalized vectors measure ANN mechanics, not semantic or exact-evidence retrieval.",
+        "The FAISS and TurboVec batch timings are local single-host observations, not vendor-neutral throughput claims.",
+        "No production backend is replaced without real native-4096 embedding and exact-evidence confirmation."
+      ],
+      "claim_id": "turbovec-4096-synthetic-frontier",
+      "component_values": [
+        0.8578125,
+        0.8484375000000001,
+        0.8828125,
+        0.8421875,
+        0.8359375
+      ],
+      "execution": {
+        "embedding_calls": 0,
+        "external_network_calls": 0,
+        "provider_calls": 0,
+        "reader_calls": 0,
+        "reranker_calls": 0
+      },
+      "external_network_calls": 0,
+      "metric": "mean_recall_at_10",
+      "provider_calls": 0,
+      "scope": "Synthetic normalized 4096-dimensional vectors across five seeds; two-bit and four-bit Turbovec search",
+      "status": "rejected",
+      "title": "Turbovec native 4096-dimensional compression frontier",
+      "value": 0.8534375000000001
+    }
+  ],
+  "schema_version": "hybridmind.claim-ledger/v1",
+  "spec_sha256": "77fe302a8e0903ba70e2ce956f078bb822e3c501e1a7041e6f54b0d20710925a",
+  "strictly_offline": true
+}

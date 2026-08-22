@@ -1,0 +1,189 @@
+{
+  "schema_version": "hybridmind-baseline/v1",
+  "classification": "measured_pre_change_offline_baseline",
+  "generated_at": "2026-08-14T21:17:03.457742+05:30",
+  "repository": {
+    "path": "D:\\hybridmind",
+    "remote": "git@github.com:a3ro-dev/hybridmind.git",
+    "branch": "main",
+    "commit_sha": "3422f226d5adc650802e5aeb87a0302b0765635f",
+    "initial_worktree_clean": true,
+    "requirements_sha256": "3b7c7bc03a9fd1472f10f6fa4bc1bacd668501a5f6404847a6d72c3147d8a7dc",
+    "memorybench_pnpm_lock_sha256": "09ad44052b70515eaac890a14e66c1cb59b6fbc3f6ff208be50058e154b937e8"
+  },
+  "execution": {
+    "mode": "offline",
+    "external_network_calls": 0,
+    "embedding_calls": 0,
+    "reranker_calls": 0,
+    "reader_or_judge_calls": 0,
+    "actual_external_cost_usd": 0.0,
+    "live_preflight_performed": false,
+    "live_evaluation_performed": false
+  },
+  "verification": {
+    "python_primary_suite": {
+      "command": ".venv\\Scripts\\python.exe -m pytest tests -q --disable-warnings",
+      "status": "passed",
+      "passed": 279,
+      "skipped": 3,
+      "failed": 0,
+      "reported_seconds": 16.56,
+      "first_fresh_process_wall_seconds": 23.71
+    },
+    "python_legacy_verify_suite": {
+      "command": ".venv\\Scripts\\python.exe -m pytest verify -q --disable-warnings --tb=short",
+      "status": "failed",
+      "passed": 12,
+      "skipped": 0,
+      "failed": 4,
+      "reported_seconds": 1.71,
+      "failures": [
+        "verify/test_auto_edges.py::test_auto_edge_creation",
+        "verify/test_community_detection.py::test_community_detection",
+        "verify/test_consolidation.py::test_session_consolidation",
+        "verify/test_fact_supersession.py::test_fact_supersession_logic"
+      ],
+      "classification": "stale tests assume opt-in or provider-backed features execute while the verify fixture explicitly disables or does not inject them"
+    },
+    "python_compileall": {
+      "status": "passed"
+    },
+    "python_dependency_check": {
+      "command": ".venv\\Scripts\\python.exe -m pip check",
+      "status": "passed"
+    },
+    "python_lint": {
+      "status": "not_run",
+      "reason": "ruff is not installed in the required .venv"
+    },
+    "memorybench_test": {
+      "command": "pnpm test",
+      "status": "passed",
+      "passed": 1,
+      "duration_ms": 1520.3641
+    },
+    "memorybench_format_check": {
+      "command": "pnpm format:check",
+      "status": "failed",
+      "reason": "src/providers/hybridmind/index.ts is not formatted and configured ui globs match no files"
+    },
+    "memorybench_typecheck": {
+      "command": "pnpm exec tsc --noEmit",
+      "status": "failed",
+      "reason": "tsconfig requests missing bun-types"
+    },
+    "legacy_multi_domain_help": {
+      "command": ".venv\\Scripts\\python.exe scripts\\multi_domain_eval.py --help",
+      "status": "failed",
+      "reason": "the script has no argument parser and attempted an immediate localhost HTTP connection"
+    }
+  },
+  "locomo_sparse": {
+    "artifact": "experiments/baselines/20260814-3422f226-locomo-bm25s.json",
+    "artifact_sha256": "ad0bd46990658e5cb143132049febd91627fd3bebf178ec297fe14065e46b7e0",
+    "dataset": "memorybench/data/benchmarks/locomo/locomo10.json",
+    "dataset_sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
+    "samples": 10,
+    "turns": 5882,
+    "questions_total": 1986,
+    "evidence_questions": 1977,
+    "excluded_invalid_annotation_questions": 2,
+    "excluded_unresolved_evidence_questions": 3,
+    "retriever": "conversation-scoped BM25S over raw turns",
+    "mrr_first_exact_evidence": 0.38547807742054224,
+    "exact_evidence_recall_at_1": 0.2565995236708438,
+    "exact_evidence_recall_at_5": 0.4639087775538538,
+    "exact_evidence_recall_at_10": 0.5446963848209756,
+    "exact_evidence_recall_at_25": 0.6398942781248743,
+    "exact_evidence_recall_at_50": 0.708225899979871,
+    "exact_evidence_recall_at_100": 0.7738354630287947,
+    "exact_evidence_any_hit_at_10": 0.5948406676783005,
+    "exact_evidence_all_hit_at_10": 0.503793626707132,
+    "prompt_source_reduction_regex_token_proxy_at_10": 0.9831857047507496,
+    "query_latency_ms": {
+      "mean": 0.3365851289497113,
+      "p50": 0.25610000011511147,
+      "p95": 0.338400001055561,
+      "p99": 0.44809999963035807
+    },
+    "limits": [
+      "not a HybridMind API or end-to-end hybrid result",
+      "no dense, graph, reranker, decomposition, salience, answer, or judge stage",
+      "no answer accuracy",
+      "regex token reduction is not model KV-cache measurement"
+    ]
+  },
+  "synthetic_resource_frontier": {
+    "artifact": "experiments/baselines/20260814-3422f226-resource-frontier.json",
+    "artifact_sha256": "9f6a9ac2151f68d69659be6dadfd4df3d95148c6fb7c8065abff6fcb7bfa8002",
+    "vectors": 512,
+    "dimension": 4096,
+    "queries": 64,
+    "top_k": 10,
+    "serialized_total_bytes": 17557781,
+    "observed_peak_rss_bytes": 125964288,
+    "observed_rss_increase_bytes": 23740416,
+    "total_index_build_seconds": 0.13267170001199702,
+    "component_sequence_latency_ms": {
+      "p50": 0.7316,
+      "p95": 0.954305,
+      "p99": 1.147307
+    },
+    "deterministic_replay_equal": true,
+    "capacity_projection_current_vector_component_lower_bound_bytes": {
+      "10000000_source_tokens": 1290016512,
+      "40000000_source_tokens": 5160000000,
+      "100000000_source_tokens": 12900000000
+    },
+    "limits": [
+      "synthetic component sequence, not HTTP end-to-end",
+      "embedding, reranker, reader, and provider latency excluded",
+      "capacity figures are analytic lower bounds with major components excluded"
+    ]
+  },
+  "unavailable_or_ineligible_baselines": [
+    {
+      "name": "dense, vector-sparse, graph, hybrid, cross-encoder, decomposition, and reader evaluations",
+      "status": "not_run",
+      "reason": "require a live exact-4096 embedding deployment and, where applicable, provider calls; no fresh priced live plan was created or preflighted"
+    },
+    {
+      "name": "historical MemoryBench checkpoint metrics",
+      "status": "ineligible_as_current_baseline",
+      "reason": "partial historical checkpoint predates current evidence provenance, immutable manifests, execution attestation, and budget enforcement"
+    },
+    {
+      "name": "MuSiQue retrieval",
+      "status": "not_run",
+      "reason": "dataset is absent and current evaluator is live-server dependent"
+    },
+    {
+      "name": "LongMemEval retrieval",
+      "status": "not_run",
+      "reason": "dataset is present but current evaluator is live-server dependent"
+    }
+  ],
+  "environment": {
+    "host": "Acer Nitro ANV15-51",
+    "os": "Microsoft Windows 11 Home Single Language 10.0.26100",
+    "cpu": "13th Gen Intel(R) Core(TM) i5-13420H",
+    "logical_processors": 12,
+    "ram_bytes": 16869351424,
+    "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU",
+    "gpu_memory_mib": 6141,
+    "nvidia_driver": "595.97",
+    "python": "3.13.5",
+    "node": "24.5.0",
+    "pnpm": "11.1.3",
+    "torch": "2.11.0+cpu",
+    "torch_cuda_available": false,
+    "numpy": "2.4.3",
+    "faiss_cpu": "1.13.2",
+    "bm25s": "0.3.9",
+    "networkx": "3.6.1",
+    "fastapi": "0.135.2",
+    "pydantic": "2.12.5",
+    "pytest": "9.0.2"
+  }
+}

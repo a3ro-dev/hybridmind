@@ -1,0 +1,1085 @@
+{
+  "claim_boundary": [
+    "Synthetic normalized vectors measure ANN mechanics, not semantic or exact-evidence retrieval.",
+    "The FAISS and TurboVec batch timings are local single-host observations, not vendor-neutral throughput claims.",
+    "No production backend is replaced without real native-4096 embedding and exact-evidence confirmation."
+  ],
+  "classification": "measured_offline_turbovec_synthetic_frontier",
+  "execution": {
+    "elapsed_seconds": 6.210267199996451,
+    "embedding_calls": 0,
+    "external_network_calls": 0,
+    "provider_calls": 0,
+    "reader_calls": 0,
+    "reranker_calls": 0
+  },
+  "external_network_calls_during_experiment": 0,
+  "generated_at_utc": "2026-08-22T16:46:39.569631+00:00",
+  "oracle": [
+    {
+      "backend": "faiss.IndexFlatIP",
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 1.0,
+      "recall_at_10": 1.0,
+      "seed": 0,
+      "warm_batch_search_ms": {
+        "mean": 9.3139,
+        "n": 3,
+        "p50": 9.1279,
+        "p95": 9.67528,
+        "p99": 9.723936
+      }
+    },
+    {
+      "backend": "faiss.IndexFlatIP",
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 1.0,
+      "recall_at_10": 1.0,
+      "seed": 1,
+      "warm_batch_search_ms": {
+        "mean": 9.415633333333334,
+        "n": 3,
+        "p50": 9.293,
+        "p95": 9.65597,
+        "p99": 9.688234000000001
+      }
+    },
+    {
+      "backend": "faiss.IndexFlatIP",
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 1.0,
+      "recall_at_10": 1.0,
+      "seed": 2,
+      "warm_batch_search_ms": {
+        "mean": 17.025333333333332,
+        "n": 3,
+        "p50": 18.7566,
+        "p95": 19.87557,
+        "p99": 19.975034
+      }
+    },
+    {
+      "backend": "faiss.IndexFlatIP",
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 1.0,
+      "recall_at_10": 1.0,
+      "seed": 3,
+      "warm_batch_search_ms": {
+        "mean": 40.39293333333333,
+        "n": 3,
+        "p50": 31.8523,
+        "p95": 57.17425,
+        "p99": 59.42509
+      }
+    },
+    {
+      "backend": "faiss.IndexFlatIP",
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 1.0,
+      "recall_at_10": 1.0,
+      "seed": 4,
+      "warm_batch_search_ms": {
+        "mean": 28.74666666666667,
+        "n": 3,
+        "p50": 26.2788,
+        "p95": 35.25405,
+        "p99": 36.05185
+      }
+    }
+  ],
+  "provenance": {
+    "dependency_versions": {
+      "faiss-cpu": "1.13.2",
+      "numpy": "2.4.3",
+      "psutil": "7.2.2",
+      "turbovec": "1.0.0"
+    },
+    "git_commit": "3422f226d5adc650802e5aeb87a0302b0765635f",
+    "git_worktree_status_sha256": "4362480a7a41ace3769c4515346ff8c5fde951e0f411b1ff846624ec2791c54d",
+    "logical_cpu_count": 12,
+    "platform": "Windows-11-10.0.26100-SP0",
+    "processor": "Intel64 Family 6 Model 186 Stepping 2, GenuineIntel",
+    "python": "3.13.5",
+    "source": {
+      "path": "D:\\hybridmind\\scripts\\offline_turbovec_frontier.py",
+      "sha256": "f0bdeaf6bc38232b14831599aaaca63afe7b32ff307b7e09a203852c80865ae3"
+    },
+    "turbovec_license": "MIT",
+    "turbovec_native_binary_sha256": {
+      "D:\\hybridmind\\.venv\\Lib\\site-packages\\turbovec\\_turbovec.pyd": "60a9ac64323ca4dcd01b90c2d28314483549acba0b3205918f9bac361d5b3e4d"
+    },
+    "turbovec_project": "https://github.com/RyanCodrai/turbovec",
+    "turbovec_release": "1.0.0"
+  },
+  "provider_calls": 0,
+  "results": [
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 2,
+      "build_ms": 60.5056,
+      "calibrated": false,
+      "calibration_ms": 0.0,
+      "calibration_rows": 0,
+      "calibration_state": "uncalibrated",
+      "compression_ratio_vs_raw_float32": 10.404418580674369,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.0035085882991552353,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.34375,
+      "recall_at_10": 0.575,
+      "retrieved_id_sha256": "9d2a970855cdc7f1d1bde687513212492bf9572ddd720155df809b15bc18b091",
+      "rss_increase_bytes": 6586368,
+      "seed": 0,
+      "serialized_index_bytes": 6450035,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 2039,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 6.339033333333333,
+        "n": 3,
+        "p50": 6.3524,
+        "p95": 6.43277,
+        "p99": 6.439914
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.09904739583333333,
+        "n": 3,
+        "p50": 0.09925625,
+        "p95": 0.10051203125,
+        "p99": 0.10062365625
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 2,
+      "build_ms": 38.8379,
+      "calibrated": true,
+      "calibration_ms": 12.614,
+      "calibration_rows": 1024,
+      "calibration_state": "calibrated",
+      "compression_ratio_vs_raw_float32": 10.351828368068565,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.0033904213923960924,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.390625,
+      "recall_at_10": 0.5703125,
+      "retrieved_id_sha256": "71a56756b3ea025f9f0bdcffab496ad8373ee93d4f2df5f87fd4f3b1cd2dbefe",
+      "rss_increase_bytes": 45895680,
+      "seed": 0,
+      "serialized_index_bytes": 6482803,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 2039,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 6.619433333333333,
+        "n": 3,
+        "p50": 6.4145,
+        "p95": 7.42817,
+        "p99": 7.518274
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.10342864583333333,
+        "n": 3,
+        "p50": 0.1002265625,
+        "p95": 0.11606515625,
+        "p99": 0.11747303125
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 4,
+      "build_ms": 131.1838,
+      "calibrated": false,
+      "calibration_ms": 0.0,
+      "calibration_rows": 0,
+      "calibration_state": "uncalibrated",
+      "compression_ratio_vs_raw_float32": 5.240802103853355,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.0008994335075840354,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.765625,
+      "recall_at_10": 0.8578125,
+      "retrieved_id_sha256": "5e7419775b2c2056a476f95a9c63ba3ffb50b0552ffda99adbe91aacb9c7d02c",
+      "rss_increase_bytes": 8708096,
+      "seed": 0,
+      "serialized_index_bytes": 12805075,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 1693,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 10.364333333333335,
+        "n": 3,
+        "p50": 10.2964,
+        "p95": 10.57909,
+        "p99": 10.604218
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.16194270833333335,
+        "n": 3,
+        "p50": 0.16088125,
+        "p95": 0.16529828125,
+        "p99": 0.16569090625
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 4,
+      "build_ms": 50.1262,
+      "calibrated": true,
+      "calibration_ms": 13.3765,
+      "calibration_rows": 1024,
+      "calibration_state": "calibrated",
+      "compression_ratio_vs_raw_float32": 5.227425199077446,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.0008707952802069485,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.78125,
+      "recall_at_10": 0.8546875,
+      "retrieved_id_sha256": "eb4bf35368f04fafbd32183ce41f20bb598a59ff762989a7e7dd0366b4af3bed",
+      "rss_increase_bytes": 50610176,
+      "seed": 0,
+      "serialized_index_bytes": 12837843,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 2039,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 10.355633333333333,
+        "n": 3,
+        "p50": 10.5032,
+        "p95": 10.63649,
+        "p99": 10.648338
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.16180677083333334,
+        "n": 3,
+        "p50": 0.1641125,
+        "p95": 0.16619515625,
+        "p99": 0.16638028125
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 2,
+      "build_ms": 47.4791,
+      "calibrated": false,
+      "calibration_ms": 0.0,
+      "calibration_rows": 0,
+      "calibration_state": "uncalibrated",
+      "compression_ratio_vs_raw_float32": 10.404418580674369,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.0034174658358097076,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.375,
+      "recall_at_10": 0.5765625,
+      "retrieved_id_sha256": "6b99aeb6fc6fbdb90838fb1adee645b4eef39cba621b157de4338423b1e12150",
+      "rss_increase_bytes": 4648960,
+      "seed": 1,
+      "serialized_index_bytes": 6450035,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 3056,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 6.207,
+        "n": 3,
+        "p50": 6.2294,
+        "p95": 6.2449699999999995,
+        "p99": 6.246353999999999
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.096984375,
+        "n": 3,
+        "p50": 0.097334375,
+        "p95": 0.09757765624999999,
+        "p99": 0.09759928124999999
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 2,
+      "build_ms": 40.0273,
+      "calibrated": true,
+      "calibration_ms": 12.3971,
+      "calibration_rows": 1024,
+      "calibration_state": "calibrated",
+      "compression_ratio_vs_raw_float32": 10.351828368068565,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.0034828123170882463,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.4375,
+      "recall_at_10": 0.5640625,
+      "retrieved_id_sha256": "6dffef6099198b4be4a0252ba34730030363f4fa685f508ef217ec83cb9b8cf1",
+      "rss_increase_bytes": 46034944,
+      "seed": 1,
+      "serialized_index_bytes": 6482803,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 3056,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 6.507833333333333,
+        "n": 3,
+        "p50": 6.2599,
+        "p95": 6.9857499999999995,
+        "p99": 7.050269999999999
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.10168489583333333,
+        "n": 3,
+        "p50": 0.0978109375,
+        "p95": 0.10915234374999999,
+        "p99": 0.11016046874999999
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 4,
+      "build_ms": 49.5269,
+      "calibrated": false,
+      "calibration_ms": 0.0,
+      "calibration_rows": 0,
+      "calibration_state": "uncalibrated",
+      "compression_ratio_vs_raw_float32": 5.240802103853355,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.0008227497455663979,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.78125,
+      "recall_at_10": 0.8484375000000001,
+      "retrieved_id_sha256": "5204b23c922788bffdd7a2f244df5fc879afa2a9696c0d112829a51152f28814",
+      "rss_increase_bytes": 8466432,
+      "seed": 1,
+      "serialized_index_bytes": 12805075,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 3056,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 10.298300000000001,
+        "n": 3,
+        "p50": 10.2932,
+        "p95": 10.34459,
+        "p99": 10.349158000000001
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.16091093750000002,
+        "n": 3,
+        "p50": 0.16083125,
+        "p95": 0.16163421875,
+        "p99": 0.16170559375000002
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 4,
+      "build_ms": 106.5702,
+      "calibrated": true,
+      "calibration_ms": 12.2826,
+      "calibration_rows": 1024,
+      "calibration_state": "calibrated",
+      "compression_ratio_vs_raw_float32": 5.227425199077446,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.0008430089801549911,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.859375,
+      "recall_at_10": 0.8562500000000001,
+      "retrieved_id_sha256": "8d4c6ffd2d2f8b7f900ec203b7fa1662dba8ad340fe7ce029e57b41d4edd3e33",
+      "rss_increase_bytes": 49442816,
+      "seed": 1,
+      "serialized_index_bytes": 12837843,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 626,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 16.7211,
+        "n": 3,
+        "p50": 13.617,
+        "p95": 23.50233,
+        "p99": 24.381026
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.2612671875,
+        "n": 3,
+        "p50": 0.212765625,
+        "p95": 0.36722390625,
+        "p99": 0.38095353125
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 2,
+      "build_ms": 43.41,
+      "calibrated": false,
+      "calibration_ms": 0.0,
+      "calibration_rows": 0,
+      "calibration_state": "uncalibrated",
+      "compression_ratio_vs_raw_float32": 10.404418580674369,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.0033682058565318584,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.421875,
+      "recall_at_10": 0.559375,
+      "retrieved_id_sha256": "bbd15bccfd29df111757dd6e0262a5ca1801e596cb21c6dd4156ea06eb594ec3",
+      "rss_increase_bytes": 4591616,
+      "seed": 2,
+      "serialized_index_bytes": 6450035,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 82,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 6.687666666666668,
+        "n": 3,
+        "p50": 6.7064,
+        "p95": 6.80468,
+        "p99": 6.813416
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.10449479166666668,
+        "n": 3,
+        "p50": 0.1047875,
+        "p95": 0.106323125,
+        "p99": 0.106459625
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 2,
+      "build_ms": 41.136,
+      "calibrated": true,
+      "calibration_ms": 13.8292,
+      "calibration_rows": 1024,
+      "calibration_state": "calibrated",
+      "compression_ratio_vs_raw_float32": 10.351828368068565,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.003337669651955366,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.53125,
+      "recall_at_10": 0.55,
+      "retrieved_id_sha256": "dfbbc12c55815215663b23311b4f9c8143031af5a00845ea7738aff9af255e7f",
+      "rss_increase_bytes": 47607808,
+      "seed": 2,
+      "serialized_index_bytes": 6482803,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 82,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 7.7438666666666665,
+        "n": 3,
+        "p50": 7.861,
+        "p95": 8.304070000000001,
+        "p99": 8.343454000000001
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.12099791666666666,
+        "n": 3,
+        "p50": 0.122828125,
+        "p95": 0.12975109375000002,
+        "p99": 0.13036646875000002
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 4,
+      "build_ms": 48.7111,
+      "calibrated": false,
+      "calibration_ms": 0.0,
+      "calibration_rows": 0,
+      "calibration_state": "uncalibrated",
+      "compression_ratio_vs_raw_float32": 5.240802103853355,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.0009179478511214256,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.828125,
+      "recall_at_10": 0.8828125,
+      "retrieved_id_sha256": "d6a17cd3e9290b07c1110f19619481d9160ee0573cbac36b66d39202874b6224",
+      "rss_increase_bytes": 8757248,
+      "seed": 2,
+      "serialized_index_bytes": 12805075,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 3922,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 10.313333333333334,
+        "n": 3,
+        "p50": 10.4358,
+        "p95": 10.756920000000001,
+        "p99": 10.785464000000001
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.16114583333333335,
+        "n": 3,
+        "p50": 0.163059375,
+        "p95": 0.16807687500000001,
+        "p99": 0.16852287500000002
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 4,
+      "build_ms": 53.9128,
+      "calibrated": true,
+      "calibration_ms": 15.4238,
+      "calibration_rows": 1024,
+      "calibration_state": "calibrated",
+      "compression_ratio_vs_raw_float32": 5.227425199077446,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.0008928690222091973,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.78125,
+      "recall_at_10": 0.8515625,
+      "retrieved_id_sha256": "4e9a35afc9ff74e1047d25bbe6565afadf8cc51fe75075c0c82f85137a4e57ba",
+      "rss_increase_bytes": 50159616,
+      "seed": 2,
+      "serialized_index_bytes": 12837843,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 3922,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 10.4554,
+        "n": 3,
+        "p50": 9.9626,
+        "p95": 11.416369999999999,
+        "p99": 11.545594
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.163365625,
+        "n": 3,
+        "p50": 0.155665625,
+        "p95": 0.17838078124999998,
+        "p99": 0.18039990625
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 2,
+      "build_ms": 150.284,
+      "calibrated": false,
+      "calibration_ms": 0.0,
+      "calibration_rows": 0,
+      "calibration_state": "uncalibrated",
+      "compression_ratio_vs_raw_float32": 10.404418580674369,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.0033778578508645296,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.234375,
+      "recall_at_10": 0.55625,
+      "retrieved_id_sha256": "9bbdb7279f8931b1196050982bbe73a410f5dacd38bcdaac0660d9ea385a42af",
+      "rss_increase_bytes": 4485120,
+      "seed": 3,
+      "serialized_index_bytes": 6450035,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 1543,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 34.42846666666666,
+        "n": 3,
+        "p50": 37.0374,
+        "p95": 38.811749999999996,
+        "p99": 38.969469999999994
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.5379447916666665,
+        "n": 3,
+        "p50": 0.578709375,
+        "p95": 0.6064335937499999,
+        "p99": 0.6088979687499999
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 2,
+      "build_ms": 170.5143,
+      "calibrated": true,
+      "calibration_ms": 71.9643,
+      "calibration_rows": 1024,
+      "calibration_state": "calibrated",
+      "compression_ratio_vs_raw_float32": 10.351828368068565,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.003346826182678342,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.25,
+      "recall_at_10": 0.5625,
+      "retrieved_id_sha256": "68bb2fec84cdd8edbc6cfd2393f943fbb69d8d3df9606d09d49c994909e641a7",
+      "rss_increase_bytes": 48394240,
+      "seed": 3,
+      "serialized_index_bytes": 6482803,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 1883,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 27.867900000000002,
+        "n": 3,
+        "p50": 29.2101,
+        "p95": 29.82732,
+        "p99": 29.882184000000002
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.43543593750000004,
+        "n": 3,
+        "p50": 0.4564078125,
+        "p95": 0.466051875,
+        "p99": 0.46690912500000004
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 4,
+      "build_ms": 115.7134,
+      "calibrated": false,
+      "calibration_ms": 0.0,
+      "calibration_rows": 0,
+      "calibration_state": "uncalibrated",
+      "compression_ratio_vs_raw_float32": 5.240802103853355,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.000902954488992691,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.78125,
+      "recall_at_10": 0.8421875,
+      "retrieved_id_sha256": "5e5cbcf856072aefc99754bc4f0eb637676ba1bc3878e85117ad33fa0a8f2ffd",
+      "rss_increase_bytes": 8732672,
+      "seed": 3,
+      "serialized_index_bytes": 12805075,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 3213,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 19.645,
+        "n": 3,
+        "p50": 19.6202,
+        "p95": 20.2421,
+        "p99": 20.29738
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.306953125,
+        "n": 3,
+        "p50": 0.306565625,
+        "p95": 0.3162828125,
+        "p99": 0.3171465625
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 4,
+      "build_ms": 113.3809,
+      "calibrated": true,
+      "calibration_ms": 25.0216,
+      "calibration_rows": 1024,
+      "calibration_state": "calibrated",
+      "compression_ratio_vs_raw_float32": 5.227425199077446,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.0008262001210823655,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.796875,
+      "recall_at_10": 0.85,
+      "retrieved_id_sha256": "2678c1d8312c73c52e09f56b2091f4072a6a8fc6317891ac8fe046d41420a411",
+      "rss_increase_bytes": 52678656,
+      "seed": 3,
+      "serialized_index_bytes": 12837843,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 3213,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 22.792666666666666,
+        "n": 3,
+        "p50": 24.5625,
+        "p95": 24.76275,
+        "p99": 24.78055
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.35613541666666665,
+        "n": 3,
+        "p50": 0.3837890625,
+        "p95": 0.38691796875,
+        "p99": 0.38719609375
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 2,
+      "build_ms": 63.5334,
+      "calibrated": false,
+      "calibration_ms": 0.0,
+      "calibration_rows": 0,
+      "calibration_state": "uncalibrated",
+      "compression_ratio_vs_raw_float32": 10.404418580674369,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.0030310144647955894,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.375,
+      "recall_at_10": 0.55625,
+      "retrieved_id_sha256": "fe87e6b62838055d9b38521a4e31ab3a7573b7b436cbcaeb603c6ac853a421a2",
+      "rss_increase_bytes": 4288512,
+      "seed": 4,
+      "serialized_index_bytes": 6450035,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 2765,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 19.362166666666667,
+        "n": 3,
+        "p50": 18.8768,
+        "p95": 21.11132,
+        "p99": 21.309944
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.30253385416666667,
+        "n": 3,
+        "p50": 0.29495,
+        "p95": 0.329864375,
+        "p99": 0.332967875
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 2,
+      "build_ms": 92.6931,
+      "calibrated": true,
+      "calibration_ms": 36.8246,
+      "calibration_rows": 1024,
+      "calibration_state": "calibrated",
+      "compression_ratio_vs_raw_float32": 10.351828368068565,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.0030788485892117023,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.46875,
+      "recall_at_10": 0.5703125,
+      "retrieved_id_sha256": "ed969be852bb2e933e6f408f57f69a41f9655faf4235f85978521547b40eb716",
+      "rss_increase_bytes": 47828992,
+      "seed": 4,
+      "serialized_index_bytes": 6482803,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 2765,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 21.527366666666666,
+        "n": 3,
+        "p50": 20.3927,
+        "p95": 24.51623,
+        "p99": 24.882766
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.33636510416666665,
+        "n": 3,
+        "p50": 0.3186359375,
+        "p95": 0.38306609375,
+        "p99": 0.38879321875
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 4,
+      "build_ms": 157.2512,
+      "calibrated": false,
+      "calibration_ms": 0.0,
+      "calibration_rows": 0,
+      "calibration_state": "uncalibrated",
+      "compression_ratio_vs_raw_float32": 5.240802103853355,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.0008409686270169914,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.859375,
+      "recall_at_10": 0.8359375,
+      "retrieved_id_sha256": "d40359ebf5e317ebf9ce37e39366cfee75d270009820e7a9fc241de7b949fea0",
+      "rss_increase_bytes": 8413184,
+      "seed": 4,
+      "serialized_index_bytes": 12805075,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 1394,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 29.932266666666667,
+        "n": 3,
+        "p50": 29.6174,
+        "p95": 31.017349999999997,
+        "p99": 31.141789999999997
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.46769166666666667,
+        "n": 3,
+        "p50": 0.462771875,
+        "p95": 0.48464609374999995,
+        "p99": 0.48659046874999995
+      }
+    },
+    {
+      "backend": "turbovec.IdMapIndex",
+      "bit_width": 4,
+      "build_ms": 143.9913,
+      "calibrated": true,
+      "calibration_ms": 44.6858,
+      "calibration_rows": 1024,
+      "calibration_state": "calibrated",
+      "compression_ratio_vs_raw_float32": 5.227425199077446,
+      "deterministic_replay": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "mean_absolute_oracle_score_gap_at_10": 0.0008736712043173611,
+      "persistence_roundtrip": {
+        "ids_equal": true,
+        "scores_equal": true
+      },
+      "raw_float32_bytes": 67108864,
+      "recall_at_1": 0.828125,
+      "recall_at_10": 0.8562500000000001,
+      "retrieved_id_sha256": "d5d54385524412880670244824500c0c6e2f8e5935411b63347bbf49e2226682",
+      "rss_increase_bytes": 52236288,
+      "seed": 4,
+      "serialized_index_bytes": 12837843,
+      "stable_id_delete": {
+        "deleted_id_absent_from_probe": true,
+        "remove_returned_true": true,
+        "removed_id": 1394,
+        "size_after": 4095,
+        "size_before": 4096
+      },
+      "warm_batch_search_ms": {
+        "mean": 19.934966666666668,
+        "n": 3,
+        "p50": 19.1729,
+        "p95": 21.61172,
+        "p99": 21.828504
+      },
+      "warm_per_query_amortized_ms": {
+        "mean": 0.3114838541666667,
+        "n": 3,
+        "p50": 0.2995765625,
+        "p95": 0.337683125,
+        "p99": 0.341070375
+      }
+    }
+  ],
+  "safety_gate": {
+    "budget_bytes": 536870912,
+    "estimated_working_bytes": 201392128
+  },
+  "schema_version": "hybridmind.offline-turbovec-frontier/v1",
+  "workload": {
+    "bit_widths": [
+      2,
+      4
+    ],
+    "calibration_modes": [
+      false,
+      true
+    ],
+    "dimension": 4096,
+    "mechanics_test_only": false,
+    "query_count": 64,
+    "repetitions": 3,
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "top_k": 10,
+    "vector_count": 4096
+  }
+}
