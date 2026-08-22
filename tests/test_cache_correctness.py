@@ -55,7 +55,17 @@ def test_access_tracking_bypasses_hybrid_response_cache(monkeypatch):
                 ],
                 0.1,
                 1,
+                {
+                    "schema_version": "hybridmind.search-execution/v1",
+                    "cache_hit": False,
+                    "stages": {},
+                },
             )
+
+    class StoreSpy:
+        @staticmethod
+        def get_corpus_generation():
+            return 7
 
     cache = CacheSpy()
     ranker = RankerSpy()
@@ -65,10 +75,12 @@ def test_access_tracking_bypasses_hybrid_response_cache(monkeypatch):
         search_api.hybrid_search(
             HybridSearchRequest(query_text="where", track_access=True),
             ranker,
+            StoreSpy(),
         )
     )
 
     assert [result.node_id for result in response.results] == ["node-1"]
     assert ranker.track_access is True
+    assert response.execution_trace["corpus_generation"] == 7
     assert cache.get_calls == 0
     assert cache.set_calls == 0

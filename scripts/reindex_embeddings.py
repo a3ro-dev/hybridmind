@@ -83,6 +83,8 @@ def main():
     vector_index = VectorIndex(
         dimension=settings.embedding_dimension,
         index_path=None,
+        hnsw_ef_search=settings.hnsw_ef_search,
+        hnsw_ef_construction=settings.hnsw_ef_construction,
     )
     vector_index.index_path = Path(paths["vector_index"])
 

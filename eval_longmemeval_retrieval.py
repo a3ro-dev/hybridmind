@@ -2,7 +2,9 @@
 Retrieval-only LongMemEval evaluation for HybridMind.
 
 Calls /search/hybrid for each question and measures primary Hit@k / MRR using
-gold evidence/session IDs. Answer-text overlap is a separately labelled proxy.
+the gold ID namespace actually released by the dataset. LongMemEval-S normally
+provides support-session IDs, which are not exact supporting-turn evidence.
+Answer-text overlap is a separately labelled proxy.
 
 The LongMemEval benchmark tests long-context episodic memory across multiple
 conversation sessions (up to 500 sessions per question).
@@ -46,6 +48,52 @@ QUESTION_TYPES = [
 
 class EvaluationRunError(RuntimeError):
     pass
+
+
+def audit_retrieval_challenge(data: list[dict], *, top_k: int = 10) -> dict:
+    """Fail closed when an embedded LongMemEval haystack is oracle context.
+
+    Some released/local files contain only support sessions rather than a
+    retrieval corpus. Scoring those files at top-k produces a ceiling by
+    construction. Files without embedded haystack IDs are left to the normal
+    corpus-generation/evidence attestation path.
+    """
+    audited = [
+        item for item in data
+        if isinstance(item.get("haystack_session_ids"), list)
+        and isinstance(item.get("answer_session_ids"), list)
+    ]
+    if not audited:
+        return {"audited_examples": 0, "embedded_haystacks": False}
+    haystack_counts = [len(item["haystack_session_ids"]) for item in audited]
+    non_gold_counts = [
+        len(set(map(str, item["haystack_session_ids"]))
+            - set(map(str, item["answer_session_ids"])))
+        for item in audited
+    ]
+    result = {
+        "audited_examples": len(audited),
+        "embedded_haystacks": True,
+        "top_k": top_k,
+        "total_haystack_sessions": sum(haystack_counts),
+        "total_non_gold_sessions": sum(non_gold_counts),
+        "examples_with_non_gold_sessions": sum(value > 0 for value in non_gold_counts),
+        "examples_with_more_than_top_k_sessions": sum(
+            value > top_k for value in haystack_counts
+        ),
+        "max_haystack_sessions": max(haystack_counts),
+    }
+    failures = []
+    if result["total_non_gold_sessions"] == 0:
+        failures.append("embedded haystacks contain no distractor sessions")
+    if result["examples_with_more_than_top_k_sessions"] == 0:
+        failures.append(f"every embedded haystack fits within top_k={top_k}")
+    if failures:
+        raise EvaluationRunError(
+            "LongMemEval dataset admission failed: " + "; ".join(failures)
+            + f"; audit={json.dumps(result, sort_keys=True)}"
+        )
+    return result
 
 
 def parse_args():
@@ -102,17 +150,22 @@ def load_questions(split: str = "s", n: int = 20, question_type_filter: str | No
         sys.exit(1)
 
     data = json.loads(path.read_text())
+    if not isinstance(data, list):
+        raise EvaluationRunError("LongMemEval dataset root must be a JSON array")
+    audit_retrieval_challenge(data, top_k=10)
     questions = []
     for item in data:
         qt = item.get("question_type", "unknown")
         if question_type_filter and qt != question_type_filter:
             continue
-        # Never treat the full haystack as gold. Released variants use either
-        # explicit evidence or answer_session_ids for supporting sessions.
-        evidence_ids = (
-            item.get("evidence")
-            or item.get("answer_session_ids")
-            or []
+        # Never treat the full haystack as gold or conflate session IDs with
+        # exact supporting-turn IDs. Released variants use either explicit
+        # evidence or answer_session_ids for supporting sessions.
+        explicit_evidence = item.get("evidence") or []
+        support_session_ids = item.get("answer_session_ids") or []
+        evidence_ids = explicit_evidence or support_session_ids
+        metric_basis = (
+            "exact_evidence_id" if explicit_evidence else "support_session_id"
         )
         questions.append({
             "question_id": item["question_id"],
@@ -121,6 +174,7 @@ def load_questions(split: str = "s", n: int = 20, question_type_filter: str | No
             "question_type": qt,
             "question_date": item.get("question_date", ""),
             "evidence_ids": [str(e) for e in evidence_ids],
+            "metric_basis": metric_basis,
         })
         if len(questions) >= n:
             break
@@ -159,8 +213,31 @@ def candidate_evidence_ids(result: dict) -> set[str]:
     return found
 
 
-def is_exact_evidence(result: dict, evidence_ids: set[str]) -> bool:
-    return bool(evidence_ids & candidate_evidence_ids(result))
+def candidate_gold_ids(result: dict, metric_basis: str) -> set[str]:
+    """Read only the metadata namespace declared by the benchmark gold IDs."""
+    metadata = result.get("metadata") or {}
+    if metric_basis == "support_session_id":
+        keys = ("session_id", "sessionId")
+    elif metric_basis == "exact_evidence_id":
+        keys = ("evidence_id", "source_id")
+    else:
+        raise ValueError(f"unsupported LongMemEval metric basis: {metric_basis}")
+    found: set[str] = set()
+    for key in keys:
+        value = metadata.get(key)
+        values = value if isinstance(value, list) else [value]
+        found.update(
+            str(item) for item in values if item is not None and str(item).strip()
+        )
+    return found
+
+
+def is_exact_evidence(
+    result: dict,
+    evidence_ids: set[str],
+    metric_basis: str = "exact_evidence_id",
+) -> bool:
+    return bool(evidence_ids & candidate_gold_ids(result, metric_basis))
 
 
 def _reranker_executed(results: list[dict]) -> bool:
@@ -197,6 +274,17 @@ def run_eval(
     if top_k < 10:
         raise ValueError("LongMemEval evaluation requires top_k >= 10")
     eval_common.validate_rerank_pool(top_k=top_k, rerank_pool=rerank_pool)
+    metric_bases = {
+        str(question.get("metric_basis", "support_session_id"))
+        for question in questions
+    }
+    if len(metric_bases) != 1:
+        raise ValueError(
+            "LongMemEval run cannot mix exact-evidence and support-session gold IDs"
+        )
+    metric_basis = next(iter(metric_bases), "support_session_id")
+    if metric_basis not in {"exact_evidence_id", "support_session_id"}:
+        raise ValueError(f"unsupported LongMemEval metric basis: {metric_basis}")
     exact_hit1 = exact_hit5 = exact_hit10 = exact_mrr = 0.0
     exact_recall10 = exact_all_hit10 = 0.0
     overlap_hit1 = overlap_hit5 = overlap_hit10 = overlap_mrr = 0.0
@@ -222,7 +310,7 @@ def run_eval(
         "api_base_url": base_url,
         "split": split,
         "reranker_expected": search_mode == "hybrid" and rerank_pool > 0,
-        "metric_primary": "exact_evidence_id",
+        "metric_primary": metric_basis,
         "answer_overlap_role": "diagnostic_proxy_only",
         "search_mode": search_mode,
         "route_weights": route_weights,
@@ -249,6 +337,7 @@ def run_eval(
 
     for q in questions:
         qtype = route_query(q["question"])["type"]
+        execution_traces: list[dict] = []
 
         def _post(q_text: str) -> list:
             anchors = list(anchor_node_ids or [])
@@ -269,7 +358,16 @@ def run_eval(
                 )
                 eval_common.record_retrieval_response()
                 seed.raise_for_status()
-                seed_results = seed.json().get("results", [])
+                seed_body = seed.json()
+                execution_traces.append({
+                    "request_role": "graph_seed",
+                    "trace": eval_common.validate_search_execution(
+                        seed_body,
+                        expected_request=seed_payload,
+                        require_reranker=False,
+                    ),
+                })
+                seed_results = seed_body.get("results", [])
                 if seed_results:
                     anchors = [seed_results[0]["node_id"]]
             if search_mode == "graph_only" and not anchors:
@@ -299,7 +397,16 @@ def run_eval(
             )
             eval_common.record_retrieval_response()
             resp.raise_for_status()
-            return resp.json().get("results", [])
+            body = resp.json()
+            execution_traces.append({
+                "request_role": "retrieval",
+                "trace": eval_common.validate_search_execution(
+                    body,
+                    expected_request=payload,
+                    require_reranker=(search_mode == "hybrid" and rerank_pool > 0),
+                ),
+            })
+            return body.get("results", [])
 
         try:
             results = eval_common.retrieve_with_decomposition(
@@ -313,6 +420,7 @@ def run_eval(
                 pool_metrics=eval_ledger.empty_pool_metrics(metric_k),
                 status="retrieval_error", answer_status="not_run",
                 error_type=type(e).__name__, error_message=eval_common.sanitized_error(e),
+                extra={"search_execution_traces": execution_traces},
             )
             ledger.finalize_failure(
                 reason="retrieval_error",
@@ -341,8 +449,12 @@ def run_eval(
 
         evidence_ids = set(q.get("evidence_ids", []))
         retrieved_candidate_count += len(results)
-        evidence_tagged_candidate_count += sum(bool(candidate_evidence_ids(r)) for r in results)
-        relevance = [is_exact_evidence(r, evidence_ids) for r in results]
+        evidence_tagged_candidate_count += sum(
+            bool(candidate_gold_ids(r, metric_basis)) for r in results
+        )
+        relevance = [
+            is_exact_evidence(r, evidence_ids, metric_basis) for r in results
+        ]
         overlap_relevance = [is_relevant(r.get("text", ""), q["answer"]) for r in results]
 
         if evidence_ids:
@@ -352,7 +464,7 @@ def run_eval(
             exact_hit10 += any(relevance[:10])
             exact_mrr += next((1.0 / rank for rank, rel in enumerate(relevance[:10], 1) if rel), 0.0)
             retrieved_evidence_at_10 = set().union(
-                *(candidate_evidence_ids(result) for result in results[:10])
+                *(candidate_gold_ids(result, metric_basis) for result in results[:10])
             ) if results[:10] else set()
             covered_evidence = evidence_ids & retrieved_evidence_at_10
             exact_recall10 += len(covered_evidence) / len(evidence_ids)
@@ -379,7 +491,9 @@ def run_eval(
                     question_id=q["question_id"], question_type=qtype,
                     gold_evidence_ids=sorted(evidence_ids),
                     pool_metrics=eval_ledger.compute_pool_metrics(
-                        results, lambda r: is_exact_evidence(r, evidence_ids), metric_k
+                        results,
+                        lambda r: is_exact_evidence(r, evidence_ids, metric_basis),
+                        metric_k,
                     ),
                     status="answer_error", answer_status=answer_status,
                     error_type="AnswerProviderError", error_message=answer_result.error or answer_status,
@@ -399,8 +513,10 @@ def run_eval(
             answer_n += 1
 
         exact_metrics = eval_ledger.compute_pool_metrics(
-            results, lambda r: is_exact_evidence(r, evidence_ids), metric_k,
-            metric_basis="exact_evidence_id",
+            results,
+            lambda r: is_exact_evidence(r, evidence_ids, metric_basis),
+            metric_k,
+            metric_basis=metric_basis,
         )
         overlap_metrics = eval_ledger.compute_pool_metrics(
             results, lambda r: is_relevant(r.get("text", ""), q["answer"]), metric_k,
@@ -419,19 +535,24 @@ def run_eval(
             answer_status=answer_status,
             judge_method=judge_method,
             extra={
-                "exact_evidence_available": bool(evidence_ids),
+                "gold_ids_available": bool(evidence_ids),
                 "reranker_executed": _reranker_executed(results),
                 "retrieved_evidence_ids_at_10": sorted(
-                    set().union(*(candidate_evidence_ids(r) for r in results[:10]))
+                    set().union(
+                        *(candidate_gold_ids(r, metric_basis) for r in results[:10])
+                    )
                     if results[:10] else set()
                 ),
-                "gold_evidence_recall_at_10": (
+                "gold_id_recall_at_10": (
                     len(
                         evidence_ids
-                        & set().union(*(candidate_evidence_ids(r) for r in results[:10]))
+                        & set().union(
+                            *(candidate_gold_ids(r, metric_basis) for r in results[:10])
+                        )
                     ) / len(evidence_ids)
                     if evidence_ids and results[:10] else 0.0 if evidence_ids else None
                 ),
+                "search_execution_traces": execution_traces,
             },
         )
 
@@ -453,11 +574,11 @@ def run_eval(
         raise EvaluationRunError("LongMemEval run contained zero questions")
     if not exact_n:
         ledger.finalize_failure(
-            reason="no_exact_evidence",
+            reason="no_gold_ids",
             error_type="EvaluationRunError",
             expected_questions=n,
         )
-        raise EvaluationRunError("LongMemEval run contained no usable gold evidence IDs")
+        raise EvaluationRunError("LongMemEval run contained no usable gold IDs")
     if not retrieved_candidate_count or not evidence_tagged_candidate_count:
         ledger.finalize_failure(
             reason="unverified_corpus_metadata",
@@ -465,18 +586,23 @@ def run_eval(
             expected_questions=n,
         )
         raise EvaluationRunError(
-            "LongMemEval corpus evidence/session metadata cannot be verified from retrieved candidates"
+            "LongMemEval corpus metadata cannot be verified in the declared gold-ID namespace"
         )
     result = {
-        "metric_basis": "exact_evidence_id",
+        "metric_basis": metric_basis,
+        "claim_boundary": (
+            "support-session retrieval; not exact supporting-turn evidence or answer accuracy"
+            if metric_basis == "support_session_id"
+            else "exact evidence-ID retrieval; not answer accuracy"
+        ),
         "hit_at_1": round(exact_hit1 / exact_n, 3),
         "hit_at_5": round(exact_hit5 / exact_n, 3),
         "hit_at_10": round(exact_hit10 / exact_n, 3),
         "mrr": round(exact_mrr / exact_n, 3),
-        "gold_evidence_recall_at_10": round(exact_recall10 / exact_n, 3),
-        "all_gold_evidence_hit_at_10": round(exact_all_hit10 / exact_n, 3),
+        "gold_id_recall_at_10": round(exact_recall10 / exact_n, 3),
+        "all_gold_ids_hit_at_10": round(exact_all_hit10 / exact_n, 3),
         "n": n,
-        "n_exact_evidence": exact_n,
+        "n_gold_ids": exact_n,
         "answer_overlap_proxy": {
             "hit_at_1": round(overlap_hit1 / n, 3),
             "hit_at_5": round(overlap_hit5 / n, 3),
@@ -493,7 +619,7 @@ def run_eval(
                 "mrr": round(v["mrr"] / v["exact_n"], 3) if v["exact_n"] else None,
                 "answer_overlap_hit5_proxy": round(v["overlap_hit5"] / v["n"], 3) if v["n"] else 0,
                 "n": v["n"],
-                "n_exact_evidence": v["exact_n"],
+                "n_gold_ids": v["exact_n"],
             }
             for qt, v in by_type.items()
         },
@@ -507,7 +633,7 @@ def run_eval(
 def print_results(metrics: dict, label: str = ""):
     if label:
         print(f"\n{'='*60}\n{label}\n{'='*60}")
-    print(f"  N        : {metrics['n']} ({metrics.get('n_exact_evidence', 0)} with exact evidence)")
+    print(f"  N        : {metrics['n']} ({metrics.get('n_gold_ids', 0)} with gold IDs)")
     print(f"  Basis    : {metrics.get('metric_basis', 'unknown')}")
     print(f"  Hit@1    : {metrics['hit_at_1']:.1%}")
     print(f"  Hit@5    : {metrics['hit_at_5']:.1%}")
@@ -525,7 +651,7 @@ def print_results(metrics: dict, label: str = ""):
                 f"Hit@5={v['hit5']:.0%} MRR={v['mrr']:.3f}"
                 if v["hit5"] is not None else "exact evidence unavailable"
             )
-            print(f"    {qt:<40} {exact}  (n={v['n']}, exact={v['n_exact_evidence']})")
+            print(f"    {qt:<40} {exact}  (n={v['n']}, gold={v['n_gold_ids']})")
 
 
 def main():

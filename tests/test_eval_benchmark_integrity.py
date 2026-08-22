@@ -30,17 +30,71 @@ from scripts.ingest_locomo import (
 )
 
 
+def _execution_trace_for_request(payload: dict, results: list[dict]) -> dict:
+    mode = payload.get("search_mode", "hybrid")
+    required = {
+        "vector_only": {"dense"},
+        "sparse_only": {"sparse"},
+        "vector_sparse": {"dense", "sparse"},
+        "graph_only": {"graph"},
+        "hybrid": {"dense", "sparse", "graph"},
+    }[mode]
+    rerank_applied = bool(
+        mode == "hybrid" and payload.get("rerank_pool", 0) > 0 and results
+    )
+    return {
+        "schema_version": "hybridmind.search-execution/v1",
+        "search_mode": mode,
+        "corpus_generation": 1,
+        "resolved_config_sha256": "a" * 64,
+        "resolved_controls": {
+            "search_mode": mode,
+            "top_k": payload.get("top_k", 10),
+            "rerank_pool": payload.get("rerank_pool", 0),
+            "route_weights": payload.get("route_weights", True),
+            "fusion_mode": payload.get("fusion_mode", "rrf"),
+            "vector_weight": payload.get("vector_weight", 0.0) if "dense" in required else 0.0,
+            "graph_weight": payload.get("graph_weight", 0.0) if "graph" in required else 0.0,
+            "sparse_weight": payload.get("bm25_boost_weight", 0.0) if "sparse" in required else 0.0,
+        },
+        "stages": {
+            name: {
+                "requested": name in required,
+                "executed": name in required,
+                "candidates": len(results),
+            }
+            for name in ("dense", "sparse", "graph")
+        } | {
+            "cross_encoder": {
+                "attempted": rerank_applied,
+                "applied": rerank_applied,
+                "candidates": len(results) if rerank_applied else 0,
+                "failure_type": None,
+            }
+        },
+    }
+
+
 class _Response:
-    def __init__(self, results=None, error: Exception | None = None):
+    def __init__(
+        self,
+        results=None,
+        error: Exception | None = None,
+        execution_trace: dict | None = None,
+    ):
         self._results = results or []
         self._error = error
+        self._execution_trace = execution_trace
 
     def raise_for_status(self):
         if self._error:
             raise self._error
 
     def json(self):
-        return {"results": self._results}
+        body = {"results": self._results}
+        if self._execution_trace is not None:
+            body["execution_trace"] = self._execution_trace
+        return body
 
 
 class _Client:
@@ -51,7 +105,11 @@ class _Client:
 
     def post(self, path, json=None, **kwargs):
         self.calls.append((path, json, kwargs))
-        return _Response(self.results, self.error)
+        return _Response(
+            self.results,
+            self.error,
+            _execution_trace_for_request(json or {}, self.results),
+        )
 
 
 class _AsyncResponse:
@@ -162,6 +220,61 @@ def test_api_key_header_uses_authoritative_settings_and_errors_are_sanitized(mon
     assert eval_common.sanitized_error(error) == "RuntimeError"
 
 
+def test_search_execution_attestation_rejects_missing_or_incomplete_stages():
+    request = {
+        "search_mode": "vector_sparse",
+        "top_k": 10,
+        "rerank_pool": 0,
+        "route_weights": False,
+        "vector_weight": 0.6,
+        "graph_weight": 0.0,
+        "bm25_boost_weight": 0.4,
+    }
+    with pytest.raises(
+        eval_common.SearchExecutionAttestationError, match="missing execution_trace"
+    ):
+        eval_common.validate_search_execution(
+            {"results": []}, expected_request=request, require_reranker=False
+        )
+
+    body = {
+        "results": [{"node_id": "n"}],
+        "execution_trace": _execution_trace_for_request(
+            request, [{"node_id": "n"}]
+        ),
+    }
+    body["execution_trace"]["stages"]["sparse"]["executed"] = False
+    with pytest.raises(
+        eval_common.SearchExecutionAttestationError,
+        match="sparse retrieval stage did not execute",
+    ):
+        eval_common.validate_search_execution(
+            body, expected_request=request, require_reranker=False
+        )
+
+
+def test_search_execution_attestation_requires_real_reranker_evidence():
+    request = {
+        "search_mode": "hybrid",
+        "top_k": 10,
+        "rerank_pool": 25,
+        "route_weights": False,
+        "vector_weight": 0.5,
+        "graph_weight": 0.15,
+        "bm25_boost_weight": 0.35,
+    }
+    body = {
+        "results": [],
+        "execution_trace": _execution_trace_for_request(request, []),
+    }
+    with pytest.raises(
+        eval_common.SearchExecutionAttestationError, match="cross-encoder"
+    ):
+        eval_common.validate_search_execution(
+            body, expected_request=request, require_reranker=True
+        )
+
+
 def test_paid_fallback_requires_prices_before_live_llm_call(monkeypatch):
     args = SimpleNamespace(
         input_cost_per_million_tokens=0.0,
@@ -197,6 +310,77 @@ def test_exact_evidence_is_distinct_from_answer_overlap():
     }
     assert locomo.is_relevant(result["text"], "Paris")
     assert not locomo.is_exact_evidence(result, {"locomo:conv-a:D1:2"}, "conv-a")
+
+
+def test_longmem_gold_namespace_does_not_conflate_session_and_evidence_ids():
+    result = {
+        "metadata": {
+            "session_id": "session-gold",
+            "evidence_id": "turn-gold",
+        }
+    }
+    assert longmem.is_exact_evidence(
+        result, {"session-gold"}, "support_session_id"
+    )
+    assert not longmem.is_exact_evidence(
+        result, {"turn-gold"}, "support_session_id"
+    )
+    assert longmem.is_exact_evidence(
+        result, {"turn-gold"}, "exact_evidence_id"
+    )
+
+
+def test_longmem_loader_labels_released_session_gold(monkeypatch, tmp_path: Path):
+    dataset_dir = tmp_path / "longmemeval"
+    dataset_dir.mkdir()
+    (dataset_dir / "longmemeval_s.json").write_text(
+        json.dumps([{
+            "question_id": "q",
+            "question": "where?",
+            "answer": "there",
+            "answer_session_ids": ["s1"],
+        }]),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(longmem, "DATA_DIR", dataset_dir)
+
+    loaded = longmem.load_questions(split="s", n=1)
+
+    assert loaded[0]["evidence_ids"] == ["s1"]
+    assert loaded[0]["metric_basis"] == "support_session_id"
+
+
+def test_longmem_loader_rejects_oracle_context_haystacks(monkeypatch, tmp_path: Path):
+    dataset_dir = tmp_path / "longmemeval"
+    dataset_dir.mkdir()
+    (dataset_dir / "longmemeval_s.json").write_text(
+        json.dumps([{
+            "question_id": "q",
+            "question": "where?",
+            "answer": "there",
+            "answer_session_ids": ["s1"],
+            "haystack_session_ids": ["s1"],
+        }]),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(longmem, "DATA_DIR", dataset_dir)
+
+    with pytest.raises(
+        longmem.EvaluationRunError,
+        match="no distractor sessions",
+    ):
+        longmem.load_questions(split="s", n=1)
+
+
+def test_longmem_challenge_audit_accepts_distractors_beyond_top_k():
+    sessions = [f"s{index}" for index in range(12)]
+    audit = longmem.audit_retrieval_challenge([{
+        "haystack_session_ids": sessions,
+        "answer_session_ids": ["s0"],
+    }], top_k=10)
+
+    assert audit["total_non_gold_sessions"] == 11
+    assert audit["examples_with_more_than_top_k_sessions"] == 1
 
 
 def test_locomo_request_is_scoped_uses_final_top_k_and_correct_graph_key(
@@ -237,6 +421,10 @@ def test_locomo_request_is_scoped_uses_final_top_k_and_correct_graph_key(
     assert "anchor_node_ids" not in payload
     assert summary["hit_at_1"] == 1.0
     assert summary["metric_basis"] == "exact_evidence_id"
+    row = json.loads(next(tmp_path.glob("*.jsonl")).read_text(encoding="utf-8"))
+    attestation = row["extra"]["search_execution_traces"][0]
+    assert attestation["request_role"] == "retrieval"
+    assert attestation["trace"]["search_mode"] == "graph_only"
 
 
 def test_locomo_retrieval_error_is_ledgered_and_fails_closed(monkeypatch, tmp_path: Path):
@@ -457,8 +645,8 @@ def test_multievidence_metrics_report_recall_and_all_hit_at_fixed_k(monkeypatch,
         }],
         _Client([result]), top_k=10, rerank_pool=25, decompose_multihop=False,
     )
-    assert long_summary["gold_evidence_recall_at_10"] == 0.5
-    assert long_summary["all_gold_evidence_hit_at_10"] == 0.0
+    assert long_summary["gold_id_recall_at_10"] == 0.5
+    assert long_summary["all_gold_ids_hit_at_10"] == 0.0
 
     musique_result = {
         **result,
@@ -530,6 +718,25 @@ def test_legacy_sample_scorer_is_quarantined_before_provider_access():
 
     with pytest.raises(SystemExit, match="quarantined"):
         score_sample_20.main()
+
+
+def test_multi_domain_eval_help_path_is_plan_only_before_client_creation(monkeypatch, capsys):
+    from scripts import multi_domain_eval
+
+    monkeypatch.setattr(
+        multi_domain_eval,
+        "MultiDomainEval",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("live client must not be constructed")
+        ),
+    )
+    assert multi_domain_eval.main([]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["status"] == "quarantined_plan_only"
+    assert payload["provider_calls"] == 0
+
+    with pytest.raises(SystemExit, match="quarantined"):
+        multi_domain_eval.main(["--execute"])
 
 
 @pytest.mark.parametrize(

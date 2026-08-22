@@ -6,6 +6,7 @@ import pytest
 from config import Settings, settings
 import engine.hybrid_ranker as hybrid_ranker_module
 from engine.hybrid_ranker import HybridRanker
+from engine.vector_search import VectorSearchEngine
 from engine.fusion import rrf_fuse
 from engine.salience import compute_salience
 from models.search import HybridSearchRequest
@@ -181,6 +182,33 @@ def test_vector_batch_and_rebuild_reject_before_mutation():
     assert index.reverse_map.keys() == {"existing"}
 
 
+def test_dense_channel_preserves_identical_text_with_distinct_provenance():
+    class Embedder:
+        @staticmethod
+        def embed(_text):
+            vector = np.zeros(4096, dtype=np.float32)
+            vector[0] = 1.0
+            return vector
+
+    first = _result("first", 1.0, {"evidence_id": "D1:1"})
+    second = _result("second", 1.0, {"evidence_id": "D1:2"})
+    first["text"] = second["text"] = "identical citable sentence"
+    store = _Store({
+        "first": {"id": "first", **first},
+        "second": {"id": "second", **second},
+    })
+
+    class Index:
+        @staticmethod
+        def search(*_args, **_kwargs):
+            return [("first", 1.0), ("second", 0.99)]
+
+    results, _, _ = VectorSearchEngine(Index(), store, Embedder()).search(
+        "query", top_k=2
+    )
+    assert [result["node_id"] for result in results] == ["first", "second"]
+
+
 def test_vector_rebuild_backend_failure_keeps_previous_live_index(monkeypatch):
     import types
     import storage.vector_index as vector_module
@@ -243,6 +271,25 @@ def test_vector_batch_rejects_duplicate_ids_before_mutation():
 def test_vector_index_constructor_rejects_non_contract_dimension():
     with pytest.raises(ValueError, match="dimension=4096"):
         VectorIndex(dimension=3)
+
+
+def test_vector_index_attests_configured_hnsw_controls():
+    index = VectorIndex(
+        dimension=4096,
+        hnsw_ef_search=512,
+        hnsw_ef_construction=80,
+    )
+    if not index._use_faiss:
+        pytest.skip("HNSW controls require FAISS")
+
+    assert index.index.hnsw.efSearch == 512
+    assert index.index.hnsw.efConstruction == 80
+    assert index.get_stats()["hnsw_ef_search"] == 512
+    assert index.get_stats()["hnsw_ef_construction"] == 80
+
+    index.clear()
+    assert index.index.hnsw.efSearch == 512
+    assert index.index.hnsw.efConstruction == 80
 
 
 def test_typed_graph_paths_are_directional_symmetric_and_confidence_aware():
@@ -584,3 +631,70 @@ def test_invalid_fact_is_removed_before_reranker(monkeypatch):
     results, _, _ = ranker.search("query", top_k=1, rerank_pool=2, track_access=False)
     assert [result["node_id"] for result in results] == ["active"]
     assert reranker.pool_size == 1
+
+
+def test_exact_text_dedup_preserves_distinct_evidence_provenance(monkeypatch):
+    """Presentation dedup must not erase separately citable source turns."""
+    monkeypatch.setattr(settings, "local_lexical_rerank_enabled", False)
+    first = _result(
+        "first", 1.0,
+        {"benchmark_sample_id": "conversation", "dia_id": "D1:1"},
+    )
+    second = _result(
+        "second", 0.9,
+        {"benchmark_sample_id": "conversation", "dia_id": "D2:1"},
+    )
+    first["text"] = second["text"] = "The preference is tea."
+    ranker = HybridRanker(
+        _VectorEngine([first, second]), _GraphEngine(), _BM25(),
+        query_routing_enabled=False,
+    )
+
+    results, _, _ = ranker.search(
+        "preference tea", top_k=2, rerank_pool=0,
+        search_mode="vector_only", deduplicate=True, track_access=False,
+    )
+
+    assert [result["node_id"] for result in results] == ["first", "second"]
+
+
+def test_explicit_as_of_filters_every_controlled_candidate_channel(monkeypatch):
+    """Point-in-time validity is a search contract, not a hybrid-only heuristic."""
+    monkeypatch.setattr(settings, "local_lexical_rerank_enabled", False)
+    active = _result(
+        "active", 0.8,
+        valid_from="2025-01-01T00:00:00+00:00",
+        valid_until="2027-01-01T00:00:00+00:00",
+    )
+    future = _result(
+        "future", 1.0,
+        valid_from="2027-01-01T00:00:00+00:00",
+    )
+    ranker = HybridRanker(
+        _VectorEngine([future, active]), _GraphEngine(), _BM25(),
+        query_routing_enabled=False,
+    )
+
+    results, _, _ = ranker.search(
+        "state", top_k=2, rerank_pool=0, search_mode="vector_only",
+        as_of=datetime(2026, 6, 1, tzinfo=timezone.utc), track_access=False,
+    )
+
+    assert [result["node_id"] for result in results] == ["active"]
+
+
+def test_as_of_is_passed_to_graph_traversal_and_proximity(monkeypatch):
+    monkeypatch.setattr(settings, "local_lexical_rerank_enabled", False)
+    graph = _GraphEngine()
+    anchor = _result("anchor", 1.0)
+    ranker = HybridRanker(
+        _VectorEngine([anchor]), graph, _BM25(), query_routing_enabled=False,
+    )
+    instant = datetime(2026, 6, 1, tzinfo=timezone.utc)
+
+    ranker.search(
+        "state", top_k=1, rerank_pool=0, search_mode="graph_only",
+        anchor_nodes=["anchor"], as_of=instant, track_access=False,
+    )
+
+    assert graph.proximity_calls[0]["as_of"] == instant

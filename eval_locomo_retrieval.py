@@ -297,6 +297,7 @@ def run_eval(
             print(f"  Answer: {safe_a}...")
 
         qtype = route_query(question)["type"]
+        execution_traces: list[dict] = []
 
         def _post(q_text: str) -> list:
             anchors = list(anchor_node_ids or [])
@@ -323,7 +324,16 @@ def run_eval(
                 )
                 eval_common.record_retrieval_response()
                 seed.raise_for_status()
-                seed_results = seed.json().get("results", [])
+                seed_body = seed.json()
+                execution_traces.append({
+                    "request_role": "graph_seed",
+                    "trace": eval_common.validate_search_execution(
+                        seed_body,
+                        expected_request=seed_payload,
+                        require_reranker=False,
+                    ),
+                })
+                seed_results = seed_body.get("results", [])
                 if seed_results:
                     anchors = [seed_results[0]["node_id"]]
             if search_mode == "graph_only" and not anchors:
@@ -357,7 +367,16 @@ def run_eval(
             )
             eval_common.record_retrieval_response()
             resp.raise_for_status()
-            return resp.json().get("results", [])
+            body = resp.json()
+            execution_traces.append({
+                "request_role": "retrieval",
+                "trace": eval_common.validate_search_execution(
+                    body,
+                    expected_request=payload,
+                    require_reranker=reranker_expected,
+                ),
+            })
+            return body.get("results", [])
 
         try:
             res_list = eval_common.retrieve_with_decomposition(
@@ -374,7 +393,10 @@ def run_eval(
                 answer_status="not_run",
                 error_type=type(e).__name__,
                 error_message=eval_common.sanitized_error(e),
-                extra={"sample_id": sample_id},
+                extra={
+                    "sample_id": sample_id,
+                    "search_execution_traces": execution_traces,
+                },
             )
             if verbose:
                 print(f"  ERROR: {eval_common.sanitized_error(e)}")
@@ -524,6 +546,7 @@ def run_eval(
                 "gold_evidence_recall_at_10": exact_recall_at_10[-1] if exact_eligible else None,
                 "all_gold_evidence_hit_at_10": all_evidence_hit_at_10[-1] if exact_eligible else None,
                 "reranker_executed": _reranker_executed(res_list),
+                "search_execution_traces": execution_traces,
             },
         )
 

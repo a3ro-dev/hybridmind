@@ -19,6 +19,7 @@ import math
 import os
 import re
 import time
+from collections.abc import Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -125,6 +126,148 @@ class AnswerResult:
 
 class EvaluationBudgetExceeded(RuntimeError):
     """A live evaluation crossed a predeclared resource or spend ceiling."""
+
+
+class SearchExecutionAttestationError(RuntimeError):
+    """The server response cannot prove the requested retrieval condition ran."""
+
+
+_SEARCH_STAGES = {
+    "vector_only": {"dense"},
+    "sparse_only": {"sparse"},
+    "vector_sparse": {"dense", "sparse"},
+    "graph_only": {"graph"},
+    "hybrid": {"dense", "sparse", "graph"},
+}
+
+
+def validate_search_execution(
+    response_body: Mapping,
+    *,
+    expected_request: Mapping,
+    require_reranker: bool,
+) -> dict:
+    """Validate and return a server-attested controlled-search trace.
+
+    Evaluator request labels are not execution evidence. A completed condition
+    therefore requires the API's versioned trace, exact requested mode,
+    resolved control values, corpus generation, and every mode-required stage.
+    Positive reranker conditions additionally require a successful, non-empty
+    cross-encoder execution.
+    """
+    if not isinstance(response_body, Mapping):
+        raise SearchExecutionAttestationError("search response must be an object")
+    trace = response_body.get("execution_trace")
+    if not isinstance(trace, Mapping):
+        raise SearchExecutionAttestationError(
+            "search response is missing execution_trace"
+        )
+    if trace.get("schema_version") != "hybridmind.search-execution/v1":
+        raise SearchExecutionAttestationError(
+            "search execution trace schema is missing or unsupported"
+        )
+
+    expected_mode = str(expected_request.get("search_mode") or "hybrid")
+    if expected_mode not in _SEARCH_STAGES:
+        raise SearchExecutionAttestationError(
+            f"unsupported expected search mode: {expected_mode}"
+        )
+    if trace.get("search_mode") != expected_mode:
+        raise SearchExecutionAttestationError(
+            "server-attested search mode does not match the request"
+        )
+
+    corpus_generation = trace.get("corpus_generation")
+    if (
+        isinstance(corpus_generation, bool)
+        or not isinstance(corpus_generation, int)
+        or corpus_generation < 0
+    ):
+        raise SearchExecutionAttestationError(
+            "execution trace lacks a valid corpus generation"
+        )
+    config_sha = trace.get("resolved_config_sha256")
+    if not isinstance(config_sha, str) or not re.fullmatch(r"[0-9a-f]{64}", config_sha):
+        raise SearchExecutionAttestationError(
+            "execution trace lacks a valid resolved configuration hash"
+        )
+
+    controls = trace.get("resolved_controls")
+    if not isinstance(controls, Mapping):
+        raise SearchExecutionAttestationError(
+            "execution trace lacks resolved controls"
+        )
+    control_fields = {
+        "search_mode": "search_mode",
+        "top_k": "top_k",
+        "rerank_pool": "rerank_pool",
+        "route_weights": "route_weights",
+        "fusion_mode": "fusion_mode",
+        "vector_weight": "vector_weight",
+        "graph_weight": "graph_weight",
+        "bm25_boost_weight": "sparse_weight",
+    }
+    stage_bound_controls = {
+        "vector_weight": "dense",
+        "graph_weight": "graph",
+        "bm25_boost_weight": "sparse",
+    }
+    for request_name, control_name in control_fields.items():
+        if request_name not in expected_request:
+            continue
+        bound_stage = stage_bound_controls.get(request_name)
+        if bound_stage is not None and bound_stage not in _SEARCH_STAGES[expected_mode]:
+            # Controlled modes force unused signal weights to zero.
+            if controls.get(control_name) != 0.0:
+                raise SearchExecutionAttestationError(
+                    f"disabled control {control_name} was not resolved to zero"
+                )
+            continue
+        expected = expected_request.get(request_name)
+        if expected is None:
+            continue
+        if controls.get(control_name) != expected:
+            raise SearchExecutionAttestationError(
+                f"resolved control {control_name} does not match the request"
+            )
+
+    stages = trace.get("stages")
+    if not isinstance(stages, Mapping):
+        raise SearchExecutionAttestationError("execution trace lacks stage evidence")
+    required = _SEARCH_STAGES[expected_mode]
+    for stage_name in ("dense", "sparse", "graph"):
+        stage = stages.get(stage_name)
+        if not isinstance(stage, Mapping):
+            raise SearchExecutionAttestationError(
+                f"execution trace lacks {stage_name} stage evidence"
+            )
+        should_run = stage_name in required
+        if stage.get("requested") is not should_run:
+            raise SearchExecutionAttestationError(
+                f"server stage request flag is invalid for {stage_name}"
+            )
+        if stage.get("executed") is not should_run:
+            raise SearchExecutionAttestationError(
+                f"requested {stage_name} retrieval stage did not execute"
+                if should_run
+                else f"unrequested {stage_name} retrieval stage executed"
+            )
+
+    reranker = stages.get("cross_encoder")
+    if not isinstance(reranker, Mapping):
+        raise SearchExecutionAttestationError(
+            "execution trace lacks cross-encoder stage evidence"
+        )
+    if require_reranker and not (
+        reranker.get("attempted") is True
+        and reranker.get("applied") is True
+        and int(reranker.get("candidates") or 0) > 0
+        and not reranker.get("failure_type")
+    ):
+        raise SearchExecutionAttestationError(
+            "required cross-encoder reranker did not execute successfully"
+        )
+    return dict(trace)
 
 
 def validate_rerank_pool(*, top_k: int, rerank_pool: int) -> None:

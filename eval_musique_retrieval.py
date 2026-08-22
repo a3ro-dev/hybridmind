@@ -247,6 +247,7 @@ def run_eval(
     for q in questions:
         supporting_ids = q["supporting_ids"]
         qtype = route_query(q["question"])["type"]
+        execution_traces: list[dict] = []
 
         def _post(q_text: str) -> list:
             anchors = list(anchor_node_ids or [])
@@ -267,7 +268,16 @@ def run_eval(
                 )
                 eval_common.record_retrieval_response()
                 seed.raise_for_status()
-                seed_results = seed.json().get("results", [])
+                seed_body = seed.json()
+                execution_traces.append({
+                    "request_role": "graph_seed",
+                    "trace": eval_common.validate_search_execution(
+                        seed_body,
+                        expected_request=seed_payload,
+                        require_reranker=False,
+                    ),
+                })
+                seed_results = seed_body.get("results", [])
                 if seed_results:
                     anchors = [seed_results[0]["node_id"]]
             if search_mode == "graph_only" and not anchors:
@@ -297,7 +307,16 @@ def run_eval(
             )
             eval_common.record_retrieval_response()
             resp.raise_for_status()
-            return resp.json().get("results", [])
+            body = resp.json()
+            execution_traces.append({
+                "request_role": "retrieval",
+                "trace": eval_common.validate_search_execution(
+                    body,
+                    expected_request=payload,
+                    require_reranker=(search_mode == "hybrid" and rerank_pool > 0),
+                ),
+            })
+            return body.get("results", [])
 
         try:
             results = eval_common.retrieve_with_decomposition(
@@ -311,6 +330,7 @@ def run_eval(
                 pool_metrics=eval_ledger.empty_pool_metrics(metric_k),
                 status="retrieval_error", answer_status="not_run",
                 error_type=type(e).__name__, error_message=eval_common.sanitized_error(e),
+                extra={"search_execution_traces": execution_traces},
             )
             ledger.finalize_failure(
                 reason="retrieval_error",
@@ -451,6 +471,7 @@ def run_eval(
                     supporting_ids.issubset(retrieved_ids_at_10)
                     if supporting_ids else None
                 ),
+                "search_execution_traces": execution_traces,
             },
         )
 

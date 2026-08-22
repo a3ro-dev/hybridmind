@@ -209,6 +209,12 @@ async def ingest_session(
                 "event_time_timezone_assumption": "dataset_unspecified_assumed_utc",
                 "dia_id": turn["dia_id"],
                 "evidence_id": turn["evidence_id"],
+                # Held-out conversation-split evidence (2026-08-14) showed
+                # speaker-prefixed sparse keys improve exact source recall at
+                # a bounded footprint. Keep the authoritative/dense text and
+                # temporal metadata unchanged; only the sparse representation
+                # uses this source-grounded alternate key.
+                "sparse_text": f"{turn['speaker']}: {txt}",
                 "locomo_session": turn["session_name"],
                 "turn_index": turn["turn_index"],
             },

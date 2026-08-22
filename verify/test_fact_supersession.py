@@ -1,15 +1,23 @@
 """
 Verify fact contradiction / supersession check at ingest.
 """
-import os
+import numpy as np
 from config import settings
 
-def test_fact_supersession_logic(client, db_manager):
+def test_fact_supersession_logic(client, db_manager, monkeypatch):
     # Enable fact extraction (so ingest/session-facts triggers) and override threshold
-    orig_fact_enabled = os.environ.get("FACT_EXTRACTION_ENABLED")
-    os.environ["FACT_EXTRACTION_ENABLED"] = "true"
+    orig_fact_enabled = settings.fact_extraction_enabled
+    settings.fact_extraction_enabled = True
     orig_threshold = settings.fact_contradiction_threshold
     settings.fact_contradiction_threshold = 0.80
+    monkeypatch.setattr("engine.llm_client.is_configured", lambda *args, **kwargs: True)
+    fixed = np.zeros(4096, dtype=np.float32)
+    fixed[0] = 1.0
+    monkeypatch.setattr(
+        db_manager.embedding_engine,
+        "embed_batch",
+        lambda texts: np.stack([fixed.copy() for _ in texts]),
+    )
 
     try:
         # Clear database
@@ -53,8 +61,5 @@ def test_fact_supersession_logic(client, db_manager):
         assert any(e["type"] == "supersedes" and e["target_id"] == n1_id for e in edges)
 
     finally:
-        if orig_fact_enabled is not None:
-            os.environ["FACT_EXTRACTION_ENABLED"] = orig_fact_enabled
-        else:
-            del os.environ["FACT_EXTRACTION_ENABLED"]
+        settings.fact_extraction_enabled = orig_fact_enabled
         settings.fact_contradiction_threshold = orig_threshold

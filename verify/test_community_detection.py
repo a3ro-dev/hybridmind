@@ -1,7 +1,14 @@
 """
 Verify Louvain community detection and community summary nodes.
 """
-def test_community_detection(client, db_manager):
+def test_community_detection(client, db_manager, monkeypatch):
+    # Derived summaries are provider-backed and fail closed in production.
+    # This explicit offline double keeps the verification focused on community
+    # membership, provenance edges, and atomic summary persistence.
+    monkeypatch.setattr(
+        "engine.consolidation.llm_summarize",
+        lambda facts, model=None: "Community: " + " | ".join(facts),
+    )
     # Clear database
     client.post("/admin/clear")
 

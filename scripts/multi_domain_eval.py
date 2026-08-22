@@ -1,3 +1,4 @@
+import argparse
 import html
 import json
 import math
@@ -1173,5 +1174,42 @@ The next measurement should add human-labeled relevance judgments for the cross-
         self.generate_report()
 
 
+def parse_args(argv: Optional[List[str]] = None):
+    parser = argparse.ArgumentParser(
+        description=(
+            "Legacy exploratory multi-domain harness. It is dry-plan only until "
+            "it emits exact-evidence immutable ledgers and enforces a priced "
+            "resource-bound live plan."
+        )
+    )
+    parser.add_argument(
+        "--execute",
+        action="store_true",
+        help="request execution (currently rejected by the provenance gate)",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    args = parse_args(argv)
+    if args.execute:
+        raise SystemExit(
+            "multi_domain_eval live execution is quarantined: this exploratory "
+            "harness lacks exact evidence-ID relevance, immutable completion "
+            "receipts, and enforced usage/spend accounting"
+        )
+    print(json.dumps({
+        "schema": "hybridmind.multi-domain-plan/v1",
+        "status": "quarantined_plan_only",
+        "provider_calls": 0,
+        "reasons": [
+            "no exact evidence-ID relevance labels",
+            "no immutable per-question ledger/completion receipt",
+            "no enforced priced usage-limited live plan",
+        ],
+    }, indent=2, sort_keys=True))
+    return 0
+
+
 if __name__ == "__main__":
-    MultiDomainEval().run()
+    raise SystemExit(main())
