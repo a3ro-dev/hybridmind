@@ -108,3 +108,11 @@ benchmarks/results/ledger_*.jsonl
 
 # ── Data directory (database, vectors, faiss index) ───────────────
 data/
+
+# ── Codex-local research artifacts ───────────────────────────────
+# The technical PDF is delivered through the desktop artifact channel,
+# while rendered QA images and installed skill caches are local-only.
+output/pdf/
+tmp/
+.agents/skills/
+skills-lock.json
