@@ -9,9 +9,9 @@ The GNN produces node embeddings that capture multi-hop relational context;
 candidates are re-scored by cosine similarity to the query GNN embedding.
 
 Training:  scripts/train_gnn.py  (RunPod)
-Inference: runs CPU-only if no GPU is available; gracefully falls back to
-           standard BFS proximity scoring when disabled or torch-geometric
-           is not installed.
+Inference: runs CPU-only if no GPU is available. When explicitly enabled, a
+missing dependency or checkpoint is an execution error, never a silent BFS
+fallback labelled as GNN retrieval.
 """
 from __future__ import annotations
 
@@ -128,16 +128,10 @@ class GNNReranker:
                 sqlite_store is not provided.
         """
         if not self.is_available():
-            return candidates[:top_k] if top_k else candidates
-
-        try:
-            return self._gnn_rerank(query_embedding, candidates, graph_index, top_k, sqlite_store)
-        except Exception as exc:
-            logger.warning(
-                "GNNReranker: inference failed; returning base order type=%s",
-                type(exc).__name__,
-            )
-            return candidates[:top_k] if top_k else candidates
+            raise RuntimeError("GNN reranker is enabled but no trained model is available")
+        return self._gnn_rerank(
+            query_embedding, candidates, graph_index, top_k, sqlite_store,
+        )
 
     def _gnn_rerank(self, query_embedding, candidates, graph_index, top_k, sqlite_store=None):
         import torch
@@ -228,4 +222,9 @@ def get_gnn_reranker() -> Optional[GNNReranker]:
             ckpt = None
         _gnn_reranker = GNNReranker(checkpoint_path=ckpt)
 
-    return _gnn_reranker if _gnn_reranker.is_available() else None
+    if not _gnn_reranker.is_available():
+        raise RuntimeError(
+            "GNN reranking is enabled but torch-geometric or a valid trained "
+            "checkpoint is unavailable"
+        )
+    return _gnn_reranker

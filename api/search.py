@@ -9,7 +9,10 @@ Features:
 - Query result caching for performance
 """
 
-from typing import List, Optional
+from datetime import datetime, timezone
+import hashlib
+import json
+from typing import List, Literal, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from models.search import (
@@ -37,10 +40,30 @@ from config import settings
 router = APIRouter(prefix="/search", tags=["Search"])
 
 
+def _config_sha256(value: dict) -> str:
+    return hashlib.sha256(
+        json.dumps(
+            value, sort_keys=True, separators=(",", ":"), default=str,
+        ).encode("utf-8")
+    ).hexdigest()
+
+
+def _require_aware(value: Optional[datetime]) -> Optional[datetime]:
+    if value is None:
+        return None
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise HTTPException(
+            status_code=422,
+            detail="as_of must include an explicit timezone offset",
+        )
+    return value.astimezone(timezone.utc)
+
+
 @router.post("/vector", response_model=SearchResponse)
 async def vector_search(
     request: VectorSearchRequest,
-    vector_engine: VectorSearchEngine = Depends(get_vector_engine)
+    vector_engine: VectorSearchEngine = Depends(get_vector_engine),
+    sqlite_store: SQLiteStore = Depends(get_sqlite_store),
 ) -> SearchResponse:
     """
     Pure vector similarity search using cosine similarity.
@@ -52,16 +75,24 @@ async def vector_search(
     """
     # Check cache first
     cache = get_query_cache()
+    corpus_generation = sqlite_store.get_corpus_generation()
+    vector_index_stats = vector_engine.vector_index.get_stats()
     cache_params = {
         "query_text": request.query_text,
         "top_k": request.top_k,
         "min_score": request.min_score,
-        "filter_metadata": request.filter_metadata
+        "filter_metadata": request.filter_metadata,
+        "corpus_generation": corpus_generation,
+        "hnsw_ef_search": vector_index_stats.get("hnsw_ef_search"),
+        "hnsw_ef_construction": vector_index_stats.get("hnsw_ef_construction"),
     }
 
     cached = cache.get("vector", cache_params)
     if cached:
-        return SearchResponse(**cached)
+        response = SearchResponse(**cached)
+        if response.execution_trace is not None:
+            response.execution_trace["cache_hit"] = True
+        return response
 
     # Execute search
     results, query_time_ms, total_candidates = vector_engine.search(
@@ -86,7 +117,36 @@ async def vector_search(
         results=search_results,
         query_time_ms=query_time_ms,
         total_candidates=total_candidates,
-        search_type="vector"
+        search_type="vector",
+        execution_trace={
+            "schema_version": "hybridmind.search-execution/v1",
+            "corpus_generation": corpus_generation,
+            "search_mode": "vector_only",
+            "resolved_config_sha256": _config_sha256(cache_params),
+            "resolved_controls": {
+                "search_mode": "vector_only",
+                "top_k": request.top_k,
+                "hnsw_ef_search": vector_index_stats.get("hnsw_ef_search"),
+                "hnsw_ef_construction": vector_index_stats.get(
+                    "hnsw_ef_construction"
+                ),
+            },
+            "cache_hit": False,
+            "stages": {
+                "dense": {
+                    "requested": True,
+                    "executed": True,
+                    "candidates": total_candidates,
+                    "identity": type(vector_engine.vector_index).__name__,
+                    "hnsw_ef_search": vector_index_stats.get("hnsw_ef_search"),
+                    "hnsw_ef_construction": vector_index_stats.get(
+                        "hnsw_ef_construction"
+                    ),
+                },
+                "sparse": {"requested": False, "executed": False, "candidates": 0},
+                "graph": {"requested": False, "executed": False, "candidates": 0},
+            },
+        },
     )
 
     # Cache the result
@@ -100,7 +160,12 @@ async def graph_search(
     start_id: str = Query(..., description="Starting node ID"),
     depth: int = Query(default=2, ge=1, le=5, description="Maximum traversal depth"),
     edge_types: Optional[List[str]] = Query(default=None, description="Filter by edge types"),
-    direction: str = Query(default="both", description="'outgoing', 'incoming', or 'both'"),
+    direction: Literal["outgoing", "incoming", "both", "typed"] = Query(
+        default="both", description="'outgoing', 'incoming', 'both', or 'typed'"
+    ),
+    as_of: Optional[datetime] = Query(
+        default=None, description="Timezone-aware point-in-time validity boundary"
+    ),
     graph_engine: GraphSearchEngine = Depends(get_graph_engine),
     sqlite_store: SQLiteStore = Depends(get_sqlite_store)
 ) -> SearchResponse:
@@ -110,6 +175,7 @@ async def graph_search(
     Returns nodes reachable within the specified depth,
     ranked by graph proximity (closer nodes first).
     """
+    as_of = _require_aware(as_of)
     # Validate start node exists
     start_node = sqlite_store.get_node(start_id)
     if start_node is None:
@@ -119,7 +185,8 @@ async def graph_search(
         start_id=start_id,
         depth=depth,
         edge_types=edge_types,
-        direction=direction
+        direction=direction,
+        as_of=as_of,
     )
 
     search_results = [
@@ -139,14 +206,38 @@ async def graph_search(
         results=search_results,
         query_time_ms=query_time_ms,
         total_candidates=total_candidates,
-        search_type="graph"
+        search_type="graph",
+        execution_trace={
+            "schema_version": "hybridmind.search-execution/v1",
+            "corpus_generation": sqlite_store.get_corpus_generation(),
+            "search_mode": "graph_only",
+            "as_of": as_of.isoformat() if as_of is not None else None,
+            "resolved_config_sha256": _config_sha256({
+                "start_id": start_id,
+                "depth": depth,
+                "edge_types": edge_types,
+                "direction": direction,
+                "as_of": as_of,
+            }),
+            "cache_hit": False,
+            "stages": {
+                "dense": {"requested": False, "executed": False, "candidates": 0},
+                "sparse": {"requested": False, "executed": False, "candidates": 0},
+                "graph": {
+                    "requested": True,
+                    "executed": True,
+                    "candidates": total_candidates,
+                },
+            },
+        },
     )
 
 
 @router.post("/hybrid", response_model=SearchResponse)
 async def hybrid_search(
     request: HybridSearchRequest,
-    hybrid_ranker: HybridRanker = Depends(get_hybrid_ranker)
+    hybrid_ranker: HybridRanker = Depends(get_hybrid_ranker),
+    sqlite_store: SQLiteStore = Depends(get_sqlite_store),
 ) -> SearchResponse:
     """
     Hybrid dense, sparse, and graph retrieval with optional reranking.
@@ -156,6 +247,7 @@ async def hybrid_search(
     """
     # Check cache first
     cache = get_query_cache()
+    corpus_generation = sqlite_store.get_corpus_generation()
     cache_params = {
         "query_text": request.query_text,
         "top_k": request.top_k,
@@ -174,6 +266,8 @@ async def hybrid_search(
         "search_mode": request.search_mode,
         "route_weights": request.route_weights,
         "track_access": request.track_access,
+        "as_of": request.as_of.isoformat() if request.as_of is not None else None,
+        "corpus_generation": corpus_generation,
     }
 
     should_track_access = (
@@ -185,10 +279,12 @@ async def hybrid_search(
         cached = cache.get("hybrid", cache_params)
         if cached:
             cached_response = SearchResponse(**cached)
+            if cached_response.execution_trace is not None:
+                cached_response.execution_trace["cache_hit"] = True
             return cached_response
 
     # Execute search
-    results, query_time_ms, total_candidates = hybrid_ranker.search(
+    results, query_time_ms, total_candidates, execution_trace = hybrid_ranker.search(
         query_text=request.query_text,
         top_k=request.top_k,
         vector_weight=request.vector_weight,
@@ -206,7 +302,16 @@ async def hybrid_search(
         search_mode=request.search_mode,
         route_weights=request.route_weights,
         track_access=request.track_access,
+        as_of=request.as_of,
+        return_trace=True,
     )
+    generation_after = sqlite_store.get_corpus_generation()
+    if generation_after != corpus_generation:
+        raise HTTPException(
+            status_code=409,
+            detail="corpus changed during search; retry against a stable generation",
+        )
+    execution_trace["corpus_generation"] = corpus_generation
 
     search_results = [
         SearchResult(
@@ -234,7 +339,8 @@ async def hybrid_search(
         results=search_results,
         query_time_ms=query_time_ms,
         total_candidates=total_candidates,
-        search_type="hybrid"
+        search_type=request.search_mode,
+        execution_trace=execution_trace,
     )
 
     # Stateful searches must not be cached: a cache hit would skip the

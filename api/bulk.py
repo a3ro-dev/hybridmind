@@ -25,6 +25,7 @@ from api.dependencies import (
 )
 from storage.sqlite_store import SQLiteStore
 from storage.vector_index import VectorIndex
+from storage.bm25_index import sparse_document_text
 from typing import Any as _BM25AnyType
 from storage.graph_index import GraphIndex
 from engine.embedding import EmbeddingEngine, validate_embedding_4096
@@ -326,7 +327,13 @@ def _rebuild_indexes_from_sql(
         bm25_index.rebuild_from_nodes(nodes)
     else:
         bm25_index.clear()
-        bm25_index.add_batch([(node["id"], node["text"]) for node in nodes])
+        bm25_index.add_batch([
+            (
+                node["id"],
+                sparse_document_text(node["text"], node.get("metadata")),
+            )
+            for node in nodes
+        ])
 
 
 def _rebuild_primary_indexes(db_manager) -> None:
@@ -457,7 +464,13 @@ async def bulk_create_nodes(
             for node_data, embedding in zip(nodes_to_create, validated_embeddings)
         ]
         vector_index.add_batch(vector_batch)
-        bm25_index.add_batch([(node["id"], node["text"]) for node in nodes_to_create])
+        bm25_index.add_batch([
+            (
+                node["id"],
+                sparse_document_text(node["text"], node.get("metadata")),
+            )
+            for node in nodes_to_create
+        ])
 
         # ColBERT is part of the active retrieval contract when enabled.  It is
         # therefore a required stage, not a best-effort post-success side effect.

@@ -101,17 +101,11 @@ def infer_cosine_edges(
     threshold = threshold if threshold is not None else cfg.auto_edge_cosine_threshold
     max_edges = max_edges if max_edges is not None else cfg.auto_edge_max_per_node
 
-    try:
-        import numpy as np
-        emb = np.asarray(embedding, dtype=np.float32)
-        candidates: List[Tuple[str, float]] = vector_index.search(emb, top_k=max_edges + 5)
-    except Exception as exc:
-        logger.debug(
-            "edge_inference: vector search failed node=%s type=%s",
-            node_id,
-            type(exc).__name__,
-        )
-        return 0
+    import numpy as np
+    emb = np.asarray(embedding, dtype=np.float32)
+    candidates: List[Tuple[str, float]] = vector_index.search(
+        emb, top_k=max_edges + 5,
+    )
 
     created = 0
     for cand_id, score in candidates:
@@ -145,13 +139,9 @@ def infer_cosine_edges(
 
 def _extract_entities_spacy(text: str) -> List[str]:
     """Extract named entities using spaCy (optional dep)."""
-    try:
-        import spacy
-        nlp = _get_spacy_model()
-        doc = nlp(text)
-        return list({ent.text.lower() for ent in doc.ents if len(ent.text) > 1})
-    except Exception:
-        return []
+    nlp = _get_spacy_model()
+    doc = nlp(text)
+    return list({ent.text.lower() for ent in doc.ents if len(ent.text) > 1})
 
 
 _spacy_nlp = None
@@ -210,10 +200,9 @@ def infer_entity_edges(
         if entity_index is not None:
             related_ids = [nid for nid in entity_index.get(entity, []) if nid != node_id]
         else:
-            try:
-                related_ids = sqlite_store.search_nodes_by_entity(entity, exclude_id=node_id)
-            except Exception:
-                continue  # method may not exist in older versions
+            related_ids = sqlite_store.search_nodes_by_entity(
+                entity, exclude_id=node_id,
+            )
 
         for rel_id in related_ids:
             if created >= cfg.auto_edge_max_per_node:
@@ -253,20 +242,12 @@ def infer_temporal_edges(
     cfg = _settings()
     if not cfg.temporal_edges_enabled or not event_time:
         return 0
-    try:
-        neighbors = sqlite_store.find_temporal_neighbors(
-            event_time,
-            exclude_id=node_id,
-            window_days=cfg.temporal_edge_window_days,
-            limit=cfg.temporal_edge_max_per_node,
-        )
-    except Exception as exc:
-        logger.debug(
-            "edge_inference: temporal lookup failed node=%s type=%s",
-            node_id,
-            type(exc).__name__,
-        )
-        return 0
+    neighbors = sqlite_store.find_temporal_neighbors(
+        event_time,
+        exclude_id=node_id,
+        window_days=cfg.temporal_edge_window_days,
+        limit=cfg.temporal_edge_max_per_node,
+    )
 
     created = 0
     half_life = max(float(cfg.temporal_edge_half_life_days), 1e-6)
@@ -318,15 +299,9 @@ def run_auto_edge_inference(
     result = {}
 
     entities = node_metadata.get("entities", [])
-    try:
-        result["entities_indexed"] = sqlite_store.upsert_node_entities(node_id, entities)
-    except Exception as exc:
-        logger.debug(
-            "edge_inference: entity indexing failed node=%s type=%s",
-            node_id,
-            type(exc).__name__,
-        )
-        result["entities_indexed"] = 0
+    result["entities_indexed"] = sqlite_store.upsert_node_entities(
+        node_id, entities,
+    )
 
     if cfg.auto_edges_enabled:
         result["cosine"] = infer_cosine_edges(

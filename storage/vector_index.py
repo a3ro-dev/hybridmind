@@ -38,7 +38,9 @@ class VectorIndex:
         self,
         dimension: int = 4096,
         index_path: Optional[str] = None,
-        deletion_threshold: float = 0.2
+        deletion_threshold: float = 0.2,
+        hnsw_ef_search: int = 64,
+        hnsw_ef_construction: int = 40,
     ):
         """
         Initialize vector index.
@@ -50,9 +52,15 @@ class VectorIndex:
         """
         if dimension != 4096:
             raise ValueError("HybridMind VectorIndex requires dimension=4096")
+        if not 1 <= hnsw_ef_search <= 4096:
+            raise ValueError("hnsw_ef_search must be between 1 and 4096")
+        if not 1 <= hnsw_ef_construction <= 4096:
+            raise ValueError("hnsw_ef_construction must be between 1 and 4096")
         self.dimension = dimension
         self.index_path = Path(index_path) if index_path else None
         self.deletion_threshold = deletion_threshold
+        self.hnsw_ef_search = int(hnsw_ef_search)
+        self.hnsw_ef_construction = int(hnsw_ef_construction)
         
         # Mapping between FAISS indices and node IDs
         self.id_map: Dict[int, str] = {}  # FAISS idx -> node_id
@@ -69,10 +77,15 @@ class VectorIndex:
         
         # Initialize index
         if FAISS_AVAILABLE:
-            self.index = faiss.IndexHNSWFlat(dimension, 32, faiss.METRIC_INNER_PRODUCT)
-            self.index.hnsw.efSearch = 64
+            self.index = self._new_faiss_index()
             self._use_faiss = True
-            logger.info(f"FAISS HNSW vector index initialized: dimension={dimension}")
+            logger.info(
+                "FAISS HNSW vector index initialized: dimension=%s efSearch=%s "
+                "efConstruction=%s",
+                dimension,
+                self.hnsw_ef_search,
+                self.hnsw_ef_construction,
+            )
         else:
             # Fallback to NumPy-based search
             self._vectors: List[np.ndarray] = []
@@ -82,6 +95,14 @@ class VectorIndex:
         # Load from disk if exists
         if self.index_path and self.index_path.exists():
             self.load()
+
+    def _new_faiss_index(self):
+        index = faiss.IndexHNSWFlat(
+            self.dimension, 32, faiss.METRIC_INNER_PRODUCT
+        )
+        index.hnsw.efSearch = self.hnsw_ef_search
+        index.hnsw.efConstruction = self.hnsw_ef_construction
+        return index
     
     @property
     def size(self) -> int:
@@ -253,8 +274,10 @@ class VectorIndex:
                     # Use raw vector cache — HNSW does not support reconstruct()
                     vec = self._raw_vectors.get(idx)
                     if vec is None:
-                        logger.warning(f"Missing cached vector for idx={idx}, skipping")
-                        continue
+                        raise RuntimeError(
+                            "vector compaction cannot reconstruct active FAISS row "
+                            f"idx={idx}; refusing to drop derived-index data"
+                        )
                 else:
                     vec = self._vectors[idx]
                 remaining.append(vec)
@@ -283,10 +306,7 @@ class VectorIndex:
         new_id_map = {index: node_id for index, node_id in enumerate(node_ids)}
         new_reverse_map = {node_id: index for index, node_id in enumerate(node_ids)}
         if self._use_faiss:
-            new_index = faiss.IndexHNSWFlat(
-                self.dimension, 32, faiss.METRIC_INNER_PRODUCT
-            )
-            new_index.hnsw.efSearch = 64
+            new_index = self._new_faiss_index()
             if validated:
                 new_index.add(np.vstack(validated).astype(np.float32))
             new_raw_vectors = {
@@ -477,6 +497,10 @@ class VectorIndex:
                         f"expected {self.dimension}"
                     )
                 self.index = loaded_index
+                if not hasattr(self.index, "hnsw"):
+                    raise ValueError("Persisted FAISS index is not an HNSW index")
+                self.index.hnsw.efSearch = self.hnsw_ef_search
+                self.index.hnsw.efConstruction = self.hnsw_ef_construction
                 self._use_faiss = True
         elif "vectors" in data:
             self._vectors = [
@@ -546,8 +570,7 @@ class VectorIndex:
     def clear(self):
         """Clear all vectors from index."""
         if self._use_faiss:
-            self.index = faiss.IndexHNSWFlat(self.dimension, 32, faiss.METRIC_INNER_PRODUCT)
-            self.index.hnsw.efSearch = 64
+            self.index = self._new_faiss_index()
             self._raw_vectors = {}
         else:
             self._vectors = []
@@ -566,6 +589,10 @@ class VectorIndex:
             "active_vectors": self.size,
             "deleted_vectors": len(self.deleted_ids),
             "deletion_ratio": round(self.deletion_ratio, 4),
+            "hnsw_ef_search": self.hnsw_ef_search if self._use_faiss else None,
+            "hnsw_ef_construction": (
+                self.hnsw_ef_construction if self._use_faiss else None
+            ),
             "deletion_threshold": self.deletion_threshold,
             "dimension": self.dimension,
             "using_faiss": self._use_faiss

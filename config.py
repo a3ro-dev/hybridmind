@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     # Device (auto = cuda > mps > cpu)
     device: str = "auto"
     use_faiss_gpu: bool = False  # opt-in; Linux/Docker only (no Windows wheel)
+    # FAISS HNSW controls are explicit experiment axes. The conservative
+    # defaults preserve current behavior until exact-evidence runs justify a
+    # promotion; synthetic 4096-d measurements are not sufficient by themselves.
+    hnsw_ef_search: int = Field(default=64, ge=1, le=4096)
+    hnsw_ef_construction: int = Field(default=40, ge=1, le=4096)
 
     # Embedding: self-hosted RunPod TEI (Qwen3-Embedding-8B, native 4096-dim)
     # is the primary and ONLY backend when HYBRIDMIND_EMBEDDING_DIMENSION=4096.

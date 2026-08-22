@@ -68,9 +68,11 @@ class VectorSearchEngine:
             min_score=min_score
         )
         
-        # Fetch node details, apply filters, and deduplicate by text
+        # Fetch node details and apply filters. VectorIndex already emits one
+        # active row per node ID. Exact text is not a safe deduplication key:
+        # separate evidence IDs, sessions, or validity intervals may cite the
+        # same sentence and must remain independently retrievable.
         results = []
-        seen_texts: set = set()
         for node_id, score in candidates:
             if not self.sqlite_store.is_node_retrievable(node_id):
                 continue
@@ -81,12 +83,6 @@ class VectorSearchEngine:
             # Apply metadata filter
             if filter_metadata and not self._matches_filter(node["metadata"], filter_metadata):
                 continue
-            
-            # Deduplicate: skip if we already have a result with identical text
-            text_key = node["text"].strip()
-            if text_key in seen_texts:
-                continue
-            seen_texts.add(text_key)
             
             results.append({
                 "node_id": node_id,

@@ -16,6 +16,7 @@ from storage.sqlite_store import SQLiteStore
 from storage.vector_index import VectorIndex
 from storage.graph_index import GraphIndex
 from storage.mindfile import MindFile
+from storage.bm25_index import sparse_document_text
 from storage.colbert_store import ColbertStore, colbert_enabled
 from engine.device import resolve_device
 from engine.embedding import EmbeddingEngine, get_embedding_engine as get_embedding_backend
@@ -99,6 +100,8 @@ class DatabaseManager:
         self.sqlite_store = SQLiteStore(paths["sqlite"])
         self.vector_index = VectorIndex(
             dimension=settings.embedding_dimension,
+            hnsw_ef_search=settings.hnsw_ef_search,
+            hnsw_ef_construction=settings.hnsw_ef_construction,
             # SQLite is the trusted source of truth.  Persisted index pickles
             # are deliberately not loaded; derived indexes are rebuilt below.
             index_path=None
@@ -208,7 +211,10 @@ class DatabaseManager:
                         memory_kind=node.get("memory_kind"),
                         confidence=node.get("confidence", 1.0),
                     )
-                bm25_batch.append((node["id"], node["text"]))
+                bm25_batch.append((
+                    node["id"],
+                    sparse_document_text(node["text"], node.get("metadata")),
+                ))
             
             self.bm25_index.clear()
             self.bm25_index.add_batch(bm25_batch)

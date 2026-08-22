@@ -4,8 +4,10 @@ Handles graph traversal and proximity-based search.
 """
 
 import time
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+from engine.temporal import validity_relevance
 from storage.graph_index import GraphIndex
 from storage.sqlite_store import SQLiteStore
 
@@ -35,7 +37,8 @@ class GraphSearchEngine:
         start_id: str,
         depth: int = 2,
         edge_types: Optional[List[str]] = None,
-        direction: str = "both"
+        direction: str = "both",
+        as_of: Optional[datetime] = None,
     ) -> Tuple[List[Dict[str, Any]], float, int]:
         """
         Perform graph traversal from a starting node.
@@ -63,7 +66,8 @@ class GraphSearchEngine:
             start_id=start_id,
             max_depth=depth,
             direction=direction,
-            edge_types=edge_types
+            edge_types=edge_types,
+            as_of=as_of,
         )
         
         # Fetch node details and build results
@@ -73,6 +77,10 @@ class GraphSearchEngine:
                 continue
             node = self.sqlite_store.get_node(node_id)
             if node is None:
+                continue
+            if as_of is not None and validity_relevance(
+                node, None, now=as_of,
+            ) <= 0.0:
                 continue
             
             # Calculate graph score based on distance
@@ -99,7 +107,8 @@ class GraphSearchEngine:
         self,
         node_id: str,
         edge_types: Optional[List[str]] = None,
-        direction: str = "both"
+        direction: str = "both",
+        as_of: Optional[datetime] = None,
     ) -> List[Dict[str, Any]]:
         """
         Get immediate neighbors of a node with edge details.
@@ -122,6 +131,10 @@ class GraphSearchEngine:
         seen_nodes: Set[str] = set()
         
         for edge in edges:
+            if as_of is not None and not self.graph_index._edge_is_active(
+                edge, as_of,
+            ):
+                continue
             # Determine neighbor node
             if edge["direction"] == "outgoing":
                 neighbor_id = edge["target_id"]
@@ -134,7 +147,14 @@ class GraphSearchEngine:
             
             # Fetch neighbor details
             neighbor_node = self.sqlite_store.get_node(neighbor_id)
-            if neighbor_node and self.sqlite_store.is_node_retrievable(neighbor_id):
+            if (
+                neighbor_node
+                and self.sqlite_store.is_node_retrievable(neighbor_id)
+                and (
+                    as_of is None
+                    or validity_relevance(neighbor_node, None, now=as_of) > 0.0
+                )
+            ):
                 neighbors.append({
                     "node_id": neighbor_id,
                     "text": neighbor_node["text"],
@@ -154,6 +174,7 @@ class GraphSearchEngine:
         edge_type_weights: Optional[Dict[str, float]] = None,
         temporal_decay: bool = False,
         half_life_days: float = 30.0,
+        as_of: Optional[datetime] = None,
     ) -> Dict[str, float]:
         """
         Compute graph proximity scores for multiple nodes.
@@ -180,6 +201,7 @@ class GraphSearchEngine:
                     half_life_days=half_life_days,
                     edge_type_weights=edge_type_weights,
                     direction="typed",
+                    as_of=as_of,
                 )
             elif edge_type_weights:
                 score = self.graph_index.compute_weighted_proximity_score(
@@ -188,12 +210,14 @@ class GraphSearchEngine:
                     max_depth,
                     edge_type_weights,
                     direction="typed",
+                    as_of=as_of,
                 )
             else:
                 score = self.graph_index.compute_proximity_score(
                     node_id,
                     reference_nodes,
-                    max_depth
+                    max_depth,
+                    as_of=as_of,
                 )
             scores[node_id] = round(score, 4)
 

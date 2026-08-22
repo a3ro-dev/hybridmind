@@ -27,6 +27,7 @@ from api.dependencies import (
 )
 from storage.sqlite_store import SQLiteStore
 from storage.vector_index import VectorIndex
+from storage.bm25_index import sparse_document_text
 from typing import Any as _AnyType
 from storage.graph_index import GraphIndex
 from engine.embedding import EmbeddingEngine, validate_embedding_4096
@@ -111,7 +112,13 @@ def _rebuild_primary_indexes(
         bm25_index.rebuild_from_nodes(nodes)
     else:
         bm25_index.clear()
-        bm25_index.add_batch([(node["id"], node["text"]) for node in nodes])
+        bm25_index.add_batch([
+            (
+                node["id"],
+                sparse_document_text(node["text"], node.get("metadata")),
+            )
+            for node in nodes
+        ])
 
 
 router = APIRouter(prefix="/nodes", tags=["Nodes"])
@@ -286,6 +293,7 @@ async def create_node(
             ):
                 child_id = f"{node_id}_{i}"
                 child_metadata = metadata.copy()
+                child_metadata.pop("sparse_text", None)
                 child_metadata.update(
                     {"parent_id": node_id, "is_sentence_chunk": True, "chunk_index": i}
                 )
@@ -322,7 +330,7 @@ async def create_node(
                 bm25_index.add(child_id, sentence)
 
             vector_index.add(node_id, embedding)
-            bm25_index.add(node_id, node.text)
+            bm25_index.add(node_id, sparse_document_text(node.text, metadata))
             run_auto_edge_inference(
                 node_id=node_id,
                 embedding=embedding,
@@ -593,8 +601,10 @@ async def update_node(
 
             if new_embedding is not None:
                 vector_index.add(node_id, new_embedding)
-            if text_changed:
-                bm25_index.add(node_id, new_text)
+            if text_changed or update.metadata is not None:
+                bm25_index.add(
+                    node_id, sparse_document_text(new_text, new_metadata),
+                )
             graph_index.add_node(
                 node_id,
                 event_time=result.get("event_time"),
@@ -614,6 +624,7 @@ async def update_node(
                 ):
                     child_id = f"{node_id}_{index}"
                     child_metadata = dict(new_metadata)
+                    child_metadata.pop("sparse_text", None)
                     child_metadata.update(
                         {
                             "parent_id": node_id,
@@ -668,6 +679,7 @@ async def update_node(
                     sqlite_store.get_sentence_children(node_id)
                 ):
                     child_metadata = dict(new_metadata)
+                    child_metadata.pop("sparse_text", None)
                     child_metadata.update(
                         {
                             "parent_id": node_id,

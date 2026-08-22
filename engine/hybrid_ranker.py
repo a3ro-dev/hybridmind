@@ -6,9 +6,12 @@ Implements the Contextual Relevance Score (CRS) algorithm with:
   - Temporal graph decay (optional, HYBRIDMIND_TEMPORAL_DECAY_ENABLED=true)
 """
 
+import hashlib
+import json
 import logging
 import re
 import time
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 import numpy as np
 
@@ -23,6 +26,52 @@ from models.edge import EDGE_TYPE_WALK_WEIGHTS
 logger = logging.getLogger(__name__)
 
 _SEARCH_MODES = {"hybrid", "vector_only", "sparse_only", "vector_sparse", "graph_only"}
+_PROVENANCE_KEYS = (
+    "benchmark_sample_id",
+    "conversation_id",
+    "session_id",
+    "evidence_id",
+    "dia_id",
+    "source_node_id",
+    "source_id",
+    "container_id",
+)
+
+
+def _canonical_trace_hash(value: Dict[str, Any]) -> str:
+    encoded = json.dumps(
+        value, sort_keys=True, separators=(",", ":"), default=str,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _provenance_dedup_key(
+    node_id: str,
+    candidate: Dict[str, Any],
+    authoritative_node: Optional[Dict[str, Any]],
+) -> Tuple[Any, ...]:
+    """Return a dedup key that can never merge separately citable facts.
+
+    Exact text is only one component. If no explicit source identity is
+    available, the node ID is the provenance boundary and distinct nodes are
+    preserved. This favors auditable evidence over cosmetic context collapse.
+    """
+    metadata = candidate.get("metadata") or {}
+    provenance = tuple(
+        (key, json.dumps(metadata[key], sort_keys=True, default=str))
+        for key in _PROVENANCE_KEYS
+        if key in metadata and metadata[key] not in (None, "", [])
+    )
+    if not provenance:
+        provenance = (("node_id", node_id),)
+    node = authoritative_node or {}
+    return (
+        str(candidate.get("text", "")).strip(),
+        provenance,
+        node.get("valid_from"),
+        node.get("valid_until"),
+        node.get("memory_kind") or metadata.get("memory_kind"),
+    )
 
 
 def _query_type_weights(query_type: str) -> Dict[str, float]:
@@ -117,7 +166,9 @@ class HybridRanker:
         include_images: bool = False,
         route_weights: bool = True,
         track_access: Optional[bool] = None,
-    ) -> Tuple[List[Dict[str, Any]], float, int]:
+        as_of: Optional[datetime] = None,
+        return_trace: bool = False,
+    ):
         start_time = time.perf_counter()
         if top_k < 1:
             raise ValueError("top_k must be at least 1")
@@ -131,6 +182,10 @@ class HybridRanker:
             raise ValueError(f"Unsupported search_mode {search_mode!r}; expected one of {sorted(_SEARCH_MODES)}")
         if search_mode == "graph_only" and not anchor_nodes:
             raise ValueError("graph_only search requires at least one anchor node")
+        if as_of is not None:
+            if as_of.tzinfo is None or as_of.utcoffset() is None:
+                raise ValueError("as_of must include an explicit timezone offset")
+            as_of = as_of.astimezone(timezone.utc)
 
         use_dense = search_mode in {"hybrid", "vector_only", "vector_sparse"}
         use_sparse = search_mode in {"hybrid", "sparse_only", "vector_sparse"}
@@ -199,6 +254,83 @@ class HybridRanker:
 
         route_filter = route.get("metadata_filter") or {}
         effective_filter = {**route_filter, **(filter_metadata or {})} or None
+        resolved_fusion_mode = fusion_mode or get_fusion_mode()
+        vector_index = getattr(self.vector_engine, "vector_index", None)
+        vector_index_stats = (
+            vector_index.get_stats()
+            if use_dense and vector_index is not None and hasattr(vector_index, "get_stats")
+            else {}
+        )
+        resolved_controls = {
+            "search_mode": search_mode,
+            "query_type": query_type,
+            "vector_weight": vector_weight,
+            "graph_weight": graph_weight,
+            "sparse_weight": bm25_boost_weight,
+            "time_weight": time_weight,
+            "fusion_mode": resolved_fusion_mode,
+            "rrf_k": get_rrf_k() if resolved_fusion_mode == "rrf" else None,
+            "top_k": top_k,
+            "rerank_pool": rerank_pool,
+            "max_depth": max_depth,
+            "deduplicate": deduplicate,
+            "route_weights": route_weights,
+            "as_of": as_of.isoformat() if as_of is not None else None,
+            "hnsw_ef_search": vector_index_stats.get("hnsw_ef_search"),
+            "hnsw_ef_construction": vector_index_stats.get(
+                "hnsw_ef_construction"
+            ),
+        }
+        execution_trace: Dict[str, Any] = {
+            "schema_version": "hybridmind.search-execution/v1",
+            "search_mode": search_mode,
+            "query_type": query_type,
+            "as_of": as_of.isoformat() if as_of is not None else None,
+            "anchor_nodes": list(anchor_nodes or []),
+            "resolved_config_sha256": _canonical_trace_hash(resolved_controls),
+            "resolved_controls": resolved_controls,
+            "cache_hit": False,
+            "stages": {
+                "dense": {
+                    "requested": use_dense,
+                    "executed": False,
+                    "candidates": 0,
+                    "identity": type(vector_index).__name__ if vector_index is not None else None,
+                    "hnsw_ef_search": vector_index_stats.get("hnsw_ef_search"),
+                    "hnsw_ef_construction": vector_index_stats.get(
+                        "hnsw_ef_construction"
+                    ),
+                },
+                "sparse": {
+                    "requested": use_sparse,
+                    "executed": False,
+                    "candidates": 0,
+                    "identity": type(self.bm25_index).__name__ if self.bm25_index is not None else None,
+                },
+                "graph": {"requested": use_graph, "executed": False, "candidates": 0},
+                "temporal_validity": {
+                    "requested": as_of is not None,
+                    "executed": False,
+                    "filtered_candidates": 0,
+                },
+                "cross_encoder": {
+                    "configured": bool(
+                        self.reranker is not None
+                        and getattr(self.reranker, "enabled", True)
+                    ),
+                    "attempted": False,
+                    "applied": False,
+                    "candidates": 0,
+                    "failure_type": None,
+                },
+            },
+        }
+
+        def finish(results: List[Dict[str, Any]], candidate_count: int):
+            query_time_ms = round((time.perf_counter() - start_time) * 1000, 2)
+            if return_trace:
+                return results, query_time_ms, candidate_count, execution_trace
+            return results, query_time_ms, candidate_count
 
         # We need candidate generation. We will pull top_k * 5 vector results and bm25 results.
         vector_k = top_k * 5 if deduplicate else top_k * 3
@@ -238,10 +370,15 @@ class HybridRanker:
                     if r["node_id"] not in seen_vec_ids:
                         seen_vec_ids.add(r["node_id"])
                         vector_results.append(r)
+            execution_trace["stages"]["dense"].update(
+                executed=True, candidates=len(vector_results)
+            )
 
         bm25_results = []
         bm25_result_ids: Set[str] = set()
         bm25_score_by_node: Dict[str, float] = {}
+        if use_sparse and self.bm25_index is None:
+            raise RuntimeError("sparse retrieval was requested but no sparse index is configured")
         if self.bm25_index and use_sparse:
             for q in queries_to_search:
                 bm25_hits = self.bm25_index.search(q, top_k=5000)
@@ -264,6 +401,9 @@ class HybridRanker:
                             })
                         if len(bm25_results) >= candidate_k * 3:
                             break
+            execution_trace["stages"]["sparse"].update(
+                executed=True, candidates=len(bm25_results)
+            )
 
         # Step 2: Combine vector and BM25 into a baseline V score.
         # Vector score is cosine similarity (0 to 1). We should boost it if BM25 matches.
@@ -337,7 +477,7 @@ class HybridRanker:
                 raw_vector_scores[anchor] = 0.0
                 raw_bm25_scores[anchor] = 0.0
                 traversed, _, _ = self.graph_engine.traverse(
-                    anchor, depth=max_depth, direction="typed"
+                    anchor, depth=max_depth, direction="typed", as_of=as_of,
                 )
                 for item in traversed:
                     if effective_filter and not self.vector_engine._matches_filter(
@@ -402,21 +542,45 @@ class HybridRanker:
         candidate_ids = [nid for nid, _ in sorted_rrf[:candidate_k] if nid in rolled_up_nodes]
 
         if not candidate_ids:
-            return [], round((time.perf_counter() - start_time) * 1000, 2), 0
+            return finish([], 0)
 
-        # Deduplicate candidate_ids by text: keep only the highest-scoring node_id for each unique text.
-        # This prevents the same text (from different containers) from flooding the candidate pool.
+        # An explicit point-in-time is authoritative for every controlled
+        # candidate channel. Query-text temporal heuristics remain a hybrid
+        # ranking aid; they never replace this hard validity boundary.
+        if as_of is not None:
+            before_validity = len(candidate_ids)
+            candidate_ids = [
+                node_id
+                for node_id in candidate_ids
+                if validity_relevance(
+                    self.vector_engine.sqlite_store.get_node(node_id) or {},
+                    None,
+                    now=as_of,
+                )
+                > 0.0
+            ]
+            execution_trace["stages"]["temporal_validity"].update(
+                executed=True,
+                filtered_candidates=before_validity - len(candidate_ids),
+            )
+            if not candidate_ids:
+                return finish([], 0)
+
+        # Deduplication is provenance-safe: exact text alone cannot collapse
+        # distinct evidence IDs, temporal versions, or scopes.
         if deduplicate:
-            seen_texts: set = set()
+            seen_keys: set = set()
             deduped_ids = []
             for nid in candidate_ids:
                 nd = rolled_up_nodes.get(nid)
                 if nd is None:
                     continue
-                tk = nd.get("text", "").strip()
-                if tk in seen_texts:
+                key = _provenance_dedup_key(
+                    nid, nd, self.vector_engine.sqlite_store.get_node(nid),
+                )
+                if key in seen_keys:
                     continue
-                seen_texts.add(tk)
+                seen_keys.add(key)
                 deduped_ids.append(nid)
             candidate_ids = deduped_ids
 
@@ -434,11 +598,10 @@ class HybridRanker:
         expanded_candidate_ids = set(candidate_ids)
         if use_graph and not self.disable_graph_expansion:
             for ref in reference_nodes:
-                # Traversal
                 try:
                     # get nodes from graph within max_depth
                     neighbors, _, _ = self.graph_engine.traverse(
-                        start_id=ref, depth=max_depth, direction="typed"
+                        start_id=ref, depth=max_depth, direction="typed", as_of=as_of,
                     )
                     for n in neighbors:
                         neighbor_id = n["node_id"]
@@ -447,10 +610,11 @@ class HybridRanker:
                         if neighbor_id not in expanded_candidate_ids:
                             expanded_candidate_ids.add(neighbor_id)
                             expanded_candidates.append(neighbor_id)
-                except Exception as e:
-                    logger.warning(
-                        "Graph traversal failed for an anchor (%s)", type(e).__name__
-                    )
+                except Exception as exc:
+                    raise RuntimeError(
+                        "graph retrieval was requested but anchor traversal failed "
+                        f"({type(exc).__name__})"
+                    ) from exc
 
         # Add the expanded candidates to our node_data and rolled_up_scores if missing
         for nid in expanded_candidates:
@@ -484,10 +648,17 @@ class HybridRanker:
                 # pure graph signal control.
                 temporal_decay=self.temporal_decay_enabled and search_mode == "hybrid",
                 half_life_days=self.temporal_decay_half_life_days,
+                as_of=as_of,
             )
             if use_graph
             else {nid: 0.0 for nid in candidate_ids}
         )
+        if use_graph:
+            execution_trace["stages"]["graph"].update(
+                executed=True,
+                candidates=sum(1 for score in graph_scores.values() if score > 0.0),
+                reference_nodes=list(reference_nodes),
+            )
 
         from config import settings as _cfg
         lifecycle_active = search_mode == "hybrid"
@@ -525,11 +696,16 @@ class HybridRanker:
                 if salience_active and node is not None
                 else 0.0
             )
-            validity_scores[nid] = (
-                validity_relevance(node or {}, target_time)
-                if lifecycle_active
-                else 1.0
-            )
+            if as_of is not None:
+                validity_scores[nid] = validity_relevance(
+                    node or {}, None, now=as_of,
+                )
+            else:
+                validity_scores[nid] = (
+                    validity_relevance(node or {}, target_time)
+                    if lifecycle_active
+                    else 1.0
+                )
 
         if lifecycle_active and temporal_order_intent:
             dated = []
@@ -549,7 +725,7 @@ class HybridRanker:
                 time_scores[nid] = 1.0 if time_rank[timestamp] == desired_rank else 0.0
 
         # Step 5: Late Fusion Scoring
-        fusion_mode = fusion_mode or get_fusion_mode()
+        fusion_mode = resolved_fusion_mode
 
         if search_mode == "sparse_only":
             max_bm25 = max(
@@ -763,7 +939,7 @@ class HybridRanker:
             raise ValueError("fusion_mode must be one of: rrf, linear, mlp")
 
         if deduplicate:
-            seen_texts: Set[str] = set()
+            seen_keys: Set[Tuple[Any, ...]] = set()
             deduped = []
             dedup_score_field = {
                 "vector_only": "raw_vector_score",
@@ -773,9 +949,14 @@ class HybridRanker:
             }.get(search_mode, "vector_score")
             hybrid_results.sort(key=lambda x: -x.get(dedup_score_field, 0.0))
             for result in hybrid_results:
-                text_key = result["text"].strip()
-                if text_key not in seen_texts:
-                    seen_texts.add(text_key)
+                node_id = result["node_id"]
+                dedup_key = _provenance_dedup_key(
+                    node_id,
+                    result,
+                    self.vector_engine.sqlite_store.get_node(node_id),
+                )
+                if dedup_key not in seen_keys:
+                    seen_keys.add(dedup_key)
                     deduped.append(result)
             hybrid_results = deduped
 
@@ -793,17 +974,25 @@ class HybridRanker:
         apply_post_rerankers = search_mode == "hybrid"
 
         # ── ColBERT MaxSim late interaction (opt-in: HYBRIDMIND_COLBERT_ENABLED=true) ──
+        colbert_requested = False
         try:
             from storage.colbert_store import colbert_enabled
-            if apply_post_rerankers and colbert_enabled():
+            colbert_requested = bool(apply_post_rerankers and colbert_enabled())
+            if colbert_requested:
                 from engine.colbert_reranker import colbert_maxsim_rerank
                 # The embedding engine is accessible via the vector_engine
                 emb_engine = self.vector_engine.embedding_engine
                 hybrid_results = colbert_maxsim_rerank(
                     query_text, hybrid_results, emb_engine,
                 )
-        except ImportError:
-            pass
+        except Exception as exc:
+            if colbert_requested:
+                raise RuntimeError(
+                    "ColBERT reranking is enabled but execution failed "
+                    f"({type(exc).__name__})"
+                ) from exc
+            if not isinstance(exc, ImportError):
+                raise
 
         # ── GNN reranker (opt-in: HYBRIDMIND_GNN_ENABLED=true + torch-geometric installed) ──
         # get_gnn_reranker() returns None whenever the flag is off or the dependency isn't
@@ -823,8 +1012,14 @@ class HybridRanker:
                     top_k=rerank_pool,
                     sqlite_store=self.vector_engine.sqlite_store,
                 )
-        except Exception as e:
-            logger.debug("GNN reranking skipped (%s)", type(e).__name__)
+        except Exception as exc:
+            from config import settings as _gnn_cfg
+            if apply_post_rerankers and _gnn_cfg.gnn_enabled:
+                raise RuntimeError(
+                    "GNN reranking is enabled but execution failed "
+                    f"({type(exc).__name__})"
+                ) from exc
+            raise
 
         # Query-local lexical reranking recovers exact source turns that are
         # present in the generated pool but under-ranked by corpus-global RRF.
@@ -843,8 +1038,14 @@ class HybridRanker:
                     rrf_k=get_rrf_k(),
                     document_term_cache=self._lexical_term_cache,
                 )
-        except Exception as e:
-            logger.warning("Query-local lexical reranking skipped (%s)", type(e).__name__)
+        except Exception as exc:
+            from config import settings as _lexical_cfg
+            if apply_post_rerankers and _lexical_cfg.local_lexical_rerank_enabled:
+                raise RuntimeError(
+                    "query-local lexical reranking is enabled but execution failed "
+                    f"({type(exc).__name__})"
+                ) from exc
+            raise
 
         # Cross-encoder reranking is the final text relevance stage. Only the
         # strongest fusion candidates enter the expensive model, and the API
@@ -859,6 +1060,10 @@ class HybridRanker:
         )
         effective_rerank_pool = rerank_pool if rerank_enabled else top_k
         rerank_candidates = hybrid_results[:effective_rerank_pool]
+        execution_trace["stages"]["cross_encoder"].update(
+            attempted=bool(rerank_enabled and rerank_candidates),
+            candidates=len(rerank_candidates) if rerank_enabled else 0,
+        )
         for candidate in rerank_candidates:
             candidate["rerank_attempted"] = rerank_enabled
             candidate["rerank_applied"] = False
@@ -869,6 +1074,15 @@ class HybridRanker:
                 top_k=None,
             )
             rerank_applied = any("rerank_score" in candidate for candidate in rerank_candidates)
+            failure_types = sorted({
+                str(candidate.get("rerank_failure_type"))
+                for candidate in rerank_candidates
+                if candidate.get("rerank_failure_type")
+            })
+            execution_trace["stages"]["cross_encoder"].update(
+                applied=rerank_applied,
+                failure_type=",".join(failure_types) if failure_types else None,
+            )
             for candidate in rerank_candidates:
                 candidate["rerank_applied"] = rerank_applied
                 failure_type = candidate.get("rerank_failure_type")
@@ -933,11 +1147,13 @@ class HybridRanker:
                         results_with_visual = list(hybrid_results)
                         results_with_visual.extend(visual_candidates[:top_k])
                         hybrid_results = sorted(results_with_visual, key=lambda x: -x["combined_score"])[:top_k]
-            except Exception as e:
-                logger.warning("Visual memory search failed (%s)", type(e).__name__)
+            except Exception as exc:
+                raise RuntimeError(
+                    "visual retrieval was requested but execution failed "
+                    f"({type(exc).__name__})"
+                ) from exc
 
-        query_time_ms = (time.perf_counter() - start_time) * 1000
-        return hybrid_results, round(query_time_ms, 2), len(candidate_ids)
+        return finish(hybrid_results, len(candidate_ids))
 
     def compare_search_modes(
         self,

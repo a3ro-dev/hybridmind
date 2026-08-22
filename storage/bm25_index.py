@@ -7,6 +7,25 @@ from typing import List, Dict, Tuple, Any
 logger = logging.getLogger(__name__)
 
 
+def sparse_document_text(text: str, metadata: Dict[str, Any] | None = None) -> str:
+    """Resolve the source-preserving sparse retrieval representation.
+
+    ``metadata.sparse_text`` is an explicit alternate retrieval key. Search
+    responses still return the authoritative node text and provenance. This
+    permits a measured sparse representation (for example, speaker-prefixed
+    dialogue) without changing dense embeddings or source evidence.
+    """
+    if not isinstance(text, str) or not text.strip():
+        raise ValueError("sparse source text must be a non-empty string")
+    metadata = metadata or {}
+    alternate = metadata.get("sparse_text")
+    if alternate is None:
+        return text
+    if not isinstance(alternate, str) or not alternate.strip():
+        raise ValueError("metadata.sparse_text must be a non-empty string")
+    return alternate.strip()
+
+
 class PorterStemmer:
     """Pure-Python Porter stemmer (Porter, 1980). No external dependencies."""
 
@@ -399,7 +418,10 @@ class BM25Index:
     def rebuild_from_nodes(self, nodes: List[Dict[str, Any]]):
         self.clear()
         for node in nodes:
-            self.add(node["id"], node["text"])
+            self.add(
+                node["id"],
+                sparse_document_text(node["text"], node.get("metadata")),
+            )
 
     @property
     def size(self) -> int:
@@ -506,7 +528,10 @@ class BM25SBackend:
         for node in nodes:
             nid = node["id"]
             self._id_to_idx[nid] = len(self._corpus)
-            self._corpus.append((nid, node["text"]))
+            self._corpus.append((
+                nid,
+                sparse_document_text(node["text"], node.get("metadata")),
+            ))
         self._dirty = True
 
     def clear(self):
@@ -678,7 +703,10 @@ class SpladeBackend:
     def rebuild_from_nodes(self, nodes: List[Dict[str, Any]]):
         self._vectors = {}
         self._ids = []
-        self.add_batch([(n["id"], n["text"]) for n in nodes])
+        self.add_batch([
+            (n["id"], sparse_document_text(n["text"], n.get("metadata")))
+            for n in nodes
+        ])
 
     def clear(self):
         self._vectors = {}
@@ -745,21 +773,26 @@ def create_sparse_index(
         index_path: Persistence path prefix.
         **kwargs: Passed to the backend constructor.
 
-    Falls back to "bm25" if the requested backend's deps are not installed.
+    The requested identity is a hard execution contract. Missing optional
+    dependencies raise instead of silently relabelling a different backend.
     """
     if backend == "splade":
         if _HAS_FASTEMBED:
             logger.info("Sparse index: SPLADE via fastembed")
             return SpladeBackend(index_path=index_path, **kwargs)
-        logger.warning("fastembed not installed — falling back to bm25s")
-        backend = "bm25s"
+        raise RuntimeError(
+            "sparse backend 'splade' was requested but fastembed is unavailable"
+        )
 
     if backend == "bm25s":
         if _HAS_BM25S:
             logger.info("Sparse index: bm25s (fast) backend")
             return BM25SBackend(index_path=index_path, **kwargs)
-        logger.warning("bm25s not installed — falling back to pure-Python BM25. Install: pip install bm25s PyStemmer")
-        backend = "bm25"
+        raise RuntimeError(
+            "sparse backend 'bm25s' was requested but bm25s/PyStemmer is unavailable"
+        )
 
-    logger.info("Sparse index: pure-Python BM25 backend")
-    return BM25Index(index_path=index_path, **kwargs)
+    if backend == "bm25":
+        logger.info("Sparse index: pure-Python BM25 backend")
+        return BM25Index(index_path=index_path, **kwargs)
+    raise ValueError("sparse backend must be one of: bm25, bm25s, splade")

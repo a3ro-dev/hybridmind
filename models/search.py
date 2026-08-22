@@ -1,7 +1,9 @@
 """Search-related Pydantic models."""
 
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field, model_validator
+from datetime import datetime
+from typing import Any, Dict, List, Literal, Optional
+
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from config import settings
 
@@ -17,7 +19,8 @@ class GraphSearchRequest(BaseModel):
     start_id: str
     depth: int = Field(default=2, ge=1, le=5)
     edge_types: Optional[List[str]] = None
-    direction: str = "both"
+    direction: Literal["outgoing", "incoming", "both", "typed"] = "both"
+    as_of: Optional[datetime] = None
 
 
 class HybridSearchRequest(BaseModel):
@@ -29,7 +32,13 @@ class HybridSearchRequest(BaseModel):
     max_depth: int = Field(default=2, ge=1, le=5)
     min_score: float = Field(default=0.0, ge=0.0, le=1.0)
     filter_metadata: Optional[Dict[str, Any]] = None
-    deduplicate: bool = Field(default=True, description="Deduplicate results with identical text")
+    deduplicate: bool = Field(
+        default=True,
+        description=(
+            "Deduplicate only results with equivalent source provenance, scope, "
+            "and temporal validity; identical text alone is never sufficient"
+        ),
+    )
     rerank_pool: int = Field(default_factory=lambda: settings.rerank_pool_size, ge=0, le=100, description="Maximum candidate pool fed to the cross-encoder reranker; 0 disables that stage. A positive value must be at least top_k.")
     bm25_boost_weight: Optional[float] = Field(default=None, ge=0.0, le=2.0, description="Sparse RRF weight; when omitted, query routing may select it")
     overlap_threshold: float = Field(default=0.15, ge=0.0, le=1.0, description="BM25 overlap fraction below which graph score is ramped down")
@@ -46,6 +55,22 @@ class HybridSearchRequest(BaseModel):
     )
     route_weights: bool = Field(default=True, description="Apply query-type routing weights")
     track_access: Optional[bool] = Field(default=None, description="Override config access tracking for this request")
+    as_of: Optional[datetime] = Field(
+        default=None,
+        description=(
+            "Timezone-aware point-in-time validity boundary. Candidates and graph "
+            "edges use half-open [valid_from, valid_until) semantics."
+        ),
+    )
+
+    @field_validator("as_of")
+    @classmethod
+    def require_timezone_aware_as_of(cls, value: Optional[datetime]):
+        if value is not None and (
+            value.tzinfo is None or value.utcoffset() is None
+        ):
+            raise ValueError("as_of must include an explicit timezone offset")
+        return value
 
     @model_validator(mode="after")
     def validate_cross_field_contracts(self):
@@ -82,6 +107,7 @@ class SearchResponse(BaseModel):
     query_time_ms: float
     total_candidates: int
     search_type: str
+    execution_trace: Optional[Dict[str, Any]] = None
 
 
 class StatsResponse(BaseModel):

@@ -134,6 +134,16 @@ class SQLiteStore:
                 cursor.execute("ALTER TABLE nodes ADD COLUMN raw_embedding BLOB")
             except sqlite3.OperationalError:
                 pass
+            # NULL is the compact representation for a raw vector that is
+            # bit-identical to the authoritative embedding. This migration is
+            # lossless because reads reconstruct the same 4096-d float32 value.
+            cursor.execute(
+                """UPDATE nodes
+                   SET raw_embedding = NULL
+                   WHERE raw_embedding IS NOT NULL
+                     AND embedding IS NOT NULL
+                     AND raw_embedding = embedding"""
+            )
             for col_def in [
                 "event_time TEXT DEFAULT NULL",
                 "valid_from TEXT DEFAULT NULL",
@@ -240,6 +250,35 @@ class SQLiteStore:
                 "CREATE INDEX IF NOT EXISTS idx_node_entities_key ON node_entities(entity_key)"
             )
 
+            # Persistent corpus generation used to scope search caches and
+            # attest exactly which authoritative SQLite generation produced a
+            # response. Triggers participate in the caller's transaction, so a
+            # rolled-back mutation cannot advance the generation. A single API
+            # operation may advance it more than once; only monotonic identity,
+            # not an operation count, is part of the contract.
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS system_state (
+                    key TEXT PRIMARY KEY,
+                    integer_value INTEGER NOT NULL
+                )
+            """)
+            cursor.execute("""
+                INSERT OR IGNORE INTO system_state (key, integer_value)
+                VALUES ('corpus_generation', 0)
+            """)
+            for table in ("nodes", "edges", "node_entities"):
+                for operation in ("INSERT", "UPDATE", "DELETE"):
+                    trigger = f"trg_{table}_{operation.lower()}_corpus_generation"
+                    cursor.execute(f"""
+                        CREATE TRIGGER IF NOT EXISTS {trigger}
+                        AFTER {operation} ON {table}
+                        BEGIN
+                            UPDATE system_state
+                            SET integer_value = integer_value + 1
+                            WHERE key = 'corpus_generation';
+                        END
+                    """)
+
             # Temporal edge fields (Phase 3) — additive migrations safe for existing DBs
             for col_def in [
                 "valid_from TEXT DEFAULT NULL",
@@ -253,6 +292,21 @@ class SQLiteStore:
                     pass  # column already exists
     
     # ==================== Embedding Serialization ====================
+
+    def get_corpus_generation(self) -> int:
+        """Return the persistent authoritative mutation generation."""
+        with self._cursor() as cursor:
+            cursor.execute(
+                "SELECT integer_value FROM system_state "
+                "WHERE key = 'corpus_generation'"
+            )
+            row = cursor.fetchone()
+        if row is None:
+            raise RuntimeError("corpus generation state is missing")
+        value = int(row["integer_value"])
+        if value < 0:
+            raise RuntimeError("corpus generation state is corrupt")
+        return value
     
     @staticmethod
     def _validate_embedding(embedding: np.ndarray, *, label: str) -> np.ndarray:
@@ -293,6 +347,35 @@ class SQLiteStore:
             np.frombuffer(data, dtype=np.float32).copy(),
             label="persisted embedding",
         )
+
+    @classmethod
+    def _serialize_raw_embedding_override(
+        cls,
+        embedding_blob: Optional[bytes],
+        raw_embedding: Optional[np.ndarray],
+    ) -> Optional[bytes]:
+        """Persist the raw vector only when it differs bitwise from embedding."""
+        if raw_embedding is None:
+            return None
+        raw_blob = cls._serialize_embedding(raw_embedding)
+        if embedding_blob is not None and raw_blob == embedding_blob:
+            return None
+        return raw_blob
+
+    @classmethod
+    def _deserialize_embedding_pair(
+        cls,
+        embedding_blob: Optional[bytes],
+        raw_embedding_blob: Optional[bytes],
+    ) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
+        """Restore the historical two-vector read contract from an override."""
+        embedding = cls._deserialize_embedding(embedding_blob)
+        raw_embedding = (
+            cls._deserialize_embedding(raw_embedding_blob)
+            if raw_embedding_blob is not None
+            else embedding.copy() if embedding is not None else None
+        )
+        return embedding, raw_embedding
     
     # ==================== Node Operations ====================
 
@@ -434,7 +517,9 @@ class SQLiteStore:
             valid_until=valid_until,
         )
         embedding_blob = self._serialize_embedding(embedding)
-        raw_embedding_blob = self._serialize_embedding(raw_embedding) if raw_embedding is not None else embedding_blob
+        raw_embedding_blob = self._serialize_raw_embedding_override(
+            embedding_blob, raw_embedding
+        )
         
         with self._cursor() as cursor:
             cursor.execute("""
@@ -503,13 +588,17 @@ class SQLiteStore:
             
             if row is None:
                 return None
-            
+
+            embedding, raw_embedding = self._deserialize_embedding_pair(
+                row["embedding"],
+                row["raw_embedding"] if "raw_embedding" in row.keys() else None,
+            )
             return {
                 "id": row["id"],
                 "text": row["text"],
                 "metadata": json.loads(row["metadata"]),
-                "embedding": self._deserialize_embedding(row["embedding"]),
-                "raw_embedding": self._deserialize_embedding(row["raw_embedding"]) if "raw_embedding" in row.keys() else None,
+                "embedding": embedding,
+                "raw_embedding": raw_embedding,
                 "event_time": row["event_time"],
                 "valid_from": row["valid_from"],
                 "valid_until": row["valid_until"],
@@ -661,13 +750,17 @@ class SQLiteStore:
                 (parent_id,),
             )
             rows = cursor.fetchall()
-        return [
-            {
+        results = []
+        for row in rows:
+            embedding, raw_embedding = self._deserialize_embedding_pair(
+                row["embedding"], row["raw_embedding"]
+            )
+            results.append({
                 "id": row["id"],
                 "text": row["text"],
                 "metadata": json.loads(row["metadata"]),
-                "embedding": self._deserialize_embedding(row["embedding"]),
-                "raw_embedding": self._deserialize_embedding(row["raw_embedding"]),
+                "embedding": embedding,
+                "raw_embedding": raw_embedding,
                 "event_time": row["event_time"],
                 "valid_from": row["valid_from"],
                 "valid_until": row["valid_until"],
@@ -675,9 +768,8 @@ class SQLiteStore:
                 "confidence": row["confidence"] if row["confidence"] is not None else 1.0,
                 "created_at": row["created_at"],
                 "updated_at": row["updated_at"],
-            }
-            for row in rows
-        ]
+            })
+        return results
 
     def delete_sentence_children(self, parent_id: str) -> Tuple[List[str], int]:
         """Atomically replaceable-delete derived sentence chunks and their edges."""
@@ -849,7 +941,9 @@ class SQLiteStore:
         asserted_from = self._assertion_time()
         
         embedding_blob = self._serialize_embedding(new_embedding)
-        raw_embedding_blob = self._serialize_embedding(new_raw_embedding)
+        raw_embedding_blob = self._serialize_raw_embedding_override(
+            embedding_blob, new_raw_embedding
+        )
         
         with self._cursor() as cursor:
             self._close_node_versions(cursor, [node_id], asserted_from)
