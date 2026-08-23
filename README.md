@@ -1,14 +1,30 @@
 # HybridMind
 
-**HybridMind** is a local hybrid retrieval service for AI memory experiments. It combines FAISS HNSW dense search, an Okapi BM25 index (`bm25s` backend with PyStemmer), a NetworkX directed multigraph, and SQLite. Verified `.mind.zip` snapshots use safe JSON/JSONL derived-index components rather than executable pickle payloads.
+HybridMind is a local hybrid-retrieval service for AI memory experiments. It is built around a simple constraint: a memory system should be able to show what it retrieved, why it retrieved it, and whether that evidence helped.
 
-repo: [github.com/a3ro-dev/hybridmind](https://github.com/a3ro-dev/hybridmind)
+It keeps SQLite authoritative, rebuilds dense, sparse, and graph indexes from validated records, and retrieves across all three paths with time-aware reciprocal-rank fusion. The project is deliberately conservative about claims: it is an experimental retrieval system, not a transformer KV-cache replacement or a proven long-context solution.
 
----
+## At a glance
 
-## Why
+| Area | What HybridMind does |
+| --- | --- |
+| Retrieval | FAISS HNSW dense search, Okapi BM25 (`bm25s` + PyStemmer), and a typed NetworkX directed multigraph |
+| Ranking | Time-aware weighted reciprocal-rank fusion (`k=60`), with independently controlled retrieval modes |
+| Evidence | Corpus/session scoping and exact evidence IDs for retrieval metrics |
+| Persistence | SQLite/WAL as source of truth; runtime indexes rebuilt from validated data |
+| Portability | Verified `.mind.zip` snapshots using checksummed JSON/JSONL, never executable pickles |
+| Embeddings | Remote native embeddings only, validated to exactly 4096 dimensions |
 
-pure vector search drops explicit structural relationships. graph-only search lacks semantic flexibility and degrades when edges are sparse or noisy. agent systems need both: semantic alignment to a query, plus topological traversal and keyword precision—without relying on remote cloud DBs by default.
+## Why hybrid retrieval
+
+Pure vector search can miss an explicit relation or exact term. Graph-only retrieval loses semantic flexibility and gets brittle when the graph is sparse or noisy. HybridMind keeps these as separate candidate paths, then fuses them so each path can be measured, ablated, and improved independently.
+
+## Design stance
+
+- Fail closed on malformed provider output, corrupt persistence, partial batches, and invalid benchmark provenance.
+- Treat derived indexes as rebuildable projections, not the authoritative record.
+- Make live provider work opt-in and budgeted; the offline suite makes zero provider calls.
+- Do not count answer-string overlap as retrieval evidence.
 
 ---
 
