@@ -1,5 +1,6 @@
 """
-Multi-hop query decomposition (Phase 6.2.2, docs/PHASE_6_REALISTIC.md section 4).
+Multi-hop query decomposition (docs/EVALUATION.md section 3; originally
+Phase 6.2.2).
 
 A single dense query embedding for a two-hop question geometrically lands
 between the two evidence clusters and hits neither — this is a property of
@@ -51,7 +52,7 @@ def decompose_query(
     """
     Return sub-questions for `query_text`, or [] when decomposition is
     disabled, unavailable, fails, or degenerates to <=1 sub-question (the
-    fall-through guard from docs/PHASE_6_REALISTIC.md section 4).
+    fall-through guard from docs/EVALUATION.md section 3).
 
     enabled=None defers to settings.query_decomposition_enabled (default
     False); pass enabled=True/False explicitly to override per call site

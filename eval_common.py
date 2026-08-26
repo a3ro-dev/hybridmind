@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_ANSWER_MODEL = settings.qa_model
 
-# Phase 6.1 (docs/PHASE_6_REALISTIC.md section 3): set to "true" to fall back to
+# Phase 6.1 (docs/EVALUATION.md section 3): set to "true" to fall back to
 # the pre-6.1 single-shot answering prompt (no citation, no multi-hop
 # iteration, no answer normalization before judging), so the two behaviors
 # can be A/B'd against each other via the ledger.
@@ -42,7 +42,7 @@ _STOPWORDS = {"the", "a", "an", "in", "on", "at", "to", "for", "of", "is", "was"
 
 _ABSTENTION_RE = re.compile(r"^\s*(i don'?t know|none|not (specified|available|mentioned)|n/?a)\b", re.I)
 
-# Versioned eval prompts (docs/PHASE_6_REALISTIC.md §6.0.2): a changed prompt
+# Versioned eval prompts (docs/EVALUATION.md section 3): a changed prompt
 # invalidates prior ledger rows for A/B comparison, so the version travels
 # with every judged answer. Bump this whenever the prompt text below changes.
 QA_PROMPT_VERSION = "qa_v1"                # legacy single-shot prompt (llm_answer)

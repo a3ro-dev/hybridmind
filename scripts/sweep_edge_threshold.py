@@ -1,5 +1,5 @@
 """
-Phase 6.2.3 edge-threshold sweep (docs/PHASE_6_REALISTIC.md section 4).
+Edge-threshold sweep (docs/EVALUATION.md section 3).
 
 The graph channel's failure mode is missing edges, not misranked edges, so
 the highest-leverage graph work is coverage, not ranking. This script rebuilds
@@ -8,7 +8,8 @@ resulting edge count, and â€” when a MuSiQue-style 2-hop dev set is available â€
 reports graph-reachability: the fraction of 2-hop dev questions where the
 gold second-hop node is graph-reachable within 2 hops of a first-hop
 retrieval hit. That reachability number is the ceiling on any future graph
-learning (see docs/PHASE_6_REALISTIC.md section 7, GNN trigger condition).
+learning (see docs/EVALUATION.md section 3, decomposition and auto-edge
+experiments; GNN promotion remains gated on held-out evidence).
 
 Reuses engine/edge_inference.py's infer_cosine_edges() for the actual edge
 creation logic and eval_musique_retrieval.py's loader/relevance helpers for
@@ -183,7 +184,7 @@ def main():
         results.append({"threshold": threshold, "edge_count": edge_count, "reachability": reachability, "n_eval": n_eval})
 
     print("\nPick the knee (reachability gain per edge added), not the max threshold with the most edges --")
-    print("an over-dense graph turns traversal into noise injection (docs/PHASE_6_REALISTIC.md section 4).")
+    print("an over-dense graph turns traversal into noise injection (docs/EVALUATION.md section 3).")
 
     db_manager.save_indexes()
     return results

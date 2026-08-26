@@ -1,5 +1,5 @@
 """
-Phase 6.0 statistical protocol (docs/PHASE_6_REALISTIC.md §2, 6.0.2).
+Statistical protocol (docs/EVALUATION.md section 4).
 
 - Bootstrap 95% CI (1e4 resamples over questions) for accuracy / Hit@k.
 - Paired permutation test comparing two ledger files on per-question outcomes.
@@ -159,7 +159,7 @@ def cmd_compare(args) -> None:
 
     n_a = len(records_a)
     print(f"LoCoMo-style minimum detectable effect note: with n={n_a} questions, treat any "
-          f"gain under ~2.5pts (see docs/PHASE_6_REALISTIC.md section 2, 6.0.2) as noise even if p<0.05.\n")
+          f"gain under ~2.5pts (see docs/EVALUATION.md section 4) as noise even if p<0.05.\n")
 
     for metric in metrics:
         try:
