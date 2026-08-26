@@ -1,51 +1,60 @@
-# HybridMind Agent Integration Guide
+# HybridMind agent integration guide
 
-This guide details how to integrate HybridMind into AI agents using the Python SDK (`sdk/memory.py`), the FastMCP server (`mcp_server/main.py`), and the REST API endpoints.
+Three supported integration surfaces: the Python SDK (`sdk/memory.py`), the
+MCP server (`mcp_server/main.py`), and the REST API. All of them require a
+running HybridMind API process (`python -m uvicorn main:app --host 127.0.0.1
+--port 8000`); none of them may bypass the API's security or provider policy.
 
 ---
 
-## 1. Quick Start (Python SDK)
+## 1. Python SDK
 
 ```python
 from sdk.memory import HybridMemory
 
 memory = HybridMemory(base_url="http://127.0.0.1:8000")
 
-# 1. Create a session
-session = memory.session.create(
-    name="robotics_lit_review",
-    metadata={"owner": "agent", "goal": "survey manipulation papers"}
-)
-session_id = session["session_id"]
+# Sessions scope recall and fact extraction.
+session = memory.session.create(name="lit-review", metadata={"goal": "survey"})
+sid = session["session_id"]
 
-# 2. Store findings
-paper_id = memory.store(
+# Store returns a node ID. Temporal fields are ISO-8601 strings; memory_kind
+# is one of world / experience / observation / opinion when supplied.
+nid = memory.store(
     text="Paper A proposes diffusion policies for visuomotor control.",
-    metadata={"domain": "robotics", "source_url": "https://arxiv.org/abs/2303.04137"},
-    session_id=session_id,
+    metadata={"domain": "robotics"},
+    session_id=sid,
+    entities=["Paper A"],
+    event_time="2026-08-26T10:00:00Z",
 )
 
-# 3. Relate nodes explicitly
-memory.relate(paper_id, "target-uuid-2", "supports")
-
-# 4. Recall memory (Tri-signal RRF + mxbai Reranker)
-results = memory.recall("diffusion control policy", top_k=5, mode="hybrid")
+memory.relate(nid, "target-node-id", "supports")     # explicit graph edge
+results = memory.recall("diffusion policies", top_k=5, mode="hybrid")
 ```
 
----
+Other `HybridMemory` methods: `store_batch`, `store_with_auto_edges`,
+`recall_stream`, `trace(concept, depth)` (graph traversal),
+`forget(node_id)` (soft delete by ID — there is no text-matching forget),
+`compact()`, `stats()`, and `session.{recall,list,archive}`.
 
-## 2. MCP Server Integration (Model Context Protocol)
+Mode contract: `hybrid`, `vector_only`, `sparse_only`, `vector_sparse`, and
+`graph_only`. `graph_only` raises unless you pass explicit `anchor_nodes`;
+anchors must come from somewhere other than gold labels. Explicit weights you
+pass are never overridden by server-side query routing.
 
-HybridMind ships with a native FastMCP server (`mcp_server/main.py`) for AI tools like Claude Desktop, Cursor, and Windsurf:
+## 2. MCP server
 
-### Tools Exposed
+`mcp_server/main.py` is a stdio FastMCP adapter over the API:
 
-- **`remember(text: str, metadata: dict = None)`**: Store text node into HybridMind.
-- **`recall(query: str, top_k: int = 5, mode: str = "hybrid")`**: Search memories via RRF fusion + cross-encoder reranking.
-- **`relate(source_id: str, target_id: str, relationship: str)`**: Create explicit graph edge between memories.
-- **`forget(text: str)`**: Find and soft-delete nearest node matching text.
+| Tool | Signature | Notes |
+|---|---|---|
+| `remember` | `(text, metadata=None) -> dict` | Stores one node. |
+| `recall` | `(query, top_k=10, mode="hybrid") -> list` | Same mode contract as the SDK. |
+| `relate` | `(source_id, target_id, relationship) -> dict` | Creates an edge. |
+| `forget` | `(node_id) -> dict` | Soft-deletes that exact node ID. |
+| `health` | `() -> dict` | Server health probe. |
 
-### Claude Code / MCP Config (`claude_desktop_config.json`)
+Client configuration (Claude Desktop / Claude Code / Cursor / Windsurf):
 
 ```json
 {
@@ -53,39 +62,42 @@ HybridMind ships with a native FastMCP server (`mcp_server/main.py`) for AI tool
     "hybridmind": {
       "command": "python",
       "args": ["d:/hybridmind/mcp_server/main.py"],
-      "env": {
-        "HYBRIDMIND_API_URL": "http://127.0.0.1:8000"
-      }
+      "env": { "HYBRIDMIND_API_URL": "http://127.0.0.1:8000" }
     }
   }
 }
 ```
 
----
+`HYBRIDMIND_MCP_TIMEOUT_SECONDS` (default 60) bounds each request.
 
-## 3. Structured Ingestion Endpoint (`/ingest/session-facts`)
+## 3. Structured session ingestion
 
-For agent workflow fact extraction with contradiction handling:
+`POST /ingest/session-facts` performs server-side LLM fact extraction over raw
+conversation turns (clients do not send pre-extracted facts):
 
-```python
-import httpx
-
-response = httpx.post(
-    "http://127.0.0.1:8000/ingest/session-facts",
-    json={
-        "session_id": session_id,
-        "facts": [
-            {"fact": "User prefers Dark Mode UI.", "entities": ["User", "Dark Mode"]},
-            {"fact": "User works at OpenAI.", "entities": ["User", "OpenAI"]}
-        ]
-    }
-)
+```json
+{
+  "session_id": "<session-id>",
+  "container_tag": "optional-scope-tag",
+  "turns": [
+    {"speaker": "alice", "text": "I prefer dark mode.", "date": "2026-08-26"}
+  ]
+}
 ```
 
----
+Extraction is opt-in and fail-closed: it requires
+`HYBRIDMIND_FACT_EXTRACTION_ENABLED=true` plus a configured LLM provider, and
+malformed provider output produces an error rather than an empty success.
+Extracted fields are conservative heuristics, not general causal/temporal
+reasoning.
 
-## 4. Operational Best Practices
+## 4. Operational rules
 
-1. **Session Lifecycles**: Isolate conversation contexts using `session_id` parameters to enable scoped memory recall.
-2. **Auto-Edge Linkage**: Enable `HYBRIDMIND_AUTO_EDGES_ENABLED=true` to infer graph edges automatically on ingestion.
-3. **Environment Setup**: Set `RUNPOD_TEI_EMBEDDING_URL` and `RUNPOD_LLM_ENDPOINT_ID` for GPU-accelerated serverless processing.
+1. Scope every write with `session_id` (and `container_tag` where relevant);
+   recall scoping depends on it.
+2. Live embedding/LLM/reranker use is default-deny. Warm-up or evaluation
+   requires the offline resource report + priced plan +
+   `scripts/preflight.py --plan <plan> --validate-only` flow (see README).
+3. The 4096-dimensional embedding contract has no fallback: if no remote
+   backend is configured and healthy, ingestion/search fail rather than
+   degrade to another width or a local model.
