@@ -179,6 +179,13 @@ class Settings(BaseSettings):
     # Memory lifecycle & Visual memory
     fact_contradiction_threshold: float = 0.85
     image_embedding_url: Optional[str] = None
+    # RunPod serverless key for the optional visual-embedding backend
+    # (deploy/README_image_server.md). Endpoint-bound; never shared with the
+    # text embedding/LLM providers.
+    image_runpod_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("HYBRIDMIND_IMAGE_RUNPOD_KEY"),
+    )
     image_ingest_max_base64_chars: int = Field(default=12_000_000, ge=1)
     image_ingest_max_caption_chars: int = Field(default=50_000, ge=1)
     image_ingest_max_patch_vectors: int = Field(default=4_096, ge=1)

@@ -15,7 +15,6 @@ returns None and all image paths degrade gracefully.
 from __future__ import annotations
 
 import logging
-import os
 from typing import List, Optional
 
 import numpy as np
@@ -122,15 +121,14 @@ class RemoteImageEmbeddingEngine:
 
 def get_image_embedding_engine() -> Optional[RemoteImageEmbeddingEngine]:
     """
-    Singleton factory. Returns None if HYBRIDMIND_IMAGE_EMBEDDING_URL is not set.
+    Singleton factory. Returns None unless config.image_embedding_url is set.
+    Configuration comes exclusively from config.py (HYBRIDMIND_ env vars).
     """
     global _INSTANCE, _INSTANCE_KEY
-    try:
-        from config import settings
-        base_url = (settings.image_embedding_url or os.getenv("HYBRIDMIND_IMAGE_EMBEDDING_URL", "")).strip()
-    except Exception:
-        base_url = os.getenv("HYBRIDMIND_IMAGE_EMBEDDING_URL", "").strip()
-    api_key = os.getenv("HYBRIDMIND_IMAGE_RUNPOD_KEY", "")
+    from config import settings
+
+    base_url = (settings.image_embedding_url or "").strip()
+    api_key = (settings.image_runpod_key or "").strip()
 
     if not base_url:
         return None
