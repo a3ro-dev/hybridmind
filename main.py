@@ -494,7 +494,6 @@ async def root():
                 "edges": "/bulk/edges",
                 "import": "/bulk/import",
             },
-            # Comparison endpoints disabled
             "health": {"full": "/health", "ready": "/ready", "live": "/live"},
             "stats": "/search/stats",
             "cache": "/cache/stats",

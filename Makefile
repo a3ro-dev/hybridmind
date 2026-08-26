@@ -1,19 +1,16 @@
-.PHONY: test test-slow benchmark report full-eval
+.PHONY: test verify compile check
 
 export PYTHONPATH=$(PWD)
 
+# Canonical offline verification (run inside the activated .venv).
 test:
-	pytest tests/ -m "not slow" -v
+	pytest tests/ -q
 
-test-slow:
-	pytest tests/ -v
+# Legacy opt-in feature smoke suite (not part of the default run).
+verify:
+	pytest verify/ -q
 
-benchmark:
-	python3 benchmarks/ablation_runner.py
+compile:
+	python -m compileall -q main.py config.py install.py eval_common.py eval_ledger.py eval_stats.py eval_locomo_retrieval.py eval_longmemeval_retrieval.py eval_musique_retrieval.py api engine storage models cli sdk mcp_server scripts benchmarks tests verify
 
-report: benchmark
-	python3 benchmarks/generate_report.py
-
-full-eval:
-	$(MAKE) report
-	$(MAKE) test
+check: test compile
