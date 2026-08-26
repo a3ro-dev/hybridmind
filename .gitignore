@@ -116,3 +116,6 @@ output/pdf/
 tmp/
 .agents/skills/
 skills-lock.json
+
+# Local-only materials (business docs, personal artifacts)
+local/
