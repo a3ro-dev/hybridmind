@@ -52,7 +52,8 @@ This project does not replace a transformer KV cache. Its 10M–100M-token targe
 python3 -m venv .venv
 # PowerShell: .\.venv\Scripts\Activate.ps1
 # Unix: source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt      # or: python install.py (venv + .env + MCP wiring)
+cp .env.example .env                 # fill in provider keys; config.py is authoritative
 # First create an offline resource report and a matching live-plan file.
 python scripts/offline_resource_frontier.py --output benchmarks/results/offline_resource_frontier.json
 python scripts/preflight.py --plan path/to/live-plan.json --validate-only
@@ -112,11 +113,18 @@ python eval_locomo_retrieval.py --search-mode vector_only --vector-weight 1 --gr
 
 ## Documentation Index
 
-- [AGENTS.md](AGENTS.md) — repository invariants and developer rules
-- [docs/ADVERSARIAL_AUDIT_REMEDIATION.md](docs/ADVERSARIAL_AUDIT_REMEDIATION.md) — baseline audit, remediation evidence, residual risks, and scores
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — thread safety, WAL mode, and storage engines
+- [AGENTS.md](AGENTS.md) — agent/developer contract: rules, load-bearing map, doc ownership
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — request/data flow, storage engines, security posture
 - [docs/ALGORITHM.md](docs/ALGORITHM.md) — RRF fusion formulas and cross-encoder score normalization
+- [docs/EVALUATION.md](docs/EVALUATION.md) — evaluator usage, ledger schema, statistical conventions
+- [docs/AGENT_INTEGRATION.md](docs/AGENT_INTEGRATION.md) — SDK / MCP / structured-ingestion contracts
+- [cli/README.md](cli/README.md) — CLI command surfaces
+- [PHASE_IMPLEMENTATION_STATUS.md](PHASE_IMPLEMENTATION_STATUS.md) — real vs scaffolded inventory
+- [docs/ADVERSARIAL_AUDIT_REMEDIATION.md](docs/ADVERSARIAL_AUDIT_REMEDIATION.md) — baseline audit, remediation evidence, residual risks, and scores
 - [docs/KV_CACHE_RESEARCH.md](docs/KV_CACHE_RESEARCH.md) — KV working-set hypotheses and evidence
 - [docs/RETRIEVAL_RESEARCH_PROTOCOL.md](docs/RETRIEVAL_RESEARCH_PROTOCOL.md) — preregistered quality, scale, latency, resource, and cost gates
 - [docs/RESOURCE_SPEED_TOKENOMICS.md](docs/RESOURCE_SPEED_TOKENOMICS.md) — bounded local measurements and live spend admission control
 - [demos/techspec.md](demos/techspec.md) — no-code specification for six user-facing demos
+
+The full registry of every tracked document (with ownership and update
+triggers) is the Documentation Map in `AGENTS.md`.
