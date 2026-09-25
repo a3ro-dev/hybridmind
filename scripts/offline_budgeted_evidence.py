@@ -18,6 +18,7 @@ import functools
 import hashlib
 import json
 import math
+import os
 import re
 import sys
 import time
@@ -82,6 +83,38 @@ def load(dataset: Path) -> list[dict]:
                 continue
             qs.append({"q": str(qa["question"]), "gold": gold, "cat": CATEGORY[qa["category"]]})
         convs.append({"sid": sid, "turns": turns, "qs": qs, "n_qa": len(item["qa"])})
+    return convs
+
+
+def load_longmemeval(dataset: Path) -> list[dict]:
+    """One haystack per question; gold = has_answer turns. Streams to keep RAM low.
+
+    Abstention (`_abs`) questions and questions without any has_answer turn have no
+    evidence to cover and are counted, not scored (as in the official retrieval eval).
+    """
+    import ijson
+
+    convs = []
+    with dataset.open("rb") as handle:
+        for item in ijson.items(handle, "item"):
+            qid = str(item["question_id"])
+            turns, gold = [], []
+            sessions = zip(item["haystack_session_ids"], item["haystack_dates"], item["haystack_sessions"])
+            for s, (sess_id, date, messages) in enumerate(sessions, start=1):
+                for pos, m in enumerate(messages):
+                    text = str(m.get("content") or "").strip()
+                    if not text:
+                        continue
+                    tid = f"{sess_id}:{pos}"
+                    turns.append({"id": tid, "session": s, "pos": pos, "date": str(date),
+                                  "speaker": str(m.get("role") or ""), "text": text, "caption": "", "obs": []})
+                    if m.get("has_answer") is True:
+                        gold.append(tid)
+            qs = []
+            if gold and not qid.endswith("_abs"):
+                qs.append({"q": str(item["question"]), "gold": gold, "cat": str(item["question_type"]),
+                           "question_date": str(item.get("question_date") or "")})
+            convs.append({"sid": qid, "turns": turns, "qs": qs, "n_qa": 1})
     return convs
 
 
@@ -214,7 +247,7 @@ def cluster_bootstrap(rows: list[tuple[str, float]], seed: int, samples: int = 4
 
 def run(args) -> dict:
     t0 = time.perf_counter()
-    convs = load(args.dataset)
+    convs = load_longmemeval(args.dataset) if args.kind == "longmemeval" else load(args.dataset)
     if args.half != "all":
         order = sorted(convs, key=lambda c: hashlib.sha256(f"{args.split_seed}:{c['sid']}".encode()).hexdigest())
         convs = order[:5] if args.half == "dev" else order[5:]
@@ -243,7 +276,7 @@ def run(args) -> dict:
         for st in strategies:
             for b in budgets:
                 sel = [r for r in rows if r["rep"] == rep and r["strategy"] == st and r["budget"] == b]
-                for cat in ["all", "multi-hop", "temporal", "open-domain", "single-hop", "adversarial"]:
+                for cat in ["all"] + sorted({q["cat"] for c in convs for q in c["qs"]}):
                     part = [r for r in sel if cat == "all" or r["cat"] == cat]
                     if not part:
                         continue
@@ -263,7 +296,7 @@ def run(args) -> dict:
     return {
         "schema": "hybridmind.offline_budgeted_evidence.v1",
         "status": "exploratory",
-        "dataset": {"path": str(args.dataset.relative_to(PROJECT_ROOT)),
+        "dataset": {"path": os.path.relpath(args.dataset.resolve(), PROJECT_ROOT),
                     "sha256": hashlib.sha256(args.dataset.read_bytes()).hexdigest(),
                     "questions_total": sum(c["n_qa"] for c in convs),
                     "questions_scored": sum(len(c["qs"]) for c in convs),
@@ -288,6 +321,7 @@ def main() -> None:
     p.add_argument("--baseline-rep", default="raw")
     p.add_argument("--baseline-strategy", default="turn")
     p.add_argument("--seed", type=int, default=20260925)
+    p.add_argument("--kind", choices=["locomo", "longmemeval"], default="locomo")
     p.add_argument("--half", choices=["all", "dev", "heldout"], default="all")
     p.add_argument("--split-seed", default="20260925-e3")
     p.add_argument("--keep-rows", action="store_true")
