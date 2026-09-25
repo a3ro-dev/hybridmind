@@ -12,3 +12,9 @@ Chronological decisions. Newest last.
   multi-evidence is local (83% within ±2 turns). Mean conversation ~13.4k words, so
   full-context is a cheap strong control on LoCoMo.
 - Launched audit workflow (pipeline trace + claim recomputation) and SOTA research workflow.
+
+## 2026-09-25 — E1 run (exploratory, LoCoMo)
+
+- Protocol locked in b0379e2 before running. Result: ±1 neighbour window +0.08–0.11 complete
+  coverage at equal budget; beats 2× budget top-k. Session-diversity cap refuted. Multi-hop
+  (cross-session aggregation) complete coverage 0.12–0.29 under every unit: the open failure.
