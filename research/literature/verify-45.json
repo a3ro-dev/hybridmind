@@ -1,0 +1,319 @@
+{
+ "verified": [
+  {
+   "system": "LoCoMo official dataset/repo (snap-research/locomo)",
+   "verdict": "confirmed",
+   "claim_as_reported": "CC BY-NC 4.0; locomo10.json = 10 conversations, 1,986 QA (282/321/96/841/446); mapping 1=multi-hop, 2=temporal, 3=open-domain, 4=single-hop, 5=adversarial; evaluation_stats prints keys [4,1,2,3,5]; mapping undocumented (#29)",
+   "correct_statement": "Confirmed from primary sources. LICENSE.txt contains the 'Attribution-NonCommercial 4.0 International' text. Note that the GitHub API reports license 'Other/NOASSERTION' only because it does not auto-detect the file. data/locomo10.json is 2,805,274 bytes (repo metadata; not downloaded). README Note 1 says it is a subset of the 50 conversations in the first arXiv release. evaluation_stats.py hard-codes keys=[4,1,2,3,5]. gpt_utils.py appends 'Use DATE of CONVERSATION to answer with an approximate date' to category 2, and cat-5 is built as multiple choice. Four independently released per-question artifacts (Mem0 v3, Zep 2025, Backboard, Memobase) each contain exactly 282/321/96/841 = 1,540 questions for cats 1-4. The 446 cat-5 count comes from harness docstrings (Mem0 prompts.py); I did not recount it because that needs the dataset. Issue #29 was closed 2025-12-10 by its reporter as a duplicate of #6, and the README still does not document the mapping. Issues #27, #30, #35, #42 and #43 are open. MemR3 (arXiv 2512.20237, App. C.3) confirms 12 duplicated questions, giving 830 single-hop and 445 adversarial after dedup.",
+   "primary_url": "https://github.com/snap-research/locomo"
+  },
+  {
+   "system": "LoCoMo paper (Maharana et al., ACL 2024, arXiv 2402.17753) Table 2",
+   "verdict": "confirmed",
+   "claim_as_reported": "Token F1 overall incl. adversarial: human 87.9; GPT-4-turbo 32.1; GPT-3.5-turbo 22.4; GPT-3.5-turbo-16K 37.8; Mistral-7B 13.9; Llama-2-70B 17.9",
+   "correct_statement": "Verified in arXiv HTML Table 2. Overall is QA F1 (stemmed token F1, not an LLM judge) averaged over all 5 categories including adversarial. Human 95.1/85.8/92.6/75.4/89.4 → 87.9. GPT-4-turbo 23.4/23.4/10.4/24.6/70.2 → 32.1. gpt-3.5-turbo-16K 56.4/42.0/20.3/37.2/2.1 → 37.8. The paper text describes the dataset as 50 conversations / 7,512 QA and does not clearly state that the tables were computed on the 10-conversation locomo10 release. These are not comparable to the 1,540-question LLM-judge 'J' numbers that vendors report.",
+   "primary_url": "https://arxiv.org/html/2402.17753"
+  },
+  {
+   "system": "LoCoMo paper Table 3 (RAG, DRAGON retriever, gpt-3.5-turbo-16k reader)",
+   "verdict": "confirmed",
+   "claim_as_reported": "Dialog recall@5/10/25/50 58.8/67.5/79.9/84.8; observation 49.6/57.1/66.0/71.1; summary 61.5/75.1/90.7; F1 31.7/34.6/35.8/34.8, 41.4/38.8/38.0/37.8, 29.9/32.5/31.5; typo 247.4",
+   "correct_statement": "All values match Table 3, including the '247.4' typo (dialog top-10 multi-hop recall) and the per-category dialog k=50 recalls 90.4/75.5/97.3/67.9/77.7. In official code (task_eval/evaluation.py) recall is per-question fractional evidence recall: the share of gold dia_ids present in the retrieved context ids, or the share of evidence sessions present when the retrieved ids start with 'S'. It is averaged over all questions, and a question gets recall 1 when it has empty evidence or no retrieved context. It is neither recall_any nor recall_all. Overall includes adversarial.",
+   "primary_url": "https://github.com/snap-research/locomo/blob/main/task_eval/evaluation.py"
+  },
+  {
+   "system": "locomo-audit (dial481)",
+   "verdict": "corrected",
+   "claim_as_reported": "99/1,540 (6.4%) score-corrupting errors, 93.57% ceiling, per-category ceilings, 62.81%/10.61% judge leniency, FC 92.62%, EverMemOS 2,298 tokens 'is 6,669 when measured'; license CC BY-NC 4.0 vs NOASSERTION",
+   "correct_statement": "Confirmed. 156 issues found: 99 score-corrupting (33 hallucination, 26 temporal, 24 attribution, 13 ambiguous, 3 incomplete) and 57 citation-only. Per-category ceilings: cat1 28/282 (90.1), cat2 26/321 (91.9), cat3 9/96 (90.6), cat4 36/841 (95.7). Aggregate ceiling 93.57%. Judge stress test: gpt-4o-mini, temperature 0, 'be generous' prompt, accepts 62.81% of vague-but-topical and 10.61% of specific-but-wrong answers. The full-context GPT-4.1-mini CoT baseline scores 92.62%. Correction: the 6,669 tokens/question figure is not the audit's own measurement. The audit cites it from EverMemOS's own paper (arXiv 2601.02163v2, Table 8, GPT-4.1-mini; 6,045 with GPT-4o-mini). License: the LICENSE file is CC BY-NC 4.0; the GitHub API shows NOASSERTION only because it does not detect it. This is a third-party audit, not by the LoCoMo authors.",
+   "primary_url": "https://github.com/dial481/locomo-audit"
+  },
+  {
+   "system": "Mem0 paper (arXiv 2504.19413)",
+   "verdict": "corrected",
+   "claim_as_reported": "J 66.88 (Mem0), 68.44 (Mem0g), FC 72.90, Zep 65.99, LangMem 58.10, OpenAI 52.90, A-Mem 48.38, best RAG 60.97; 'memory tokens (~7k, ~14k, 26,031)' = stored memory per conversation; category labels rotated",
+   "correct_statement": "The J numbers are confirmed from the page image of Table 2: binary gpt-4o-mini judge with the 'generous' prompt, mean ± sd over 10 runs, 1,540 cat 1-4 questions, gpt-4o-mini reader, s=10 memories. Best RAG is 60.97 ± 0.20 (k=2, 256-token chunks). Correction on tokens: Table 2's 'chunk size / memory tokens' column is per-query context, not stored memory: Mem0 1,764, Mem0g 3,616, Zep 3,911, LangMem 127, A-Mem 2,520, OpenAI 4,437, full-context 26,031. The 7k / 14k / 600k+ figures are a separate stored-footprint statement in Section 4.5. The label-rotation claim is confirmed by arithmetic: 'single'=cat1, 'multi'=cat3, 'open'=cat4, 'temporal'=cat2 reproduces all six overalls to ±0.01 (66.88, 68.44, 65.99, 58.11, 52.90, 48.38). The literal labels would give 62.14 for Mem0. Latency p50/p95: Mem0 search 0.148/0.200 s, total 0.708/1.440 s; FC total 9.870/17.117 s.",
+   "primary_url": "https://arxiv.org/abs/2504.19413"
+  },
+  {
+   "system": "Mem0 Platform v3 via mem0ai/memory-benchmarks",
+   "verdict": "confirmed",
+   "claim_as_reported": "README 92.5% (1425/1540) top-200 and 91.8% top-50; artifacts give 91.56% (1410/1540) and 82.66% (1273/1540); merged 156/274; gpt-5 reader and judge; lenient judge",
+   "correct_statement": "Recomputed from committed per-question JSON on main. LoCoMo top-200 = 1410/1540 = 91.56% (cat1 263/282, cat2 298/321, cat3 73/96, cat4 776/841; timestamp 20260406). Top-50 = 1273/1540 = 82.66% (20260408). Answerer and judge are gpt-5 on Azure. merged_from_questions lists 156 and 274 question IDs. Search latency p50/p95 is 3,056/6,009 ms (top-200) and 916/1,211 ms (top-50). The README headline (92.5% / 91.8%) was added in commit 4b61c5d (2026-05-13), which changed only README.md (+16/-16), so no matching per-question artifacts back it. LongMemEval artifacts: 467/500 = 93.4% (top-200) and 452/500 = 90.4% (top-50), versus README 94.4% / 94.8%. The dataset is longmemeval_s_cleaned.json from HF xiaowu0162/longmemeval-cleaned, 500 questions including abstention, and latency is recorded as 0.0. Code defaults are gpt-5 answerer and judge; the README says gpt-4o. The judge is far more lenient than Mem0-paper J: one correct list item suffices, 14-day date tolerance, 50% duration tolerance, a same-referent rule, and an optional evidence override. License is Apache-2.0 (changed from MIT in commit f75666d, 2026-04-13).",
+   "primary_url": "https://github.com/mem0ai/memory-benchmarks/tree/main/results/platform"
+  },
+  {
+   "system": "Zep 2025 rebuttal (getzep/zep-papers locomo_eval)",
+   "verdict": "confirmed",
+   "claim_as_reported": "75.14 ± 0.17; grades file 1157/1540 = 75.13; README swaps temporal/open; Mem0 CTO 58.44 ± 0.20; original ~84%",
+   "correct_statement": "Recomputed from data/zep_locomo_grades.json: cat1 209/282 = 74.11, cat2 212/321 = 66.04, cat3 65/96 = 67.71, cat4 671/841 = 79.79; 1157/1540 = 75.13% (single file). The README labels 66.04 'Open Domain' and 67.71 'Temporal', which swaps cats 2 and 3. Reader and judge are gpt-4o-mini with the Mem0 generous prompt. In issue #5, Mem0's CTO says the original ~84% counted cat-5 correct answers in the numerator while excluding them from the denominator (about +25.56 pp), and reports 58.44 ± 0.20 under Mem0's prompts and 10 runs. Zep conceded the calculation error (2026-05-12 comment) and corrected to 75.14 ± 0.17. The issue was closed 2025-05-19. The zep-papers repo has no detected license (NOASSERTION).",
+   "primary_url": "https://github.com/getzep/zep-papers/tree/main/kg_architecture_agent_memory/locomo_eval"
+  },
+  {
+   "system": "Zep December 2025 experiments (getzep/zep benchmarks/locomo)",
+   "verdict": "confirmed",
+   "claim_as_reported": "30/30: 80.32 ± 0.43, 1,997 tokens, retrieval p50 0.189 / p95 0.437 s; 20/20 80.06; 15/5 77.06; 10/2 73.72; 5/2 69.62",
+   "correct_statement": "Confirmed from the five experiment_summary.json files, 10 runs each, 1,540 questions (cat 5 skipped in evaluation.py). Reader and grader are gpt-4o-mini at temperature 0; GRADER_PROMPT contains the Mem0 'be generous' text. Results: 30/30 = 0.8032 ± 0.0043 (median context 1,997 tokens; retrieval p50 0.189 s, p95 0.437 s; response-generation median 2.79 s). 20/20 = 0.8006 ± 0.0033 (retrieval p50 0.241, p95 0.576 s). 15/5 = 0.7706; 10/2 = 0.7372; 5/2 = 0.6962. Latency is retrieval only. License Apache-2.0.",
+   "primary_url": "https://github.com/getzep/zep/tree/main/benchmarks/locomo/experiments"
+  },
+  {
+   "system": "Zep 2026 research page",
+   "verdict": "unverifiable",
+   "claim_as_reported": "94.7% (1,459/1,540); per-category 646/670, 311/325, 304/323, 175/221; gpt-5.4 reader and judge; max_characters=10000",
+   "correct_statement": "The page (modified 2026-08-27) does show 94.7% (1,459/1,540) and p50/p95 retrieval of 87/155 ms. Reader: gpt-5.4 (reasoning=medium). Judge: gpt-5.4 with chain-of-thought grading. Median context 5,760 tokens; config 20 edges, 10 nodes, 10 episodes, 5 thread summaries, 5 observations, cross-encoder rerank. Its per-category denominators (670+325+323+221 = 1,539) match no official category sizes, and the correct counts sum to 1,436, not 1,459, so the page is internally inconsistent. No prompt, code or per-question artifacts are published. The score also exceeds the audit's 93.57% gold-error ceiling. Correction: max_characters=10000 belongs to the separate 'auto search' configuration (86.5%, 2,680 tokens, 115/173 ms), not to the 94.7% run. The same page reports LongMemEval 90.2% (451/500).",
+   "primary_url": "https://www.getzep.com/research/"
+  },
+  {
+   "system": "Letta filesystem agent (Aug 12 2025)",
+   "verdict": "confirmed",
+   "claim_as_reported": "74.0%, gpt-4o-mini agent, judge gpt-4.1 SimpleQA-style grader, cat 5 skipped",
+   "correct_statement": "The blog reports 74.0% with a GPT-4o-mini agent and compares it to Mem0g's 68.5%. In letta-leaderboard, locomo_benchmark.py skips category 5 ('continue'). grade_sample uses GRADER_TEMPLATE with A/B/C labels through request_openai, whose default model is gpt-4.1. Embeddings are text-embedding-3-large. The question count is not stated in the blog. The judge differs from Mem0's gpt-4o-mini generous judge, so this is not like-for-like. The letta-leaderboard repo has no license.",
+   "primary_url": "https://github.com/letta-ai/letta-leaderboard/blob/main/leaderboard/locomo/locomo_benchmark.py"
+  },
+  {
+   "system": "MemOS (arXiv 2507.03724v4, MemOS-1031)",
+   "verdict": "confirmed",
+   "claim_as_reported": "75.80 overall (81.09/67.49/75.18/55.90), F1 45.27, 1,589 tokens; baselines Memobase 72.01, Mem0 64.57, MIRIX 64.33, Zep 59.22, MemU 56.55, Supermemory 55.34; README 88.83/89.20",
+   "correct_statement": "Confirmed from the v4 PDF (2025-12-03), where it is labeled Table 3, not Table 6. All methods use a GPT-4o-mini foundation LLM. The judge model is not stated. The 75.80 overall is reproduced exactly under the code mapping with 1,540 questions (single=cat4 841, multi=cat1, temporal=cat2, open=cat3). The Mem0 row (64.57) likewise reproduces. The MemOS GitHub README claims LoCoMo 88.83 and LongMemEval 89.20 with no reader, judge or artifacts, so those two are unverifiable. Repo license is Apache-2.0.",
+   "primary_url": "https://arxiv.org/abs/2507.03724"
+  },
+  {
+   "system": "Memobase v0.0.37",
+   "verdict": "confirmed",
+   "claim_as_reported": "75.78 (labeled single 70.92 / multi 46.88 / open 77.17 / temporal 85.05) = 1167/1540 with Mem0-paper rotation",
+   "correct_statement": "Recomputed from fixture/memobase/memobase_eval_0710_3000.json: cat1 200/282 = 70.92, cat2 273/321 = 85.05, cat3 45/96 = 46.88, cat4 649/841 = 77.17; 1167/1540 = 75.78. The README calls cat1 'single-hop' and cat3 'multi-hop' (Mem0-paper rotation). The judge is described only as 'e.g. gpt-4o', so the exact model is unverified. v0.0.32 = 70.91. License Apache-2.0.",
+   "primary_url": "https://github.com/memodb-io/memobase/tree/main/docs/experiments/locomo-benchmark"
+  },
+  {
+   "system": "EverMemOS / EverOS (arXiv 2601.02163)",
+   "verdict": "corrected",
+   "claim_as_reported": "Paper 93.05 (GPT-4.1-mini); EverOS README 94.42; 'decider deepseek-v4-flash by default, published numbers used qwen3.6-27B'; audit 'measured' 6,669 tokens; issue #73 38.38%",
+   "correct_statement": "Paper Table 1 (GPT-4.1-mini reader): 96.67/91.84/89.72/76.04 → 93.05 = 1433/1540 under the correct code mapping. The GPT-4o-mini overall is 86.76. The judge is GPT-4o-mini plus two auxiliary judges (three judgments). Baselines: Zep 85.22, MemOS 80.76, MemU 66.67, Mem0 64.20, MemoryOS 60.11. Zep's shown per-category values imply 85.39 rather than 85.22. Correction on the EverOS benchmarks README: LoCoMo 94.42 on 1,540 was produced with decider deepseek/deepseek-v4-flash-0731 (the locomo.toml default), answer model openai/gpt-4.1-mini, judge openai/gpt-4o-mini with runs=1, and top_k=20 episodes. qwen3.6-27B is the global default decider and was used for the other benchmarks (LongMemEval 94.00 etc.), not for LoCoMo. The 6,669 tokens/question figure is from EverMemOS's own paper, Table 8 (v2), as cited by the audit. Issue #73 (38.38% on conv-26) was closed 2026-06-06 as targeting the 'old benchmark/evaluation code path'. The EverMemOS_Eval_Results repo returns 404. The EverOS repo (renamed from EverMemOS) is Apache-2.0.",
+   "primary_url": "https://github.com/EverMind-AI/EverOS/blob/main/benchmarks/README.md"
+  },
+  {
+   "system": "Backboard.io LoCoMo benchmark (Nov 2025)",
+   "verdict": "confirmed",
+   "claim_as_reported": "90.00% = 1386/1540; cat1 252/282 labeled single_hop, cat3 72/96 labeled multi_hop; gemini-2.5-pro reader; GPT-4.1 judge; no license",
+   "correct_statement": "Recomputed from the 10 locomo_conversation_*.json 'responses': cat1 252/282 = 89.36 ('single_hop'), cat2 295/321 = 91.90 ('temporal_reasoning'), cat3 72/96 = 75.00 ('multi_hop'), cat4 767/841 = 91.20 ('open_domain'); 1386/1540 = 90.00. The README states category 1 = Single-hop, 3 = Multi-hop, 4 = Open-domain, i.e. the Mem0-paper rotation. Reader llm_model_name is gemini-2.5-pro; judge is GPT-4.1 at temperature 0.1. The GitHub API shows no license. The README's comparison table is itself cross-mapped: its Zep row lists 74.11/66.04/67.71/79.79 as Single/Multi/Open/Temporal, which are actually cats 1/2/3/4. Not comparable to the Mem0-paper J (gpt-4o-mini reader and judge).",
+   "primary_url": "https://github.com/Backboard-io/Backboard-Locomo-Benchmark"
+  },
+  {
+   "system": "Backboard.io 99.95% (DEV post)",
+   "verdict": "confirmed",
+   "claim_as_reported": "99.95% after post-training on the benchmark's own conversations",
+   "correct_statement": "The authors state they post-trained memory into model weights using the same LoCoMo conversations the benchmark tests. The score therefore measures parametric memorization or recall on training data, not retrieval or generalization. Model, judge, question count and categories are not disclosed. They propose 'LoCoMo-Δ', which would hold conversations out of training.",
+   "primary_url": "https://dev.to/jon_at_backboardio/we-hit-9995-on-the-locomo-memory-benchmark-heres-the-catch-and-why-it-still-matters-3and"
+  },
+  {
+   "system": "Hindsight (Vectorize, arXiv 2512.12818)",
+   "verdict": "corrected",
+   "claim_as_reported": "OSS-20B 83.18, OSS-120B 85.67, Gemini-3 89.61 (as labeled 86.17/70.83/95.12/83.80); judge GPT-OSS-120B; baselines copied from Backboard; per-question artifacts via viewer",
+   "correct_statement": "Table 4 numbers are confirmed. The Mem0-paper rotation reproduces the overalls: Gemini-3 = 243/282 + 269/321 + 68/96 + 800/841 = 1380/1540 = 89.61; OSS-20B 83.18; OSS-120B 85.68 vs printed 85.67. The Gemini-3 row changes only the answer model; retrieval and judging use GPT-OSS-120B. The paper states Backboard's numbers 'could not be independently reproduced' and that other baselines are 'as claimed' on the Backboard page. Correction on artifacts: the hindsight-benchmarks repo has no license file, and its results/ directory contains only leaderboard/{embeddings,llm,reranker}. The locomo.json.gz named in its README is not present, so I found no committed per-question LoCoMo artifacts. The Hindsight core repo is MIT. LongMemEval-S (500): Gemini-3 91.4, OSS-120B 89.0, OSS-20B 83.6, same judge.",
+   "primary_url": "https://arxiv.org/abs/2512.12818"
+  },
+  {
+   "system": "MIRIX (arXiv 2507.07957)",
+   "verdict": "confirmed",
+   "claim_as_reported": "85.38 (labeled 85.11/83.70/65.62/88.39); FC 87.52, Zep 79.09, LangMem 78.05, Mem0 62.47, RAG-500 51.62; labels sequential",
+   "correct_statement": "Confirmed. Reader gpt-4.1-mini, judge GPT-4.1, adversarial excluded 'following Mem0'. Baselines were run once with Mem0's code; MIRIX and full-context are averaged over 3 runs. Sequential-label arithmetic (Single=cat1, Multi=cat2, Open=cat3, Temporal=cat4) gives MIRIX 85.39 and FC 87.51, matching the printed 85.38 and 87.52. MIRIX's 'Temporal 88.39' is therefore the 841-question single-hop category. Full-context beats MIRIX. Repo Apache-2.0.",
+   "primary_url": "https://arxiv.org/html/2507.07957"
+  },
+  {
+   "system": "Nemori (arXiv 2508.03341)",
+   "verdict": "confirmed",
+   "claim_as_reported": "gpt-4.1-mini: Nemori 80.8 vs FC 80.6 ...; gpt-4o-mini: 73.0 vs 72.3; judge gpt-4o-mini; 1,540 Q; 2,745 vs 23,653 tokens",
+   "correct_statement": "Confirmed. LLM-judge (gpt-4o-mini judge) on 10 dialogues / 1,540 questions. gpt-4.1-mini: Nemori 80.8 (F1 52.1) vs full-context 80.6 (F1 53.3, higher than Nemori), LangMem 73.4, Mem0 66.3, Zep 61.6, A-Mem 61.4, MemoryOS 60.6, RAG-4096 32.9. gpt-4o-mini: Nemori 73.0 vs FC 72.3. Efficiency (gpt-4o-mini): Nemori 2,745 tokens, total latency 3,053 ms; FC 23,653 tokens, 5,806 ms. Code MIT (nemori-ai/nemori). Per-category mapping not verified.",
+   "primary_url": "https://arxiv.org/html/2508.03341"
+  },
+  {
+   "system": "LightMem (arXiv 2510.18866 v4, Feb 28 2026)",
+   "verdict": "confirmed",
+   "claim_as_reported": "GPT-4o-mini LightMem 72.99 vs FullText 71.83; 85.19k tokens, 29.83 calls, 815 s; Qwen 72.60 vs 74.87",
+   "correct_statement": "Confirmed. 72.99 is the best row, LightMem(r=0.8, th=768): 85.19k total tokens, 29.83 API calls, 815.32 s. Other rows: (0.7, 512) 71.95; (0.7, 768) 70.26. Judge GPT-4o-mini. On the Qwen3-30B backbone, LightMem 72.60 is below FullText 74.87. Whether category 5 was excluded is not verified. Code MIT.",
+   "primary_url": "https://arxiv.org/html/2510.18866"
+  },
+  {
+   "system": "A-Mem (arXiv 2502.12110)",
+   "verdict": "confirmed",
+   "claim_as_reported": "F1 numbers relabeled across versions; v1 Single/Multi/Temporal/Open/Adv; later code mapping",
+   "correct_statement": "Confirmed. v1 header order is Single Hop, Multi Hop, Temporal, Open Domain, Adversarial, with the LoCoMo row 25.02/18.41/12.04/40.36/69.23. v11 (Oct 8, 2025) prints the same numbers under Multi Hop, Temporal, Open Domain, Single Hop, Adversarial (code order). The Mem0 paper's Table 1 shows the same row under a third labeling (Single 25.02, Multi 12.04, Open 40.36, Temporal 18.41). The metric is token F1 / BLEU-1 including adversarial, not an LLM judge. Code MIT.",
+   "primary_url": "https://arxiv.org/html/2502.12110"
+  },
+  {
+   "system": "MemMachine v0.2 (arXiv 2604.04853)",
+   "verdict": "confirmed",
+   "claim_as_reported": "gpt-4.1-mini agent 0.9169 (0.9512/0.8830/0.9159/0.7188), memory 0.9123; gpt-4o-mini 0.8812/0.8747; 4.20M/8.57M input tokens; judge GPT-4o-mini",
+   "correct_statement": "Confirmed (Table 10): 1,540 questions, 446 adversarial excluded, judge GPT-4o-mini. The correct code mapping reproduces 0.9169. Token clarification: 4.20M input / 43,169 output is memory mode; agent mode is 8.57M input / 93,210 output. The LongMemEval-S ablation (GPT-5 answerer: k=20 0.855 → user-prefix 0.870 → k=30 0.912 → k=50 0.890; GPT-5-mini k=100 0.930) is a separate benchmark with a GPT-4o-mini judge on 500 questions. Only Mem0 was re-run; Zep and Memobase baselines were copied. Repo Apache-2.0.",
+   "primary_url": "https://arxiv.org/html/2604.04853"
+  },
+  {
+   "system": "Cognee",
+   "verdict": "confirmed",
+   "claim_as_reported": "No official LoCoMo number",
+   "correct_statement": "Cognee's benchmarks page reports no LoCoMo result. It reports BEAM 0.79 (100K) and 0.67 (10M), rubric-based.",
+   "primary_url": "https://www.cognee.ai/ai-memory-benchmarks"
+  },
+  {
+   "system": "SeCom (ICLR 2025, arXiv 2502.05589)",
+   "verdict": "confirmed",
+   "claim_as_reported": "GPT4Score on GPT-4-generated LOCOMO QA: SeCom BM25 71.57 / MPNet 69.33 ...; official QA appendix: SeCom 84.21, turn 81.52, session 74.20, MemoChat 75.77, FC 66.28; Long-MT-Bench+ SeCom 88.81",
+   "correct_statement": "Confirmed. Table 1 uses GPT-4-generated per-session QA, not the official LoCoMo QA. Reader GPT-35-Turbo, judge GPT-4-0125 (GPT4Score on a 0-100 scale). Appendix A.5 on official LoCoMo QA (GPT-35-Turbo, MPNet): SeCom 84.21, turn-level 81.52, MemoChat 75.77, session-level 74.20, full history 66.28. With Mistral-7B the scores are 80.07 / 78.82 / 62.68 / 69.13. Category-5 handling is not stated. Denoise ablation: 69.33 → 59.87 (LOCOMO), 88.81 → 87.51 (Long-MT-Bench+). Code MIT. Not comparable to binary J accuracy.",
+   "primary_url": "https://arxiv.org/html/2502.05589v3"
+  },
+  {
+   "system": "Memanto (arXiv 2604.22085)",
+   "verdict": "corrected",
+   "claim_as_reported": "87.1 LoCoMo (78.7/70.8/92.4/85.4, Mem0 rotation); LongMemEval 89.8; code license CC BY-SA 4.0",
+   "correct_statement": "The numbers are confirmed. The memanto-evaluation README shows 78.72/70.83/92.39/85.36 → 87.08 = 222/282 + 68/96 + 777/841 + 274/321 = 1341/1540, the Mem0-paper rotation. LongMemEval is 89.8 with the Gemini-3 answerer. This is a vendor paper; the reader was upgraded from Claude Sonnet 4 to Gemini 3. License correction: CC BY-SA 4.0 is the arXiv paper's license. The github.com/moorcheh-ai/memanto-evaluation repo has no license file.",
+   "primary_url": "https://arxiv.org/abs/2604.22085"
+  },
+  {
+   "system": "MemPalace '100% LoCoMo'",
+   "verdict": "corrected",
+   "claim_as_reported": "Session-level R@10, top_k=50 plus Sonnet rerank; retracted 2026-04-14; honest rows 60.3/48.0/83.7-88.9/96.3 on 1,986 Q",
+   "correct_statement": "Confirmed in HISTORY.md (2026-04-14 entry, issue #875): the 'LoCoMo 100% R@10 with top-50 rerank' row was removed because with 19-32 sessions per conversation and top_k=50, retrieval returns every session. The same PR removed tables that mixed recall with competitors' QA accuracy, so #875 is resolved, not an ongoing mix. BENCHMARKS.md rows on all 1,986 questions (including cat 5) are unchanged: session no-rerank R@10 60.3, dialog 48.0, hybrid v5 R@5 83.7 / R@10 88.9, bge-large + Haiku rerank top-15 R@10 96.3. Metric correction: locomo_bench.compute_retrieval_recall is fractional recall of evidence IDs (sessions at session granularity), averaged per question, with empty evidence scored 1.0. It is not a binary 'any evidence session appears' hit rate. There is no QA or judge. LongMemEval: raw 96.6% R@5; held-out 98.4% R@5 on 450. Repo MIT.",
+   "primary_url": "https://github.com/MemPalace/mempalace/blob/develop/docs/HISTORY.md"
+  },
+  {
+   "system": "Engram v0.1.3 (snap-research/locomo issue #38)",
+   "verdict": "confirmed",
+   "claim_as_reported": "R@5 93.9% (1862/1982), R@10 95.0%, NDCG@5 0.894; mislabeled categories; speaker prefix 63.0 → 75.0",
+   "correct_statement": "Self-reported in open issue #38 (2026-04-17), retrieval only (no LLM, no QA): 1,982 questions including adversarial. R@5 93.9% (1862/1982, integer counts, so a per-question hit), R@10 95.0%, NDCG@5 0.894. The 'single-hop (factual)' n=282 is cat1 (multi-hop), 'contextual' n=841 is cat4 (single-hop), and 'multi-hop' n=92 is 92 of the 96 cat-3 questions. Speaker-name injection lifted that 'multi-hop' bucket from 63.0 to 75.0. Whether a hit requires all or any evidence turns is not defined. Not comparable to QA accuracy.",
+   "primary_url": "https://github.com/snap-research/locomo/issues/38"
+  },
+  {
+   "system": "Memori (arXiv 2603.19935)",
+   "verdict": "corrected",
+   "claim_as_reported": "81.95 on 1,529 dedup questions (87.87/72.70/63.54/80.37), code mapping; baselines copied from MIRIX",
+   "correct_statement": "Mostly confirmed. Reader and judge are GPT-4.1-mini; 1,294 tokens/query. Category values match the code mapping: multi 205/282 = 72.70, open 61/96 = 63.54, temporal 258/321 = 80.37. The overall 81.95 = 1253/1529 implies single-hop 729/830 = 87.83, but the printed single-hop 87.87 equals 739/841. The table is therefore internally inconsistent by one denominator. Baselines are attributed to 'Du et al. (2025)'. They are identical to MIRIX's Table 2 values (Zep 79.09, LangMem 78.05, Mem0 62.47, FC 87.52), which use sequential, misaligned labels. Overall comparisons are valid; per-category comparisons are cross-mapped.",
+   "primary_url": "https://arxiv.org/html/2603.19935"
+  },
+  {
+   "system": "memU",
+   "verdict": "unverifiable",
+   "claim_as_reported": "92.09% historical",
+   "correct_statement": "The memU page says an earlier version 'achieved 92.09% on LoCoMo' and keeps it as a historical benchmark that 'should not be read as a benchmark of the current architecture'. No reader, judge, category subset, denominator or artifacts are given.",
+   "primary_url": "https://memu.pro/benchmark"
+  },
+  {
+   "system": "Continua AI 'LoCoMo Fair Fight' (Apr 9 2026)",
+   "verdict": "confirmed",
+   "claim_as_reported": "74.4% with GPT-4o-mini; 84.5% with GPT-4.1-mini, same context and judge",
+   "correct_statement": "Confirmed. 74.4% on 1,540 cat 1-4 questions under Mem0's exact prompts and models (GPT-4o-mini answerer and judge, text-embedding-3-small), single run. The 84.5% is a 'preliminary run' that swaps only the answer model to GPT-4.1-mini, keeping the same retrieved context and judge. No code link.",
+   "primary_url": "https://blog.continua.ai/p/the-locomo-fair-fight"
+  },
+  {
+   "system": "LoCoMo-Refined (mem-eval-suite)",
+   "verdict": "confirmed",
+   "claim_as_reported": "337 revised, 1,382 Q, Qwen3-14B judge 86.33% vs 43.67% agreement; MemoraX 82.65, MemOS 63.60, MemPalace 58.68, EverMemOS 58.25, Mem0 48.91; CC BY-NC",
+   "correct_statement": "Confirmed from the README. 1,382 questions; 337 samples revised with AI screening plus 5 human annotators. Official judge Qwen/Qwen3-14B. Human agreement 86.33% (refined judge) vs 43.67% (original). The rescored numbers above were obtained by rescoring 'the same system predictions'; where those predictions came from is not verified. LICENSE.txt is CC BY-NC 4.0 (API shows NOASSERTION). This is a third-party derived benchmark, not LoCoMo10.",
+   "primary_url": "https://github.com/mem-eval-suite/LoCoMo_refined"
+  },
+  {
+   "system": "Synthius-Mem (arXiv 2604.11563)",
+   "verdict": "corrected",
+   "claim_as_reported": "94.4% memory accuracy; 99.6% adversarial robustness; 1,813 questions",
+   "correct_statement": "The abstract confirms 94.4% accuracy and 1,813 questions over 10 LoCoMo conversations. Adversarial robustness (refusing questions about facts never disclosed) is 99.55%, rounded to 99.6. The 'exceeds human-level' claim compares an LLM-judged accuracy with the LoCoMo paper's human F1 of 87.9, a different metric. The 1,813 denominator matches neither 1,540 nor 1,986. Reader, judge and category composition are unverifiable (arXiv HTML returned 404).",
+   "primary_url": "https://arxiv.org/abs/2604.11563"
+  },
+  {
+   "system": "SmartSearch (arXiv 2603.15599)",
+   "verdict": "confirmed",
+   "claim_as_reported": "LoCoMo 91.9% at 3,141 tokens vs FC 26,792; recall 98.6%, 22.5% survives truncation, gold rank 195 → 8; LongMemEval-S 88.4% at 3,392",
+   "correct_statement": "Confirmed. 91.9% is under the MemOS protocol (gpt-4o-mini answerer and judge, binary J, 1,540). The paper also reports 93.5% under the EverMemOS protocol (gpt-4.1-mini, 7-step CoT; FC 20,281 tokens) and warns that the two protocols are not comparable. Pool recall 98.6%. 22.5% = passage-level gold annotations ranked within the token budget without a reranker. Mean gold rank is 195 → 8 with a cross-encoder on LoCoMo and 47 → 2 on LongMemEval-S. LongMemEval-S: 88.4% index-free at 3,392 tokens (gpt-4.1-mini answerer, gpt-4o-mini judge, 500). Latency about 650 ms on CPU. Paper CC BY 4.0; no code URL found.",
+   "primary_url": "https://arxiv.org/html/2603.15599"
+  },
+  {
+   "system": "Training-Free Lexical-Dense Fusion (Lysenstøen, arXiv 2606.04194)",
+   "verdict": "corrected",
+   "claim_as_reported": "e5-large-v2 BM25 0.640/0.833/0.746 ... fusion 0.752/0.894/0.829; rerank -6.88 pp; code CC BY 4.0",
+   "correct_statement": "The numbers are confirmed. Retrieval only, with session-level gold, on 1,978 LoCoMo QA including category 5. Fusion Hit@1 0.752, R@5 0.894, NDCG@5 0.829; BM25 0.640/0.833/0.746; RRF about 0.718. Per-category BM25 → fusion Hit@1: multi-hop (n=281) 0.434 → 0.609, temporal (321) 0.583 → 0.745, adversarial (446) 0.726 → 0.796. Cross-encoder rerank of the fused top-10: 0.701 → 0.633 (-6.88 pp, 95% CI [-9.34, -4.34]), from a conversation-cluster bootstrap with 4,000 resamples. LongMemEval-S uses a 150-question subset where fusion is not significant vs BM25. License correction: the opsem repo LICENSE is MIT for code, and the paper is CC BY 4.0.",
+   "primary_url": "https://github.com/Chrislysen/opsem"
+  },
+  {
+   "system": "LazyMem (arXiv 2607.22690)",
+   "verdict": "confirmed",
+   "claim_as_reported": "All@50 and accuracy by radius; RAG Top20 0.71 / Top50 0.75; LazyMem-4B 0.85 at 213 tokens; 32B 0.93 at 1,041; 100 test LongMemEval, 314 LoCoMo",
+   "correct_statement": "Confirmed (Table 2 and main table). All@50 = fraction of questions whose complete gold evidence is covered after adding ±w neighbour turns to the top-50 messages. LongMemEval w=0-3: 0.950/0.970/0.980/0.980 (accuracy 0.77/0.82/0.85/0.85). LoCoMo: 0.781/0.847/0.889/0.892 (accuracy 0.63/0.64/0.68/0.69). The LongMemEval test split is its own 100 of 500 (360/40/100 split); S vs M and original vs cleaned are not stated. LoCoMo uses cats 1-4 from the last two conversations (314 questions). Reader Qwen3-32B (thinking), judge DeepSeek-V4-Pro. The repo README says the license is 'to be added'.",
+   "primary_url": "https://arxiv.org/abs/2607.22690"
+  },
+  {
+   "system": "CueMem (arXiv 2609.12354)",
+   "verdict": "unverifiable",
+   "claim_as_reported": "81.1% with turn graph vs 71.4% without; main table 84.07",
+   "correct_statement": "The paper exists (submitted 2026-09-11) and its abstract gives no numbers. The HTML extraction gives LoCoMo overall 84.07 with Llama-3.3-70B-Instruct on 1,540 questions and an ablation of 81.1 → 71.4. The per-category columns appear garbled, and 81.10 also appears as a category value, so the inconsistency cannot be resolved without the page image. The judge is reported as the same Llama model (self-judging). No code found.",
+   "primary_url": "https://arxiv.org/abs/2609.12354"
+  },
+  {
+   "system": "Entity-Memory Graph Retrieval (Sun, arXiv 2608.27925)",
+   "verdict": "corrected",
+   "claim_as_reported": "Recall +4.81/+5.57/+4.74/+3.62 (k=25: 84.48 vs 79.75); F1 CIs include zero; license not stated",
+   "correct_statement": "The abstract confirms official LoCoMo evidence recall at top-k 25 rises from 79.7468% to 84.4842% on 1,986 questions, and that no matched cutoff supports a final-answer F1 difference (GPT-3.5 reader). The per-k deltas and CIs were not verified from tables. License correction: github.com/Sun668/em_graph_memory has an MIT LICENSE file (the API shows NOASSERTION).",
+   "primary_url": "https://arxiv.org/abs/2608.27925"
+  },
+  {
+   "system": "EMem / EMem-G (arXiv 2511.17208)",
+   "verdict": "corrected",
+   "claim_as_reported": "LongMemEval_S EMem-G 77.9, EMem 76.0; LoCoMo 0.780 J (F1 0.483); n=470; judge gpt-4o-mini, 3 runs",
+   "correct_statement": "Confirmed with reader attribution. 77.9 (EMem-G) and 76.0 (EMem) are gpt-4o-mini-reader numbers on 470 LongMemEval_S questions (abstention excluded). With gpt-4.1-mini they are 84.9 and 83.0. LoCoMo 0.780 J (F1 0.483, about 738 tokens) is gpt-4o-mini; gpt-4.1-mini gives 0.842. Judge gpt-4o-mini, 3 runs. In EMem's table, Nemori scores 0.744 (vs 73.0 in Nemori's own paper). Code MIT.",
+   "primary_url": "https://arxiv.org/html/2511.17208"
+  },
+  {
+   "system": "Fidelity Before Structure (arXiv 2601.00821)",
+   "verdict": "confirmed",
+   "claim_as_reported": "LoCoMo cats 1-3: chunks 43.9 vs artifacts 28.0; LongMemEval-S 67.4 vs 45.4",
+   "correct_statement": "The abstract (v4, 2026-07-22) confirms verbatim chunks beat extracted artifacts by 15.9 points on LoCoMo (43.9 vs 28.0) and 22.0 on LongMemEval-S (67.4 vs 45.4), with the model, retriever, reranker and judge held fixed. The sub-category, cost and judge-agreement numbers were not re-verified. Code in tao-hpu/cog-canvas (MIT).",
+   "primary_url": "https://arxiv.org/abs/2601.00821"
+  },
+  {
+   "system": "ConvMemory v2 (arXiv 2606.10842)",
+   "verdict": "confirmed",
+   "claim_as_reported": "MRR 0.5824 → 0.6560; Hit@1 0.4440 → 0.5474; Recall@10 fixed",
+   "correct_statement": "The abstract confirms a fine-tuned MiniLM cross-encoder that reranks only v1's top-10, over 4,955 LoCoMo test rows across 5 seeds. Retrieval only. The code is at github.com/pth2002/ConvMemory; the 'tag v0.5.0' and the Recall@10 = 0.7798 value were not verified.",
+   "primary_url": "https://arxiv.org/abs/2606.10842"
+  },
+  {
+   "system": "PPRO (arXiv 2607.00017)",
+   "verdict": "unverifiable",
+   "claim_as_reported": "LoCoMo Qwen2.5-7B F1 43.20 / 41.32 / 34.34",
+   "correct_statement": "The paper exists ('Learning User-Aware Recall', v2 2026-07-02), but the abstract gives no numbers and no code link. The F1 values and the 1,307-question split were not verified.",
+   "primary_url": "https://arxiv.org/abs/2607.00017"
+  },
+  {
+   "system": "Nano-Memory / Back to Basics (arXiv 2604.11628)",
+   "verdict": "unverifiable",
+   "claim_as_reported": "LoCoMo Recall@3 69.39, F1 22.66",
+   "correct_statement": "The paper exists (2026-04-13; Turn Isolation Retrieval with max-activation plus Query-Driven Pruning), but the abstract has no numbers. The repo yuqian2003/Nano-Memory has no license file.",
+   "primary_url": "https://arxiv.org/abs/2604.11628"
+  },
+  {
+   "system": "MemReranker (arXiv 2605.06132)",
+   "verdict": "unverifiable",
+   "claim_as_reported": "LoCoMo MAP bge-reranker-v2-m3 0.6708 vs MemReranker-0.6B 0.7150",
+   "correct_statement": "The abstract confirms only that the 0.6B model outperforms BGE-Reranker and the 4B model reaches 0.737 MAP. The LoCoMo-specific MAP values and the category-mislabel observation were not verified.",
+   "primary_url": "https://arxiv.org/abs/2605.06132"
+  },
+  {
+   "system": "TReMu (ACL Findings 2025, arXiv 2502.01630)",
+   "verdict": "confirmed",
+   "claim_as_reported": "GPT-4o 29.83 → 77.67",
+   "correct_statement": "The abstract confirms 29.83 (GPT-4o, standard prompting) → 77.67 (TReMu) on a new multiple-choice temporal-QA benchmark built from augmented LoCoMo dialogues. This is not LoCoMo QA; n and code were not verified.",
+   "primary_url": "https://arxiv.org/abs/2502.01630"
+  },
+  {
+   "system": "LoCoMo official task_eval/evaluation.py and evaluate_qa.py",
+   "verdict": "confirmed",
+   "claim_as_reported": "Normalization + Porter-stemmed token F1; cat1 comma-split multi-answer F1; cat3 truncated at ';'; cat5 keyword match; recall = fraction of evidence dia_ids; empty evidence = 1; defaults top-k 5, contriever",
+   "correct_statement": "Confirmed in code. normalize_answer removes commas, lowercases, strips punctuation, removes a/an/the/and, and collapses whitespace; f1_score Porter-stems tokens. Cat 1 uses f1(), which splits both sides on ',' and averages over gold parts the max F1 against any predicted part. Cat 3 gold is split on ';'[0]. Cat 5 scores 1 if the output contains 'no information available' or 'not mentioned'. Recall is fractional over evidence ids, at session level when retrieved ids start with 'S', and is 1 when evidence is empty. evaluate_qa.py defaults: --top-k 5, --retriever contriever. has_answer/eval_recall is answer-string containment, not evidence recall. gpt_utils cat-5 multiple choice uses qa['answer'] (the audit reports it is missing on 444/446 cat-5 items; I did not recount).",
+   "primary_url": "https://github.com/snap-research/locomo/blob/main/task_eval/evaluation.py"
+  },
+  {
+   "system": "mem0 legacy evaluation/ harness",
+   "verdict": "confirmed",
+   "claim_as_reported": "Generous ACCURACY_PROMPT, gpt-4o-mini temperature 0, cat 5 skipped, unstemmed F1; retired 2026-06-13 (9315e30)",
+   "correct_statement": "Confirmed at commit aae5989: llm_judge.py contains 'be generous ... as long as it touches on the same topic', model gpt-4o-mini, temperature 0.0, and '# Skip category 5'. utils.simple_tokenize lowercases and splits without stemming. Commit 9315e30 (2026-06-13) is 'retire in-repo evaluation/ in favor of mem0ai/memory-benchmarks (#5520)'. Issue #3944 (Mem0 platform about 0.20 LLM score; memories dated January 2026) was closed 2026-03-27 as completed, with no fix visible in the issue. Repo Apache-2.0.",
+   "primary_url": "https://github.com/mem0ai/mem0/blob/aae5989e78a6188b3b047c104d960c9ad0927e75/evaluation/metrics/llm_judge.py"
+  }
+ ]
+}
