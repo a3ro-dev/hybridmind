@@ -36,6 +36,9 @@ DEFAULT_DATASET = (
 )
 DEFAULT_OUTPUT = PROJECT_ROOT / "benchmarks" / "results" / "offline_locomo_bm25s.json"
 K_VALUES = (1, 3, 5, 10, 25, 50, 100)
+# Official LoCoMo category IDs (snap-research task_eval code and mem0 agree; the data confirms:
+# cat 1 is 98% multi-evidence, cat 4 averages 1.07 gold turns, cat 3 asks 'would ... likely').
+CATEGORY = {1: "multi-hop", 2: "temporal", 3: "open-domain", 4: "single-hop", 5: "adversarial"}
 _SESSION_KEY = re.compile(r"^session_(\d+)$")
 _DIA_ID = re.compile(r"D\d+:\d+")
 _TOKEN = re.compile(r"\b\w+\b", re.UNICODE)

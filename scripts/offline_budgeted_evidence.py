@@ -31,10 +31,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from scripts.offline_locomo_sparse_baseline import CATEGORY  # noqa: E402
 from storage.bm25_index import BM25SBackend  # noqa: E402
 
 DATASET = PROJECT_ROOT / "memorybench" / "data" / "benchmarks" / "locomo" / "locomo10.json"
-CATEGORY = {1: "multi-hop", 2: "temporal", 3: "open-domain", 4: "single-hop", 5: "adversarial"}
 _SESSION = re.compile(r"^session_(\d+)$")
 _DIA = re.compile(r"D\d+:\d+")
 _TOK = re.compile(r"\w+|[^\w\s]")  # declared token proxy (no tokenizer download)

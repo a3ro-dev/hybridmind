@@ -92,12 +92,12 @@ def test_equal_candidate_budgets_exact_ids_and_zero_calls():
             assert condition_row["candidate_budget"] == 4
             assert len(condition_row["ranking"]) == 4
             assert all(entry["evidence_id"].startswith("locomo:") for entry in condition_row["ranking"])
-    assert report["rows"][0]["category"] == "multi-hop"
+    assert report["rows"][0]["category"] == "open-domain"  # official LoCoMo id 3
     assert report["graph_index"]["all_shams_degree_preserving"] is True
     assert 0.0 <= report["graph_index"]["mean_sham_retained_term_turn_fraction"] < 1.0
     category_deltas = report["paired_deltas"]["held_out_by_category"]
-    assert "multi-hop" in category_deltas
-    assert "graph_ppr_vs_bm25s" in category_deltas["multi-hop"]
+    assert "open-domain" in category_deltas
+    assert "graph_ppr_vs_bm25s" in category_deltas["open-domain"]
 
 
 def test_bm25_zero_hit_is_deterministically_padded_to_budget():

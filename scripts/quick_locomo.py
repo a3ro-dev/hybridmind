@@ -78,7 +78,7 @@ def main():
     for qa in qas:
         q = qa["question"]
         ans = qa.get("answer") or qa.get("adversarial_answer", "")
-        cat = {1: "single-hop", 2: "temporal", 3: "multi-hop"}.get(qa.get("category", 0), "?")
+        cat = {1: "multi-hop", 2: "temporal", 3: "open-domain", 4: "single-hop", 5: "adversarial"}.get(qa.get("category", 0), "?")
         print(f"\n[{cat}] Q: {q}")
         print(f"  Gold answer: {str(ans)[:120]}")
         
