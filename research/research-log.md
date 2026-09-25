@@ -18,3 +18,18 @@ Chronological decisions. Newest last.
 - Protocol locked in b0379e2 before running. Result: ±1 neighbour window +0.08–0.11 complete
   coverage at equal budget; beats 2× budget top-k. Session-diversity cap refuted. Multi-hop
   (cross-session aggregation) complete coverage 0.12–0.29 under every unit: the open failure.
+
+## 2026-09-25 — audit results, E2, E3
+
+- Audit workflow (6 agents): every published number recomputes, but all offline LoCoMo scripts
+  use a permuted category map (1=single-hop, 3=multi-hop, 4=world-knowledge); the "MiniLM hurts
+  multi-hop −0.091" and "PPR multi-hop Δ0" findings are really open-domain (cat 3, n≈42).
+  Real multi-hop improved with MiniLM (+0.067). Degree sham ≈ random. 1,977 includes 446
+  adversarial questions. No production context assembly/answer path; /nodes neighbour edges
+  start from sentence chunks (i+1 unreachable for 90.4% of turns); no LLM judge; adversarial
+  scored against trap answer; no authorized live budget.
+- E2 (diagnostic): dataset observation keys +0.05–0.07 multi-hop complete coverage; reveals a
+  depth/breadth budget conflict.
+- E3: neighbour score propagation λ=0.7 (dev-tuned) — held-out narrow fail on production keys at
+  2k (tie), pass with fact keys; wins at other budgets. Neighbourhood = mechanism; propagation =
+  refinement.
