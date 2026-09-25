@@ -134,3 +134,20 @@ store provider-reported usage.
 
 **Reversal notes.** Swap the judge only with a stated meta-evaluation; a real
 tokenizer can replace the proxy if budgets are re-derived for all arms.
+
+## 2026-09-25 — Answer-level research runs use `scripts/budgeted_answer_eval.py`, not memorybench
+
+**Context.** The owner asked to use memorybench. Its local copy (AI SDK 5) calls
+the Responses API (Z.AI serves chat completions only), passes `maxTokens`
+(ignored in v5, so outputs are uncapped), re-prompts every abstention into a
+quoted answer (defeats `_abs`/adversarial scoring), reports LLM-judged hit rates
+as "recall", never routes LongMemEval `_abs` ids to the abstention judge, uses a
+permuted LoCoMo category map, and paraphrases the official judge prompts into
+JSON output. The owner then approved building a better harness.
+
+**Decision.** Research answer runs use the repo harness: official LongMemEval
+reader/judge prompts verbatim, exact evidence IDs, plan-bound reader and judge
+stages with cumulative per-plan spend, failure receipts, resume.
+
+**Reversal notes.** memorybench remains useful for cross-provider demos. To use
+it for research numbers, first fix the six issues above (and upstream them).
