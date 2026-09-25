@@ -81,7 +81,9 @@ def load(dataset: Path) -> list[dict]:
             gold = sorted({g for e in raw for g in _DIA.findall(e)})
             if not gold or not set(gold) <= ids:
                 continue
-            qs.append({"q": str(qa["question"]), "gold": gold, "cat": CATEGORY[qa["category"]]})
+            qs.append({"qid": f"{sid}:{len(qs)}", "q": str(qa["question"]), "gold": gold, "cat": CATEGORY[qa["category"]],
+                       "answer": str(qa.get("answer", "")), "abstention": qa["category"] == 5,
+                       "question_date": turns[-1]["date"]})  # LoCoMo has none: ask at conversation end
         convs.append({"sid": sid, "turns": turns, "qs": qs, "n_qa": len(item["qa"])})
     return convs
 
@@ -89,8 +91,9 @@ def load(dataset: Path) -> list[dict]:
 def load_longmemeval(dataset: Path) -> list[dict]:
     """One haystack per question; gold = has_answer turns. Streams to keep RAM low.
 
-    Abstention (`_abs`) questions and questions without any has_answer turn have no
-    evidence to cover and are counted, not scored (as in the official retrieval eval).
+    Every question is returned (answer evaluation needs all 500). Abstention (`_abs`)
+    questions and questions without a has_answer turn carry empty gold, so coverage
+    counts but does not score them (as in the official retrieval eval).
     """
     import ijson
 
@@ -98,9 +101,12 @@ def load_longmemeval(dataset: Path) -> list[dict]:
     with dataset.open("rb") as handle:
         for item in ijson.items(handle, "item"):
             qid = str(item["question_id"])
-            turns, gold = [], []
+            turns, gold, answer_sessions = [], [], set()
+            gold_ids = set(item.get("answer_session_ids") or [])
             sessions = zip(item["haystack_session_ids"], item["haystack_dates"], item["haystack_sessions"])
             for s, (sess_id, date, messages) in enumerate(sessions, start=1):
+                if sess_id in gold_ids:
+                    answer_sessions.add(s)
                 for pos, m in enumerate(messages):
                     text = str(m.get("content") or "").strip()
                     if not text:
@@ -110,10 +116,10 @@ def load_longmemeval(dataset: Path) -> list[dict]:
                                   "speaker": str(m.get("role") or ""), "text": text, "caption": "", "obs": []})
                     if m.get("has_answer") is True:
                         gold.append(tid)
-            qs = []
-            if gold and not qid.endswith("_abs"):
-                qs.append({"q": str(item["question"]), "gold": gold, "cat": str(item["question_type"]),
-                           "question_date": str(item.get("question_date") or "")})
+            abstention = qid.endswith("_abs")
+            qs = [{"qid": qid, "q": str(item["question"]), "gold": [] if abstention else gold,
+                   "cat": str(item["question_type"]), "answer": str(item["answer"]), "abstention": abstention,
+                   "question_date": str(item.get("question_date") or ""), "answer_sessions": sorted(answer_sessions)}]
             convs.append({"sid": qid, "turns": turns, "qs": qs, "n_qa": 1})
     return convs
 
@@ -258,6 +264,8 @@ def run(args) -> dict:
         for conv in convs:
             c = Conv(conv, rep)
             for qi, qa in enumerate(conv["qs"]):
+                if not qa["gold"]:
+                    continue  # nothing to cover (abstention / no has_answer turn)
                 gold = {c.by_id[g] for g in qa["gold"]}
                 for st in strategies:
                     units = strategy_units(st, c, qa["q"])
@@ -299,7 +307,7 @@ def run(args) -> dict:
         "dataset": {"path": os.path.relpath(args.dataset.resolve(), PROJECT_ROOT),
                     "sha256": hashlib.sha256(args.dataset.read_bytes()).hexdigest(),
                     "questions_total": sum(c["n_qa"] for c in convs),
-                    "questions_scored": sum(len(c["qs"]) for c in convs),
+                    "questions_scored": sum(bool(q["gold"]) for c in convs for q in c["qs"]),
                     "conversations": [c["sid"] for c in convs]},
         "token_proxy": _TOK.pattern,
         "render_format": "(session date) speaker: text [shares image: caption]",
