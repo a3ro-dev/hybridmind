@@ -162,72 +162,102 @@ def planned_usage(rows: list[dict]) -> dict:
             "reader_output_tokens": len(rows) * (READER_MAX_TOKENS + JUDGE_MAX_TOKENS)}
 
 
-def execute(args, rows: list[dict]) -> int:
+def _ledger_ok_ids(path: Path) -> set[str]:
+    if not path.exists():
+        return set()
+    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    return {r["question_id"] for r in rows if r.get("status") == "ok"}
+
+
+def run_stage(args, rows: list[dict]) -> int:
+    """Reader or judge pass, bound to its own validated plan; stops at the ceiling or first failure."""
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+
     from engine import llm_client
     from engine.resource_accounting import load_and_validate_live_plan
 
     plan, gate = load_and_validate_live_plan(args.plan)
-    provider = {"zai": "zai", "research_proxy": "research_proxy"}[args.provider]
-    if provider not in plan["providers"]:
-        raise SystemExit(f"plan does not admit provider {provider}")
-    ceiling, used = plan["usage_ceiling"], {"llm_calls": 0, "reader_input_tokens": 0, "reader_output_tokens": 0}
-    done = set()
-    if args.output.exists():  # resume: keep finished rows, never re-spend on them
-        done = {json.loads(line)["question_id"] for line in args.output.read_text(encoding="utf-8").splitlines()
-                if line.strip() and json.loads(line)["status"] == "ok"}
+    if "zai" not in plan["providers"]:
+        raise SystemExit("plan does not admit the zai provider")
+    ceiling = plan["usage_ceiling"]
+    if args.stage == "judge":  # judge the reader's ok answers only
+        answers = {}
+        for line in args.answers.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                r = json.loads(line)
+                if r.get("status") == "ok":
+                    answers[r["question_id"]] = r
+        rows = [dict(answers[r["question_id"]], judge_template=r["judge_template"]) for r in rows
+                if r["question_id"] in answers]
+    done = _ledger_ok_ids(args.output)
+    todo = [r for r in rows if r["question_id"] not in done]
+    model = args.model if args.stage == "reader" else args.judge_model
+    max_tokens = READER_MAX_TOKENS if args.stage == "reader" else JUDGE_MAX_TOKENS
     manifest = {
-        "schema": "hybridmind.budgeted_answer_eval.v1", "arm": args.arm, "kind": args.kind,
+        "schema": "hybridmind.budgeted_answer_eval.v2", "stage": args.stage, "arm": args.arm, "kind": args.kind,
         "dataset_sha256": hashlib.sha256(args.dataset.read_bytes()).hexdigest(),
         "plan_sha256": hashlib.sha256(args.plan.read_bytes()).hexdigest(), "gate": vars(gate),
-        "provider": provider, "reader_model_override": args.model, "prompt_version": PROMPT_VERSION,
-        "reader": {"temperature": 0, "max_tokens": READER_MAX_TOKENS},
-        "judge": {"temperature": 0, "max_tokens": JUDGE_MAX_TOKENS, "label": "'yes' in response.lower()"},
-        "started_at": datetime.now(timezone.utc).isoformat(), "questions": len(rows), "resumed_ok": len(done),
+        "provider": "zai", "model": model, "thinking": "disabled", "temperature": 0, "max_tokens": max_tokens,
+        "prompt_version": PROMPT_VERSION, "judge_label": "yes-substring (official)",
+        "answers_sha256": hashlib.sha256(args.answers.read_bytes()).hexdigest() if args.stage == "judge" else None,
+        "workers": args.workers, "questions": len(rows), "resumed_ok": len(done),
+        "started_at": datetime.now(timezone.utc).isoformat(),
     }
     args.output.with_suffix(".manifest.json").write_text(json.dumps(manifest, indent=1), encoding="utf-8")
-    status = "completed"
-    with args.output.open("a", encoding="utf-8", newline="\n") as ledger:
-        for row in rows:
-            if row["question_id"] in done:
-                continue
-            need = {"llm_calls": 2, "reader_input_tokens": row["reader_prompt_proxy_tokens"] * 2 + READER_MAX_TOKENS,
-                    "reader_output_tokens": READER_MAX_TOKENS + JUDGE_MAX_TOKENS}
+    # Spend is cumulative per plan across invocations (one arm per run must not reset the ceiling).
+    spent_path = args.plan.with_suffix(".spent.json")
+    used = {"llm_calls": 0, "reader_input_tokens": 0, "reader_output_tokens": 0}
+    if spent_path.exists():
+        used.update(json.loads(spent_path.read_text(encoding="utf-8")))
+    lock = threading.Lock()
+    state = {"status": "completed"}
+    ledger = args.output.open("a", encoding="utf-8", newline="\n")
+
+    def one(row: dict) -> None:
+        if args.stage == "reader":
+            prompt = row["reader_prompt"]
+        else:
+            prompt = row["judge_template"].replace(RESPONSE_SLOT, row["reader_answer"], 1)
+        need = {"llm_calls": 1, "reader_input_tokens": 2 * ntok(prompt), "reader_output_tokens": max_tokens}
+        with lock:
+            if state["status"] != "completed":
+                return
             if any(used[k] + need[k] > ceiling[k] for k in need):
-                status = "budget_exhausted"
-                break
-            record = {k: v for k, v in row.items() if k != "reader_prompt"}
-            record["reader_prompt_sha256"] = hashlib.sha256(row["reader_prompt"].encode()).hexdigest()
-            t0 = time.perf_counter()
-            reader_usage: dict = {}
-            answer = llm_client.chat_completion(
-                [{"role": "user", "content": row["reader_prompt"]}], max_tokens=READER_MAX_TOKENS,
-                temperature=0.0, model=args.model, preferred=provider, allow_fallback=False, usage=reader_usage)
-            used["llm_calls"] += 1
-            judge_usage: dict = {}
-            verdict = None
-            if answer is not None:
-                verdict = llm_client.chat_completion(
-                    [{"role": "user", "content": row["judge_template"].replace(RESPONSE_SLOT, answer, 1)}],
-                    max_tokens=JUDGE_MAX_TOKENS, temperature=0.0, model=args.judge_model, preferred=provider,
-                    allow_fallback=False, usage=judge_usage)
-                used["llm_calls"] += 1
-            for u in (reader_usage, judge_usage):
-                used["reader_input_tokens"] += int(u.get("prompt_tokens") or 0)
-                used["reader_output_tokens"] += int(u.get("completion_tokens") or 0)
-            record.update(reader_answer=answer, reader_usage=reader_usage, judge_raw=verdict, judge_usage=judge_usage,
-                          label=None if verdict is None else "yes" in verdict.lower(), seconds=time.perf_counter() - t0,
-                          status="ok" if verdict is not None else "provider_error")
+                state["status"] = "budget_exhausted"
+                return
+            for k in need:
+                used[k] += need[k]  # reserve; settled to provider-reported usage below
+        t0, usage = time.perf_counter(), {}
+        text = llm_client.chat_completion(
+            [{"role": "user", "content": prompt}], max_tokens=max_tokens, temperature=0.0, model=model,
+            preferred="zai", allow_fallback=False, usage=usage, zai_thinking=False)
+        record = {k: v for k, v in row.items() if k != "reader_prompt"}
+        if args.stage == "reader":
+            record["reader_prompt_sha256"] = hashlib.sha256(prompt.encode()).hexdigest()
+            record.update(reader_answer=text, reader_usage=usage)
+        else:
+            record.update(judge_raw=text, judge_usage=usage, label=None if text is None else "yes" in text.lower())
+        record.update(seconds=time.perf_counter() - t0, status="ok" if text is not None else "provider_error")
+        with lock:
+            for key, field in (("reader_input_tokens", "prompt_tokens"), ("reader_output_tokens", "completion_tokens")):
+                used[key] += int(usage.get(field) or need[key]) - need[key]
             ledger.write(json.dumps(record) + "\n")
             ledger.flush()
-            if record["status"] != "ok":
-                status = "provider_failure"
-                break
+            if record["status"] != "ok" and state["status"] == "completed":
+                state["status"] = "provider_failure"
+
+    with ThreadPoolExecutor(max_workers=args.workers) as pool:
+        list(pool.map(one, todo))
+    ledger.close()
+    spent_path.write_text(json.dumps(used), encoding="utf-8")
     body = args.output.read_bytes()
-    receipt = {"status": status, "usage": used, "ledger_sha256": hashlib.sha256(body).hexdigest(),
-               "rows": body.count(b"\n"), "finished_at": datetime.now(timezone.utc).isoformat()}
+    receipt = {"stage": args.stage, "status": state["status"], "usage": used,
+               "ledger_sha256": hashlib.sha256(body).hexdigest(), "rows": body.count(b"\n"),
+               "ok_rows": len(_ledger_ok_ids(args.output)), "finished_at": datetime.now(timezone.utc).isoformat()}
     args.output.with_suffix(".completion.json").write_text(json.dumps(receipt, indent=1), encoding="utf-8")
     print(json.dumps(receipt))
-    return 0 if status == "completed" else 3
+    return 0 if state["status"] == "completed" else 3
 
 
 def main() -> int:
@@ -237,28 +267,35 @@ def main() -> int:
     p.add_argument("--arm", required=True, help="none | oracle | full | <rep>|<strategy>|<budget>")
     p.add_argument("--sample", type=int, default=0, help="stratified deterministic subset size (0 = all)")
     p.add_argument("--sample-seed", default="20260925-answers")
+    p.add_argument("--question-ids", type=Path, help="file with one question_id per line (overrides --sample)")
     p.add_argument("--include-adversarial", action="store_true", help="LoCoMo category 5 (abstention-judged)")
-    p.add_argument("--output", type=Path, required=True, help="ledger .jsonl (dry run writes .plan-usage.json)")
+    p.add_argument("--output", type=Path, required=True, help="stage ledger .jsonl (dry run writes .plan-usage.json)")
     p.add_argument("--execute", action="store_true")
+    p.add_argument("--stage", choices=["reader", "judge"], default="reader")
+    p.add_argument("--answers", type=Path, help="reader ledger to judge (judge stage)")
     p.add_argument("--plan", type=Path)
-    p.add_argument("--provider", choices=["zai", "research_proxy"], default="zai")
-    p.add_argument("--model", default=None, help="Z.AI reader model override (proxy model comes from config)")
-    p.add_argument("--judge-model", default=None)
+    p.add_argument("--model", default="glm-4.7-flash", help="Z.AI reader model")
+    p.add_argument("--judge-model", default="glm-4.6", help="Z.AI judge model")
+    p.add_argument("--workers", type=int, default=4)
     args = p.parse_args()
     rows = build(args)
-    usage = planned_usage(rows)
+    if args.question_ids:
+        wanted = [q.strip() for q in args.question_ids.read_text(encoding="utf-8").splitlines() if q.strip()]
+        by_id = {r["question_id"]: r for r in rows}
+        rows = [by_id[q] for q in wanted if q in by_id]
     args.output.parent.mkdir(parents=True, exist_ok=True)
     if not args.execute:
-        summary = {"arm": args.arm, "questions": len(rows), "planned_usage_proxy_tokens": usage,
-                   "complete_coverage": sum(r["complete_coverage"] for r in rows) / max(1, sum(bool(r["gold_evidence_ids"]) for r in rows)),
+        with_gold = max(1, sum(bool(r["gold_evidence_ids"]) for r in rows))
+        summary = {"arm": args.arm, "questions": len(rows), "planned_usage_proxy_tokens": planned_usage(rows),
+                   "complete_coverage": sum(r["complete_coverage"] for r in rows) / with_gold,
                    "mean_context_proxy_tokens": sum(r["context_proxy_tokens"] for r in rows) / max(1, len(rows)),
                    "network_calls": 0}
         args.output.with_suffix(".plan-usage.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
         print(json.dumps(summary))
         return 0
-    if not args.plan:
-        raise SystemExit("--execute requires --plan")
-    return execute(args, rows)
+    if not args.plan or (args.stage == "judge" and not args.answers):
+        raise SystemExit("--execute requires --plan (and --answers for the judge stage)")
+    return run_stage(args, rows)
 
 
 if __name__ == "__main__":

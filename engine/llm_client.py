@@ -139,11 +139,14 @@ def chat_completion(
     allow_fallback: bool = True,
     enable_thinking: bool = False,
     usage: Optional[dict] = None,
+    zai_thinking: Optional[bool] = None,
 ) -> Optional[str]:
     """Return completion text from the first successful policy-allowed backend.
 
     If ``usage`` is a dict, it receives the serving provider, the model actually
     sent, and the provider-reported token usage (OpenAI-compatible backends).
+    ``zai_thinking`` explicitly enables/disables GLM reasoning on Z.AI; ``None``
+    keeps the provider default (tight ``max_tokens`` budgets need ``False``).
 
     ``model`` is the Z.AI model override. RunPod and research-proxy models are
     always sourced from their dedicated settings, preventing a GLM model name
@@ -183,6 +186,8 @@ def chat_completion(
                 response_format=response_format,
                 disable_qwen_thinking=False,
                 usage=usage,
+                extra=None if zai_thinking is None
+                else {"thinking": {"type": "enabled" if zai_thinking else "disabled"}},
             )
         else:
             logger.warning(
@@ -222,6 +227,7 @@ def _openai_compatible_completion(
     response_format: Optional[dict],
     disable_qwen_thinking: bool,
     usage: Optional[dict] = None,
+    extra: Optional[dict] = None,
 ) -> Optional[str]:
     payload: dict = {
         "model": model,
@@ -231,6 +237,8 @@ def _openai_compatible_completion(
     }
     if response_format:
         payload["response_format"] = response_format
+    if extra:
+        payload.update(extra)
     if disable_qwen_thinking and "qwen" in model.lower():
         payload["reasoning_effort"] = "none"
 
