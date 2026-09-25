@@ -241,6 +241,22 @@ def test_preflight_over_budget_plan_makes_zero_provider_calls(
     assert calls == []
 
 
+def test_preflight_rejects_ceiling_that_can_outspend_the_cap(offline_report, tmp_path, monkeypatch):
+    report_path, report = offline_report
+    plan = _live_plan(report_path, report)
+    plan["usage_ceiling"]["embedding_calls"] = 100  # planned cost fits; ceiling cost does not
+    plan_path = tmp_path / "ceiling-over-cap.json"
+    plan_path.write_text(json.dumps(plan), encoding="utf-8")
+    calls: list[str] = []
+    monkeypatch.setattr(
+        preflight,
+        "PROVIDER_CHECKS",
+        {"tei": ("TEI", lambda: (calls.append("tei") or True, "ok"))},
+    )
+    assert preflight.main(["--plan", str(plan_path), "--validate-only"]) == 2
+    assert calls == []
+
+
 def test_preflight_validate_only_makes_zero_calls(offline_report, tmp_path, monkeypatch):
     report_path, report = offline_report
     plan_path = tmp_path / "valid.json"

@@ -138,8 +138,12 @@ def chat_completion(
     preferred: Provider = "auto",
     allow_fallback: bool = True,
     enable_thinking: bool = False,
+    usage: Optional[dict] = None,
 ) -> Optional[str]:
     """Return completion text from the first successful policy-allowed backend.
+
+    If ``usage`` is a dict, it receives the serving provider, the model actually
+    sent, and the provider-reported token usage (OpenAI-compatible backends).
 
     ``model`` is the Z.AI model override. RunPod and research-proxy models are
     always sourced from their dedicated settings, preventing a GLM model name
@@ -178,6 +182,7 @@ def chat_completion(
                 temperature=temperature,
                 response_format=response_format,
                 disable_qwen_thinking=False,
+                usage=usage,
             )
         else:
             logger.warning(
@@ -197,6 +202,7 @@ def chat_completion(
                 temperature=temperature,
                 response_format=response_format,
                 disable_qwen_thinking=True,
+                usage=usage,
             )
 
         if content:
@@ -215,6 +221,7 @@ def _openai_compatible_completion(
     temperature: float,
     response_format: Optional[dict],
     disable_qwen_thinking: bool,
+    usage: Optional[dict] = None,
 ) -> Optional[str]:
     payload: dict = {
         "model": model,
@@ -240,7 +247,10 @@ def _openai_compatible_completion(
                     response=response,
                 )
             response.raise_for_status()
-            content = response.json()["choices"][0]["message"]["content"]
+            body = response.json()
+            if usage is not None:
+                usage.update(provider=provider, model=model, **(body.get("usage") or {}))
+            content = body["choices"][0]["message"]["content"]
             return content if isinstance(content, str) and content.strip() else None
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code if exc.response is not None else None
