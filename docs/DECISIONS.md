@@ -84,3 +84,53 @@ tree. Goal: fewer, sharper files; docs that fail loudly when they rot.
 10. **pytest.ini markers pruned** (seven declared, zero used); Makefile
     rewritten to real targets (`test`, `verify`, `compile`, `check`) after
     its benchmark target pointed at a nonexistent file for months.
+
+## 2026-09-25 — LoCoMo category IDs corrected to the official mapping
+
+**Context.** `eval_locomo_retrieval.py` and five offline scripts used
+1=single-hop, 3=multi-hop, 4=world-knowledge. The data (cat 1: 98% of
+questions cite ≥2 turns; cat 4: 1.07 turns on average; cat 3: "would …
+likely" questions) and the official snap-research `task_eval` code (also used
+by mem0) give 1=multi-hop, 2=temporal, 3=open-domain, 4=single-hop,
+5=adversarial. The permuted labels made published findings wrong: the
+"MiniLM hurts multi-hop by −0.091" and "PPR multi-hop Δ = 0" results are
+open-domain (n≈42 per split); real multi-hop improved with MiniLM (+0.067).
+
+**Decision.** One canonical `CATEGORY` in
+`scripts/offline_locomo_sparse_baseline.py`; the evaluator keeps an equal
+literal pinned by `tests/test_locomo_category_map.py`. Old artifacts are left
+byte-identical (hashes are cited); their labels are corrected by errata in
+the research docs rather than by rewriting evidence files.
+
+**Reversal notes.** Only if an authoritative LoCoMo release documents a
+different mapping; then change the one constant and the test together.
+
+## 2026-09-25 — Live plans must price their usage ceiling
+
+**Context.** `validate_live_plan` compared only *planned* usage cost to
+`max_estimated_spend_usd`; a run may legally consume up to its ceiling.
+
+**Decision.** Also reject plans whose ceiling cost exceeds the cap. Test:
+`test_preflight_rejects_ceiling_that_can_outspend_the_cap`.
+
+**Reversal notes.** None expected; plans that relied on the gap were unsafe.
+
+## 2026-09-25 — Research workspace and answer-evaluation conventions
+
+**Context.** The autoresearch workflow wants a state/log/findings workspace;
+answer evaluation needs a judge and reader protocol the repo lacked.
+
+**Decision.** (1) Workspace lives in `research/` (protocols, analyses,
+literature notes); scripts stay in `scripts/`, raw results in
+`experiments/results/`. Protocols are committed before their results.
+(2) `scripts/budgeted_answer_eval.py` uses the official LongMemEval reader
+(CoT, temperature 0, 800 tokens) and per-type judge prompts verbatim (MIT).
+LoCoMo has no official LLM judge: we apply LongMemEval's strict templates
+(temporal template for temporal, abstention template for adversarial with a
+fixed explanation) and give the reader the last session date as "Current
+Date". (3) Budgets are counted with a declared regex token proxy
+(`\w+|[^\w\s]`), because no tokenizer download was admitted; ledgers also
+store provider-reported usage.
+
+**Reversal notes.** Swap the judge only with a stated meta-evaluation; a real
+tokenizer can replace the proxy if budgets are re-derived for all arms.
