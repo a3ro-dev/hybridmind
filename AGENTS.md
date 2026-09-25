@@ -133,6 +133,7 @@ doc in its row — do not leave prose describing code that no longer exists.
 | `experiments/reports/baseline.md` | Pre-change measurement snapshot | Never edited; superseded snapshots get new files |
 | `docs/KV_CACHE_RESEARCH.md` | KV-hypothesis history and failed results | New hypothesis evidence |
 | `docs/research/*` | Research program, prior-art ledger, claim ledger | New experiments/claims (append; don't rewrite verdicts) |
+| `research/*` | Autoresearch workspace: `findings.md`, `research-log.md`, `research-state.yaml`, per-experiment `protocol.md`/`analysis.md`, priced `plans/`, `literature/` sweeps | Protocol committed before its results; findings after each experiment |
 | `docs/ADVERSARIAL_AUDIT_REMEDIATION.md` | Historical audit record | Never (frozen audit) |
 | `docs/AGENT_INTEGRATION.md` | SDK/MCP/API integration contracts | SDK/MCP/request-schema changes |
 | `cli/README.md` | CLI command surfaces | cli/* changes |
