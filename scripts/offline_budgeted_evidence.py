@@ -119,9 +119,23 @@ class Conv:
     # BM25S tie order depends on the requested k (47/1,977 LoCoMo top-10 sets
     # differ between k=10 and k=all), so ties break chronologically here.
     @functools.lru_cache(maxsize=4)
+    def scores(self, q: str) -> dict[int, float]:
+        return {self.by_id[i]: sc for i, sc in self.bm.search(q, top_k=len(self.turns))}
+
     def ranked_turns(self, q: str) -> list[int]:
-        hits = self.bm.search(q, top_k=len(self.turns))
-        return [self.by_id[i] for i, _ in sorted(hits, key=lambda h: (-h[1], self.by_id[h[0]]))]
+        sc = self.scores(q)
+        return sorted(sc, key=lambda i: (-sc[i], i))
+
+    def propagated(self, q: str, lam: float) -> list[int]:
+        """One-hop score diffusion along the conversation chain (same session only)."""
+        sc, t = self.scores(q), self.turns
+        out = {}
+        for j in range(len(t)):
+            nb = [sc.get(k, 0.0) for k in (j - 1, j + 1) if 0 <= k < len(t) and t[k]["session"] == t[j]["session"]]
+            v = max(sc.get(j, 0.0), lam * max(nb, default=0.0))
+            if v > 0:
+                out[j] = v
+        return sorted(out, key=lambda j: (-out[j], j))
 
     def ranked_sessions(self, q: str) -> list[int]:
         hits = self.sbm.search(q, top_k=len(self.sessions))
@@ -161,6 +175,15 @@ def strategy_units(name: str, conv: Conv, q: str) -> list[list[int]]:
             units.append([j for j in range(i, i + w + 1)
                           if j < len(conv.turns) and conv.turns[j]["session"] == s])
         return units
+    if name.startswith("prop"):  # prop0.8 = propagation with lambda 0.8
+        return [[i] for i in conv.propagated(q, float(name[4:]))]
+    if name == "top3nbr":
+        ranked, units = conv.ranked_turns(q), []
+        for r, i in enumerate(ranked):
+            s = conv.turns[i]["session"]
+            units.append([j for j in range(i - 1, i + 2) if 0 <= j < len(conv.turns)
+                          and conv.turns[j]["session"] == s] if r < 3 else [i])
+        return units
     if name == "session":
         return [conv.sessions[s] for s in conv.ranked_sessions(q)]
     if name.startswith("cap"):  # at most m turns per session on the first pass, then the rest
@@ -192,6 +215,9 @@ def cluster_bootstrap(rows: list[tuple[str, float]], seed: int, samples: int = 4
 def run(args) -> dict:
     t0 = time.perf_counter()
     convs = load(args.dataset)
+    if args.half != "all":
+        order = sorted(convs, key=lambda c: hashlib.sha256(f"{args.split_seed}:{c['sid']}".encode()).hexdigest())
+        convs = order[:5] if args.half == "dev" else order[5:]
     strategies = args.strategies.split(",")
     budgets = [int(b) for b in args.budgets.split(",")]
     rows = []  # one per (question, rep, strategy, budget)
@@ -240,7 +266,8 @@ def run(args) -> dict:
         "dataset": {"path": str(args.dataset.relative_to(PROJECT_ROOT)),
                     "sha256": hashlib.sha256(args.dataset.read_bytes()).hexdigest(),
                     "questions_total": sum(c["n_qa"] for c in convs),
-                    "questions_scored": sum(len(c["qs"]) for c in convs)},
+                    "questions_scored": sum(len(c["qs"]) for c in convs),
+                    "conversations": [c["sid"] for c in convs]},
         "token_proxy": _TOK.pattern,
         "render_format": "(session date) speaker: text [shares image: caption]",
         "baseline": {"rep": args.baseline_rep, "strategy": args.baseline_strategy},
@@ -261,6 +288,8 @@ def main() -> None:
     p.add_argument("--baseline-rep", default="raw")
     p.add_argument("--baseline-strategy", default="turn")
     p.add_argument("--seed", type=int, default=20260925)
+    p.add_argument("--half", choices=["all", "dev", "heldout"], default="all")
+    p.add_argument("--split-seed", default="20260925-e3")
     p.add_argument("--keep-rows", action="store_true")
     p.add_argument("--output", type=Path, required=True)
     args = p.parse_args()
