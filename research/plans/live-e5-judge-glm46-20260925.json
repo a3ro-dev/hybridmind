@@ -29,7 +29,7 @@
   "llm_calls": 2110,
   "reader_input_tokens": 1300000,
   "reader_output_tokens": 10000,
-  "provider_runtime_seconds": 0
+  "provider_runtime_seconds": 36000
  },
  "usage_ceiling": {
   "queries": 0,
@@ -41,7 +41,7 @@
   "llm_calls": 2400,
   "reader_input_tokens": 2600000,
   "reader_output_tokens": 24000,
-  "provider_runtime_seconds": 0
+  "provider_runtime_seconds": 172800
  },
  "rates": {
   "pricing_mode": "priced",
