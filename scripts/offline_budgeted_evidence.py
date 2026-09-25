@@ -48,6 +48,14 @@ def load(dataset: Path) -> list[dict]:
     convs = []
     for item in json.loads(dataset.read_text(encoding="utf-8")):
         sid, conv = item["sample_id"], item["conversation"]
+        # Dataset-provided LLM observations keyed by the turn they cite (diagnostic keys only).
+        obs = defaultdict(list)
+        for per_speaker in (item.get("observation") or {}).values():
+            for facts in per_speaker.values():
+                for fact in facts:
+                    if isinstance(fact, list) and len(fact) == 2:
+                        for dia in _DIA.findall(str(fact[1])):
+                            obs[dia].append(str(fact[0]))
         keys = sorted((k for k in conv if _SESSION.match(k)), key=lambda k: int(_SESSION.match(k).group(1)))
         turns = []
         for key in keys:
@@ -61,6 +69,7 @@ def load(dataset: Path) -> list[dict]:
                 turns.append({
                     "id": str(m["dia_id"]), "session": s, "pos": pos, "date": date,
                     "speaker": str(m.get("speaker") or ""), "text": text, "caption": cap,
+                    "obs": obs.get(str(m["dia_id"]), []),
                 })
         ids = {t["id"] for t in turns}
         qs = []
@@ -88,6 +97,8 @@ def index_text(t: dict, rep: str) -> str:
         return f"{t['speaker']}: {t['text']}"
     if rep == "spk_cap":
         return f"{t['speaker']}: {t['text']} {t['caption']}".strip()
+    if rep == "spk_cap_obs":  # key expansion only; the rendered value is unchanged
+        return f"{t['speaker']}: {t['text']} {t['caption']} {' '.join(t['obs'])}".strip()
     raise ValueError(rep)
 
 
@@ -255,7 +266,7 @@ def main() -> None:
     args = p.parse_args()
     result = run(args)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(result, indent=1, default=str), encoding="utf-8")
+    args.output.write_text(json.dumps(result, default=str), encoding="utf-8")
     for key, cats in result["summary"].items():
         a = cats["all"]
         cc, d = a["complete_coverage"], a["delta_complete_vs_baseline"]
