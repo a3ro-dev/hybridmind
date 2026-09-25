@@ -1,0 +1,13 @@
+{
+ "stage": "reader",
+ "status": "provider_failure",
+ "usage": {
+  "llm_calls": 2,
+  "reader_input_tokens": 12386,
+  "reader_output_tokens": 1002
+ },
+ "ledger_sha256": "146ff7f0436364236df68416117112571174c626310daf113455ae9d13acad8f",
+ "rows": 2,
+ "ok_rows": 1,
+ "finished_at": "2026-09-25T18:14:18.432589+00:00"
+}

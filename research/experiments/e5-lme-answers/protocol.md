@@ -36,3 +36,12 @@ Operator approval (2026-09-25): free reader + GLM-4.6 judge, hard cap $4 across 
 Paired question-level bootstrap (10,000) and exact McNemar for paired arms; per-type slices
 descriptive. Provider failures stop a pass and are recorded; resumed passes skip `ok` rows.
 Questions never answered remain in denominators as failures in the final table.
+
+## Smoke log (appended after locking; not a result)
+
+2026-09-25 18:14 UTC — reader smoke (prop@4k, 3 q, workers=1): q `2bf43736` answered in 3.8 s
+(4,170 prompt / 202 completion tokens, reasoning_tokens 0, answer matches gold); q `e6041065`
+failed with HTTP 429 after 3 retries → pass stopped (`provider_failure`), receipt written.
+The GLM-4.7-Flash free tier rate-limits almost immediately: the harness needs request pacing
+(e.g. ≥10–20 s spacing / patient 429 backoff) before E5 can run. Spend so far: ≈$0.00
+(1 GLM-4.6 preflight call, 16 in / 4 out tokens; reader calls free).
