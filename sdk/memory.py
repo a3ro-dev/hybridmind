@@ -339,6 +339,43 @@ class HybridMemory:
             "sparse_only, vector_sparse, graph_only, or graph."
         )
 
+    def retrieve(
+        self,
+        query: str,
+        scope: Optional[Dict[str, Any]] = None,
+        top_k: int = 10,
+        channels: Optional[List[str]] = None,
+        fusion: Optional[str] = None,
+        weights: Optional[Dict[str, float]] = None,
+        graph_method: Optional[str] = None,
+        query_keys: Optional[List[str]] = None,
+        rerank_pool: int = 0,
+        evidence: Optional[Dict[str, Any]] = None,
+        **options: Any,
+    ) -> Dict[str, Any]:
+        """Tri-signal retrieval (``POST /retrieve``).
+
+        Returns the full response: ``hits`` (with per-channel ranks and stable
+        ``evidence_id``), optional packed ``evidence`` and the execution
+        ``trace``. Omitted options take the server defaults. Extra keyword
+        options (``channel_k``, ``rrf_k``, ``dense_mode``, ``ann_audit``,
+        ``graph_extractor``, ``ppr_passage_seed_channel``, ``as_of``) are passed
+        through unchanged; the server rejects unknown fields.
+        """
+        payload: Dict[str, Any] = {"query": query, "scope": scope or {}, "top_k": top_k, "rerank_pool": rerank_pool}
+        for name, value in (
+            ("channels", channels),
+            ("fusion", fusion),
+            ("weights", weights),
+            ("graph_method", graph_method),
+            ("query_keys", query_keys),
+            ("evidence", evidence),
+        ):
+            if value is not None:
+                payload[name] = value
+        payload.update({k: v for k, v in options.items() if v is not None})
+        return self._post("/retrieve", payload)
+
     def trace(self, concept: str, depth: int = 2) -> Dict[str, Any]:
         """Find best semantic anchor for concept then graph traverse from it."""
         anchors = self.recall(concept, top_k=1, mode="vector")

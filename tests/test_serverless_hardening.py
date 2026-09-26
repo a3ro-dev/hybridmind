@@ -193,3 +193,25 @@ def test_close_and_health_never_raise():
 def _fast_retry(fn):
     # one attempt, surfaces the underlying error immediately
     return fn()
+
+
+def test_keyless_loopback_tei_sends_no_authorization_header():
+    eng = TEIEmbeddingEngine(base_url="http://127.0.0.1:8080", api_key="", dimension=4096)
+    assert "authorization" not in {k.lower() for k in eng._client.headers}
+    keyed = TEIEmbeddingEngine(base_url="http://x", api_key="k", dimension=4096)
+    assert keyed._client.headers["authorization"] == "Bearer k"
+
+
+@pytest.mark.parametrize("url", ["http://127.0.0.1:8080/", "http://localhost:8080", "https://[::1]:9000"])
+def test_loopback_validator_accepts_only_loopback(url):
+    from engine.provider_policy import validate_loopback_url
+
+    assert validate_loopback_url(url, "TEI").endswith(url.rstrip("/").split("//")[1])
+
+
+@pytest.mark.parametrize("url", ["http://10.0.0.5:8080", "http://api.runpod.ai", "http://user:pw@localhost:1", "ftp://localhost"])
+def test_loopback_validator_rejects_everything_else(url):
+    from engine.provider_policy import validate_loopback_url
+
+    with pytest.raises(ValueError):
+        validate_loopback_url(url, "TEI")

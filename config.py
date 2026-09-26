@@ -64,6 +64,14 @@ class Settings(BaseSettings):
             "RUNPOD_TEI_EMBEDDING_URL", "HYBRIDMIND_RUNPOD_TEI_EMBEDDING_URL"
         ),
     )
+    # Keyless self-hosted TEI on the same host (e.g. a VPS GPU container at
+    # http://127.0.0.1:8080). Loopback only; mutually exclusive with RUNPOD_TEI.
+    local_tei_embedding_url: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "LOCAL_TEI_EMBEDDING_URL", "HYBRIDMIND_LOCAL_TEI_EMBEDDING_URL"
+        ),
+    )
     runpod_embedding_url: str = Field(
         default="",
         validation_alias=AliasChoices(
@@ -92,8 +100,14 @@ class Settings(BaseSettings):
     fusion_model_path: Optional[str] = None
 
     # Reranker model (used by CrossEncoderReranker)
-    # mxbai-rerank-large-v2: Apache 2.0, ~84% Hit@1 vs 77% bge-reranker-v2-m3, 8x faster
-    reranker_model: str = "mixedbread-ai/mxbai-rerank-large-v2"
+    # bge-reranker-v2-m3 (Apache-2.0, XLM-R sequence classifier): loads with the
+    # pinned sentence-transformers and is TEI-servable; it is the reranker in
+    # LazyMem's LongMemEval pipeline. mxbai-rerank-large-v2 needs ST >= 5.4
+    # (docs/DECISIONS.md, 2026-09-26).
+    reranker_model: str = "BAAI/bge-reranker-v2-m3"
+    # rerank_mode=tei: HuggingFace TEI /rerank base URL. Loopback URLs are
+    # keyless; RunPod URLs are bound to RUNPOD_API_KEY.
+    reranker_tei_url: str = ""
     rerank_mode: str = Field(
         default="off",
         validation_alias=AliasChoices("RERANK_MODE", "HYBRIDMIND_RERANK_MODE"),
@@ -107,6 +121,22 @@ class Settings(BaseSettings):
 
     # Sparse retrieval backend: "bm25" (pure Python, no deps) | "bm25s" (100x faster, needs bm25s+PyStemmer) | "splade" (needs fastembed)
     sparse_retrieval_backend: str = "bm25s"
+
+    # Tri-signal retrieval (POST /retrieve, engine/trisignal.py). Defaults are
+    # provisional equal-weight RRF over all three channels until the dense arm
+    # is measured (docs/DECISIONS.md, 2026-09-26); requests may override each.
+    trisignal_channels: str = "dense,sparse,graph"
+    trisignal_channel_k: int = Field(default=100, ge=1, le=1000)
+    trisignal_fusion: str = Field(default="rrf", pattern=r"^(rrf|dbsf|zscore|minmax_linear)$")
+    trisignal_dense_mode: str = Field(default="exact", pattern=r"^(exact|hnsw)$")
+    trisignal_graph_method: str = Field(default="emg", pattern=r"^(emg|ppr)$")
+    trisignal_graph_extractor: str = "lexical-v1"
+    trisignal_graph_query_extractor: str = "lexical-v1"
+    trisignal_max_scopes: int = Field(default=32, ge=1, le=4096)
+    # Query-side embedding instruction (Qwen3-Embedding format). None embeds
+    # the bare query, matching how documents and the legacy /search path embed.
+    trisignal_query_instruction: Optional[str] = None
+    trisignal_query_instruction_style: str = Field(default="qwen3", pattern=r"^(qwen3|nv_embed|none)$")
 
     # Query routing: classify query type → apply per-type vector/graph/bm25 weights
     query_routing_enabled: bool = True
@@ -282,6 +312,14 @@ class Settings(BaseSettings):
                 "or local fallback is supported."
             )
         return value
+
+    @field_validator("trisignal_channels")
+    @classmethod
+    def require_known_channels(cls, value: str) -> str:
+        channels = [c.strip() for c in value.split(",") if c.strip()]
+        if not channels or len(set(channels)) != len(channels) or not set(channels) <= {"dense", "sparse", "graph"}:
+            raise ValueError("trisignal_channels must be a comma list drawn from dense,sparse,graph without repeats")
+        return ",".join(channels)
 
     def get_data_dir(self) -> Path:
         """Get the data directory, creating it if necessary."""

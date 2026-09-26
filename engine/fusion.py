@@ -6,6 +6,9 @@ Strategies:
 - linear : Original linear weighted sum (kept for A/B comparison and back-compat).
 - mlp    : FusionScorer MLP head — ships with a heuristic init that mimics RRF;
            loads a trained checkpoint when HYBRIDMIND_FUSION_MODEL is set.
+- dbsf / zscore / weighted_linear (+ minmax_normalize): pure score-based
+           fusion ports (Qdrant DBSF, opsem z-score, EMG query-local min-max);
+           opt-in only, see DEVIATIONS.
 
 Usage:
     from engine.fusion import get_fusion_fn, fuse
@@ -17,7 +20,7 @@ from __future__ import annotations
 import logging
 import math
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Mapping, Optional, Tuple
 
 import numpy as np
 
@@ -60,6 +63,182 @@ def rrf_fuse(
             seen.add(node_id)
             scores[node_id] = scores.get(node_id, 0.0) + weight * (1.0 / (k + rank))
     return scores
+
+
+# --------------------------------------------------------------------- #
+# Score-based fusion (opt-in; RRF k=60 stays the default)
+# --------------------------------------------------------------------- #
+#
+# dbsf_fuse is a port of Qdrant's distribution-based score fusion:
+#   https://github.com/qdrant/qdrant @ 6ab21cac18ebb6f4ae29102c7f8f5cc11affd5de
+#   lib/segment/src/common/score_fusion.rs (score_fusion, distr_norm, norm,
+#   welfords_mean_variance). SPDX-License-Identifier: Apache-2.0.
+#   Copyright 2026 Qdrant Solutions GmbH.
+#
+# zscore_fuse follows opsem's z-score convex fusion:
+#   https://github.com/Chrislysen/opsem @ 68186a45882dd85ea66fcc70ee38ba28f6de9a90
+#   tune11_multiencoder.py (_z and the alpha*z(bm25) + (1-alpha)*z(dense) sum).
+#   SPDX-License-Identifier: MIT. Copyright (c) 2026 Christian Lysenstøen.
+#
+# minmax_normalize / weighted_linear_fuse follow EMG (entity memory graph):
+#   https://github.com/Sun668/em_graph_memory @ f020e855be06ac9f33ec888945ff6b305d81cb07
+#   code/em_graph/recall/retrieval.py (normalize_semantic_scores mode
+#   "query_local_minmax_v1"; entity_weight*E + semantic_weight*S, 0.30/0.70).
+#   SPDX-License-Identifier: MIT. Copyright (c) 2026 Sun668.
+
+DEVIATIONS: List[str] = [
+    "dbsf_fuse: float64 arithmetic instead of Qdrant's f32, so normalized values can differ in the last f32 ulp.",
+    "dbsf_fuse: lists are keyed by channel name and weighted by name (absent weight = 1.0); Qdrant weights are "
+    "positional with the same 1.0 default.",
+    "dbsf_fuse: Welford runs over each list in (score desc, node_id) order, the order of a sorted Qdrant result list.",
+    "dbsf_fuse/zscore_fuse/weighted_linear_fuse: return {node_id: score}; the final ordering and tie-break "
+    "belong to ScopedCorpus.sort_scores (chronological index), not to Qdrant's ScoredPoint ordering.",
+    "zscore_fuse: opsem z-scores a complete per-conversation score vector. Here each channel's missing "
+    "candidates are first filled with that channel's minimum observed raw score, then z is computed over the "
+    "union of candidates. With complete score maps (every scope turn scored) this is exactly opsem.",
+    "zscore_fuse: an empty channel map is a constant vector and contributes z=0 to every candidate.",
+    "zscore_fuse: weights are applied as given ({channel: w}, absent = 1.0); opsem hard-codes alpha and 1-alpha. "
+    "Pass weights summing to 1 for the convex form.",
+    "minmax_normalize: every value must be finite (EMG only checks the min and max).",
+    "All score-based fusers reject non-finite scores and non-finite or negative weights (upstream does not validate).",
+]
+
+# EMG's default fusion weights mapped onto HybridMind channel names
+# (EMG entity channel -> "graph", EMG embedding channel -> "dense").
+EMG_LINEAR_WEIGHTS: Dict[str, float] = {"graph": 0.30, "dense": 0.70}
+
+_Z_STD_FLOOR = 1e-9  # opsem: z = 0 when the population std is below this
+
+
+def _validated_weights(weights: Optional[Mapping[str, float]]) -> Dict[str, float]:
+    out: Dict[str, float] = {}
+    for name, value in (weights or {}).items():
+        value = float(value)
+        if not math.isfinite(value) or value < 0.0:
+            raise ValueError(f"fusion weight for {name!r} must be finite and non-negative")
+        out[name] = value
+    return out
+
+
+def _validated_scores(name: str, scores: Mapping[str, float]) -> Dict[str, float]:
+    out = {str(node_id): float(value) for node_id, value in scores.items()}
+    for node_id, value in out.items():
+        if not math.isfinite(value):
+            raise ValueError(f"score for {node_id!r} in {name!r} must be finite")
+    return out
+
+
+def _weighted_sum(
+    normalized: Mapping[str, Mapping[str, float]], weights: Mapping[str, float]
+) -> Dict[str, float]:
+    """Sum weighted per-channel scores in sorted channel/node order (stable float sums)."""
+    fused: Dict[str, float] = {}
+    for name in sorted(normalized):
+        weight = weights.get(name, 1.0)
+        for node_id in sorted(normalized[name]):
+            fused[node_id] = fused.get(node_id, 0.0) + weight * normalized[name][node_id]
+    return dict(sorted(fused.items()))
+
+
+def _distr_norm(scores: Mapping[str, float]) -> Dict[str, float]:
+    """Qdrant ``distr_norm``: (s - (mu - 3 sigma)) / (6 sigma), sample sigma, unclipped."""
+    if len(scores) < 2:
+        return {node_id: 0.5 for node_id in scores}
+    ordered = sorted(scores.items(), key=lambda item: (-item[1], item[0]))
+    # Welford's one-pass mean / sample variance, as in welfords_mean_variance.
+    mean = 0.0
+    aggregate = 0.0
+    for k, (_node_id, value) in enumerate(ordered, start=1):
+        old_delta = value - mean
+        mean += old_delta / k
+        aggregate += old_delta * (value - mean)
+    std_dev = math.sqrt(aggregate / (len(ordered) - 1))
+    low = mean - 3.0 * std_dev
+    high = mean + 3.0 * std_dev
+    if low == high:  # Qdrant norm(): "Protect against division by zero"
+        return {node_id: 0.5 for node_id in scores}
+    return {node_id: (value - low) / (high - low) for node_id, value in scores.items()}
+
+
+def dbsf_fuse(
+    score_maps: Dict[str, Dict[str, float]],
+    weights: Optional[Dict[str, float]] = None,
+) -> Dict[str, float]:
+    """Distribution-based score fusion (Qdrant DBSF).
+
+    Each channel's returned scores are normalized on that list's own mean and
+    sample standard deviation to ``(s - (mu - 3 sigma)) / (6 sigma)`` without
+    clipping; a single-element list maps to 0.5 and a zero-variance list maps
+    every member to 0.5. Normalized scores are multiplied by the channel weight
+    and summed; a node absent from a channel gets 0 from it.
+
+    Returns ``{node_id: fused_score}`` (higher is better).
+    """
+    w = _validated_weights(weights)
+    normalized = {name: _distr_norm(_validated_scores(name, scores)) for name, scores in score_maps.items()}
+    return _weighted_sum(normalized, w)
+
+
+def _zscore(scores: Mapping[str, float]) -> Dict[str, float]:
+    """opsem ``_z``: population std; all zeros when std < 1e-9."""
+    ids = list(scores)
+    values = np.asarray([scores[i] for i in ids], dtype=float)
+    std = values.std() if values.size else 0.0
+    if std < _Z_STD_FLOOR:
+        return {i: 0.0 for i in ids}
+    z = (values - values.mean()) / std
+    return {i: float(v) for i, v in zip(ids, z)}
+
+
+def zscore_fuse(
+    score_maps: Dict[str, Dict[str, float]],
+    weights: Optional[Dict[str, float]] = None,
+) -> Dict[str, float]:
+    """Weighted z-score fusion (opsem), convex when the weights sum to 1.
+
+    Every channel is z-normalized over the union of candidates across all
+    channels. A candidate a channel did not score takes that channel's minimum
+    observed raw score (so a channel's non-matches sit at its floor rather than
+    at an arbitrary 0); an empty channel contributes 0. Pass complete score
+    maps (every scope turn) to reproduce opsem exactly.
+    """
+    w = _validated_weights(weights)
+    clean = {name: _validated_scores(name, scores) for name, scores in score_maps.items()}
+    union = sorted({node_id for scores in clean.values() for node_id in scores})
+    normalized: Dict[str, Dict[str, float]] = {}
+    for name, scores in clean.items():
+        if not scores:
+            normalized[name] = {node_id: 0.0 for node_id in union}
+            continue
+        floor = min(scores.values())
+        normalized[name] = _zscore({node_id: scores.get(node_id, floor) for node_id in union})
+    return _weighted_sum(normalized, w)
+
+
+def minmax_normalize(scores: Mapping[str, float]) -> Dict[str, float]:
+    """EMG ``query_local_minmax_v1``: (s - min) / (max - min); span <= 0 -> all 0.0."""
+    clean = _validated_scores("minmax", scores)
+    if not clean:
+        return {}
+    low = min(clean.values())
+    span = max(clean.values()) - low
+    if span <= 0.0:
+        return {node_id: 0.0 for node_id in clean}
+    return {node_id: (value - low) / span for node_id, value in clean.items()}
+
+
+def weighted_linear_fuse(
+    score_maps: Dict[str, Dict[str, float]],
+    weights: Optional[Dict[str, float]] = None,
+) -> Dict[str, float]:
+    """``sum_c w_c * s_c(node)`` over pre-normalized scores; a missing score is 0.
+
+    EMG uses ``0.30 * entity + 0.70 * embedding`` (``EMG_LINEAR_WEIGHTS``)
+    after min-max normalizing the embedding scores.
+    """
+    w = _validated_weights(weights)
+    clean = {name: _validated_scores(name, scores) for name, scores in score_maps.items()}
+    return _weighted_sum(clean, w)
 
 
 # --------------------------------------------------------------------- #

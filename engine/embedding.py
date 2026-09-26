@@ -49,6 +49,52 @@ def validate_embedding_4096(embedding, *, label: str = "embedding") -> np.ndarra
         raise ValueError(f"{label} contains non-finite values")
     return vector
 
+
+# Query-instruction formats. Ported strings, attributed per source:
+# - "qwen3": Qwen/Qwen3-Embedding-8B model card README, `get_detailed_instruct`
+#   (https://huggingface.co/Qwen/Qwen3-Embedding-8B, revision
+#   1d8ad4ca9b3dd8059ad90a75d4983776a23d44af, README.md lines 126-127).
+#   SPDX: Apache-2.0; the LICENSE carries no copyright line (Qwen Team, Alibaba).
+#   The official helper has NO space after "Query:"; the same README's TEI curl
+#   example writes "Query: " with a space. We follow the Python helper.
+# - "nv_embed": HippoRAG 2 NV-Embed-v2 wrapper
+#   (https://github.com/OSU-NLP-Group/HippoRAG, commit
+#   1438aba3fc44ff10573e5a5e1e7cc3c7f9794aff,
+#   src/hipporag/embedding_model/NVEmbedV2.py line 78). SPDX: MIT,
+#   Copyright (c) 2025 OSU Natural Language Processing.
+QUERY_FORMAT_STYLES = ("qwen3", "nv_embed", "none")
+
+# Behavioural deviations of the ported query formats (this module's only port).
+DEVIATIONS = [
+    "qwen3: an empty/None instruction returns the query unchanged; the upstream "
+    "helper would emit 'Instruct: \\nQuery:<q>'. Documents are embedded raw upstream too.",
+    "nv_embed: the prefix is concatenated to the text here; upstream passes it as "
+    "NV-Embed-v2's encode(instruction=...) argument, which prepends it but masks the "
+    "instruction tokens out of pooling, so a plain-text prefix sent to a generic "
+    "endpoint is not numerically equivalent.",
+    "style 'none' raises on a non-empty instruction instead of ignoring it.",
+]
+
+
+def format_query_for_embedding(query: str, instruction: Optional[str], style: str) -> str:
+    """Return the exact text to embed for a retrieval query.
+
+    ``instruction`` None or "" means "no instruction" for every style
+    (HippoRAG skips the prefix on an empty instruction; Qwen3 embeds documents
+    without one). Style "none" refuses a non-empty instruction rather than
+    silently dropping it.
+    """
+    if style not in QUERY_FORMAT_STYLES:
+        raise ValueError(f"unknown query format style {style!r}; expected one of {QUERY_FORMAT_STYLES}")
+    if not instruction:
+        return query
+    if style == "qwen3":
+        return f"Instruct: {instruction}\nQuery:{query}"
+    if style == "nv_embed":
+        return f"Instruct: {instruction}\nQuery: " + query
+    raise ValueError("query format style 'none' cannot carry an instruction")
+
+
 _BGE_M3_PREFIX = "BAAI/bge-m3"
 
 
@@ -419,6 +465,10 @@ class RemoteEmbeddingEngine:
     def embed(self, text: str, normalize: bool = True) -> np.ndarray:
         return self._call_api([text])[0]
 
+    def embed_query(self, text: str, instruction: Optional[str] = None, style: str = "qwen3") -> np.ndarray:
+        """Embed a retrieval query after applying the model's instruction format."""
+        return self.embed(format_query_for_embedding(text, instruction, style))
+
     def embed_batch(self, texts: List[str], normalize: bool = True, batch_size: int = 32, show_progress: bool = False) -> np.ndarray:
         if not texts:
             return np.array([]).reshape(0, self._dimension)
@@ -494,8 +544,12 @@ class TEIEmbeddingEngine:
         self._dimension = dimension
         # read timeout generous enough to absorb a serverless cold start (8B
         # model loading into VRAM); retry_transient adds backoff on top.
+        # A keyless loopback TEI (LOCAL_TEI_EMBEDDING_URL) sends no credential.
+        headers = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
         self._client = httpx.Client(
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            headers=headers,
             limits=httpx.Limits(max_connections=8, max_keepalive_connections=4),
             timeout=httpx.Timeout(connect=10.0, read=300.0, write=10.0, pool=10.0),
         )
@@ -620,6 +674,10 @@ class TEIEmbeddingEngine:
         # _call_api raises on failure (no fallback); propagate it.
         return self._call_api([text])[0]
 
+    def embed_query(self, text: str, instruction: Optional[str] = None, style: str = "qwen3") -> np.ndarray:
+        """Embed a retrieval query after applying the model's instruction format."""
+        return self.embed(format_query_for_embedding(text, instruction, style))
+
     def embed_batch(self, texts: List[str], normalize: bool = True, batch_size: int = 32, show_progress: bool = False) -> np.ndarray:
         if not texts:
             return np.array([]).reshape(0, self._dimension)
@@ -729,6 +787,23 @@ def get_embedding_engine(model_name: str = _DEFAULT_MODEL, device: Optional[str]
     from config import settings
 
     tei_url = settings.runpod_tei_embedding_url.strip()
+    local_url = settings.local_tei_embedding_url.strip()
+    if tei_url and local_url:
+        raise RuntimeError(
+            "set only one of RUNPOD_TEI_EMBEDDING_URL and LOCAL_TEI_EMBEDDING_URL"
+        )
+    if local_url:
+        from engine.provider_policy import validate_loopback_url
+
+        local_url = validate_loopback_url(local_url, "TEI embedding")
+        dim = settings.embedding_dimension
+        resolved = ("tei-local", local_url, "", dim)
+        if not isinstance(_embedding_engine, TEIEmbeddingEngine) or _embedding_engine_config != resolved:
+            if _embedding_engine is not None and hasattr(_embedding_engine, "close"):
+                _embedding_engine.close()
+            _embedding_engine = TEIEmbeddingEngine(base_url=local_url, api_key="", dimension=dim)
+            _embedding_engine_config = resolved
+        return _embedding_engine
     if tei_url:
         tei_url, api_key = _runpod_tei_credentials(tei_url)
         dim = settings.embedding_dimension

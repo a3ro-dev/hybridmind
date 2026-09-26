@@ -36,6 +36,7 @@ from api.edges import router as edges_router
 from api.search import router as search_router
 from api.bulk import router as bulk_router
 from api.comparison import router as comparison_router
+from api.retrieve import router as retrieve_router
 from api.dependencies import coordinate_mutation, get_db_manager
 from engine.cache import get_query_cache
 from engine.device import gpu_info as _gpu_info
@@ -441,6 +442,7 @@ app.include_router(edges_router)
 app.include_router(search_router)
 app.include_router(bulk_router)
 app.include_router(comparison_router)
+app.include_router(retrieve_router)
 
 
 # ==================== Health & Utility Endpoints ====================
@@ -489,6 +491,7 @@ async def root():
                 "hybrid": "/search/hybrid",
                 "compare": "/search/compare",
             },
+            "retrieve": "/retrieve",
             "bulk": {
                 "nodes": "/bulk/nodes",
                 "edges": "/bulk/edges",

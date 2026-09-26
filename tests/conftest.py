@@ -23,10 +23,13 @@ os.environ["HYBRIDMIND_MIND_FILE_PATH"] = str(_TEST_MIND)
 os.environ["HYBRIDMIND_DATABASE_PATH"] = str(_TEST_MIND / "store.db")
 os.environ["HYBRIDMIND_VECTOR_INDEX_PATH"] = str(_TEST_MIND / "vectors")
 os.environ["HYBRIDMIND_GRAPH_INDEX_PATH"] = str(_TEST_MIND / "graph.nx")
+# Shutdown snapshots prune to snapshot_retention; without isolation every test
+# run replaced the operator's real backups in data/backups/.
+os.environ["HYBRIDMIND_BACKUP_DIR"] = str(Path(_TEST_DIR) / "backups")
 # Tests run fully offline and must not hit remote endpoints. They inject a
 # deterministic 4096-dimensional test double below; this is test dependency
 # injection, not a runtime embedding fallback.
-for _var in ("RUNPOD_TEI_EMBEDDING_URL", "HC_EMBEDDING_URL", "RUNPOD_EMBEDDING_URL"):
+for _var in ("RUNPOD_TEI_EMBEDDING_URL", "LOCAL_TEI_EMBEDDING_URL", "HC_EMBEDDING_URL", "RUNPOD_EMBEDDING_URL"):
     os.environ[_var] = ""
 # Tests preserve the production dimension invariant and inject an offline
 # deterministic engine below; they never select a smaller local model.

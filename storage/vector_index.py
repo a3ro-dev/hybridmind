@@ -401,6 +401,50 @@ class VectorIndex:
         
         return results
     
+    def search_exact(
+        self,
+        query_embedding: np.ndarray,
+        top_k: int = 10,
+        min_score: float = 0.0
+    ) -> List[Tuple[str, float]]:
+        """
+        Exact inner-product search over every live (non-tombstoned) row.
+
+        Scores are computed from the vectors the index actually holds
+        (``reconstruct_n`` for FAISS, the NumPy row store otherwise), so this is
+        the brute-force oracle for ``search``. Ties break by row insertion
+        order, which makes the ranking deterministic.
+
+        Returns:
+            List of (node_id, score) tuples sorted by score descending
+        """
+        if top_k < 1:
+            raise ValueError("top_k must be at least 1")
+        if self.size == 0:
+            return []
+
+        query = self._validate_embedding("query", query_embedding)
+        norm = np.linalg.norm(query)
+        normalized_query = query / norm if norm > 0 else query
+
+        # ponytail: O(N*d) copy per query; cache a live matrix if exact mode
+        # becomes a hot path.
+        rows = np.fromiter(
+            (idx for idx in sorted(self.id_map) if idx not in self.deleted_ids),
+            dtype=np.int64,
+        )
+        if self._use_faiss:
+            matrix = self.index.reconstruct_n(0, self.index.ntotal)[rows]
+        else:
+            matrix = np.vstack(self._vectors)[rows]
+        # einsum, not @: BLAS gemv may round identical rows differently and
+        # break the insertion-order tie-break.
+        scores = np.einsum("ij,j->i", matrix, normalized_query)
+        keep = scores >= min_score
+        rows, scores = rows[keep], scores[keep]
+        order = np.lexsort((rows, -scores))[:top_k]
+        return [(self.id_map[int(rows[i])], float(scores[i])) for i in order]
+
     def get_vector(self, node_id: str) -> Optional[np.ndarray]:
         """Get vector by node ID."""
         if node_id not in self.reverse_map:
@@ -595,5 +639,8 @@ class VectorIndex:
             ),
             "deletion_threshold": self.deletion_threshold,
             "dimension": self.dimension,
-            "using_faiss": self._use_faiss
+            "using_faiss": self._use_faiss,
+            "index_type": type(self.index).__name__ if self._use_faiss else "numpy_flat",
+            # Read from the live graph, so a loaded .faiss file reports its real M.
+            "hnsw_m": self.index.hnsw.nb_neighbors(1) if self._use_faiss else None,
         }
