@@ -30,6 +30,51 @@ These drivers require a running API. Offline (zero-provider) baselines are
 separate scripts under `scripts/offline_*` — see
 `experiments/reports/baseline.md`.
 
+### Tri-signal ablations (`eval_trisignal.py`)
+
+`eval_trisignal.py` drives `engine.trisignal` (the code behind `/retrieve`)
+directly over official datasets. Each LoCoMo conversation, and each
+LongMemEval-S haystack, is its own scope. The harness refuses the invalid
+oracle file.
+
+```
+python eval_trisignal.py --dataset locomo --arms sparse,graph,graph-ppr,sparse+graph --label offline
+python eval_trisignal.py --dataset longmemeval --arms sparse,graph,graph-ppr,sparse+graph --label offline
+python eval_trisignal.py --dataset locomo --dense emg-reference --arms dense,sparse,graph,dense+graph,all --baseline dense --label ref
+python eval_trisignal.py --dataset longmemeval --dense cache:emb.sqlite --arms dense,sparse,graph,all --baseline dense --label vps-4096
+```
+
+- **Metrics:** turn recall_any/recall_all/ndcg@k; session hit and
+  recall_all@k; LoCoMo evidence recall; complete coverage after `turn` or
+  `propagate` packing at 1k/2k/4k tokens; and, for all-channel arms,
+  complementarity (unique gold per channel, oracle-union recall) and fusion
+  regret.
+- **Statistics:** paired, conversation-clustered bootstrap CIs against
+  `--baseline`.
+- **Gold subsets:** LoCoMo scores 1,981 questions (non-empty resolved gold).
+  LongMemEval uses any-role `has_answer` turns (470); `--protocol
+  lme_official` gives the official 419-question user-turn subset.
+- **Dense sources:**
+  - `emg-reference` replays EMG's shipped 1536-d vectors and frozen LLM query
+    keys and graph. It is a reference track, not the runtime model.
+  - `cache:PATH` replays 4096-d vectors from `engine/embedding_cache.py` and
+    fails on any miss.
+- **Outputs:** an immutable ledger under `experiments/results/ledgers/` and a
+  summary JSON.
+
+**Filling the 4096-d cache on a GPU host (next step, needs spend approval).**
+1. Serve Qwen3-Embedding-8B with TEI on the same host and set
+   `LOCAL_TEI_EMBEDDING_URL=http://127.0.0.1:8080`.
+2. Embed every `TurnRecord.search_text` as kind `doc` and every question as
+   kind `query` into the cache. Keep the instruction empty, or use the Qwen3
+   format `Instruct: {task}
+Query:{q}` and pass the same text to
+   `--query-instruction`.
+3. Price the run with the offline resource report and preflight
+   (`scripts/preflight.py --plan <plan> --validate-only`) before any live call.
+4. Optional reranker arm: serve `BAAI/bge-reranker-v2-m3` with TEI and set
+   `RERANK_MODE=tei` and `HYBRIDMIND_RERANKER_TEI_URL`.
+
 ## 2. Ledgers
 
 Every run appends one JSONL row per question to

@@ -1,42 +1,92 @@
-# HybridMind
+<p align="center">
+  <img src="docs/assets/banner.png" alt="HybridMind — Vector + Graph Native Database for AI Retrieval" width="100%" />
+</p>
 
-HybridMind is a local hybrid-retrieval service for AI memory experiments. It is built around a simple constraint: a memory system should be able to show what it retrieved, why it retrieved it, and whether that evidence helped.
+<p align="center">
+  <strong>Local-first dense, sparse, and graph retrieval service for AI memory experiments.</strong>
+</p>
 
-It keeps SQLite authoritative, rebuilds dense, sparse, and graph indexes from validated records, and retrieves across all three paths with time-aware reciprocal-rank fusion. The project is deliberately conservative about claims: it is an experimental retrieval system, not a transformer KV-cache replacement or a proven long-context solution.
-
-## At a glance
-
-| Area | What HybridMind does |
-| --- | --- |
-| Retrieval | FAISS HNSW dense search, Okapi BM25 (`bm25s` + PyStemmer), and a typed NetworkX directed multigraph |
-| Ranking | Time-aware weighted reciprocal-rank fusion (`k=60`), with independently controlled retrieval modes |
-| Evidence | Corpus/session scoping and exact evidence IDs for retrieval metrics |
-| Persistence | SQLite/WAL as source of truth; runtime indexes rebuilt from validated data |
-| Portability | Verified `.mind.zip` snapshots using checksummed JSON/JSONL, never executable pickles |
-| Embeddings | Remote native embeddings only, validated to exactly 4096 dimensions |
-
-## Why hybrid retrieval
-
-Pure vector search can miss an explicit relation or exact term. Graph-only retrieval loses semantic flexibility and gets brittle when the graph is sparse or noisy. HybridMind keeps these as separate candidate paths, then fuses them so each path can be measured, ablated, and improved independently.
-
-## Design stance
-
-- Fail closed on malformed provider output, corrupt persistence, partial batches, and invalid benchmark provenance.
-- Treat derived indexes as rebuildable projections, not the authoritative record.
-- Make live provider work opt-in and budgeted; the offline suite makes zero provider calls.
-- Do not count answer-string overlap as retrieval evidence.
+<p align="center">
+  <a href="#quick-start"><img src="https://img.shields.io/badge/Status-Active%20Research-00e5ff?style=for-the-badge&logoColor=black" alt="Status"></a>
+  <a href="#technical-architecture"><img src="https://img.shields.io/badge/Architecture-Dense%20%2B%20Sparse%20%2B%20Graph-ff007f?style=for-the-badge" alt="Architecture"></a>
+  <a href="tests/"><img src="https://img.shields.io/badge/Tests-390%2B%20Offline%20Passing-00d2d3?style=for-the-badge" alt="Tests"></a>
+  <a href="AGENTS.md"><img src="https://img.shields.io/badge/Storage-Authoritative%20SQLite-16e0bd?style=for-the-badge" alt="Storage"></a>
+</p>
 
 ---
 
-## Technical Architecture
+## 🪟 The Premise
+
+most vector databases give you semantic similarity but stay completely blind to explicit graph relationships, and keyword search usually lives in a disconnected silo. HybridMind fixes that retrieval disconnect locally without turning it into a bloated cloud cluster.
+
+HybridMind is a local-first dense, sparse, and graph retrieval service designed for agent memory and long-context experiments. instead of treating retrieval like a black box, it unifies FAISS HNSW vector indexing, BM25/BM25S lexical search, and NetworkX structural traversals on top of an authoritative, bitemporal SQLite/WAL persistence layer.
+
+all candidates are merged through weighted reciprocal rank fusion (RRF) with temporal filtering, giving you explainable, provenance-backed memory instead of hallucinated context. everything packages into portable, cryptographically verified `.mind` snapshots, backed by ~400 offline unit and contract tests with zero network leaks.
+
+the bet here is simple: local, inspectable hybrid retrieval gives agents way more reliable grounded reasoning than throwing raw tokens into massive context windows and hoping for the best.
+
+---
+
+## ⚡ At a glance
+
+| Area | What HybridMind does |
+|---|---|
+| **Retrieval** | FAISS HNSW dense search, Okapi BM25 (`bm25s` + PyStemmer), and a typed NetworkX directed multigraph |
+| **Ranking** | Time-aware weighted reciprocal-rank fusion (`k=60`), with independently controlled retrieval modes |
+| **Evidence** | Corpus/session scoping and exact evidence IDs for retrieval metrics |
+| **Persistence** | SQLite/WAL as authoritative source of truth; runtime indexes rebuilt from validated data |
+| **Portability** | Verified `.mind.zip` snapshots using checksummed JSON/JSONL, never executable pickles |
+| **Embeddings** | Remote native embeddings only, validated to exactly 4096 dimensions |
+
+---
+
+## 🕹️ Why Hybrid Retrieval
+
+Pure vector search can miss an explicit relation or exact term. Graph-only retrieval loses semantic flexibility and gets brittle when the graph is sparse or noisy. HybridMind keeps these as separate candidate paths, then fuses them so each path can be measured, ablated, and improved independently.
+
+```
+                  ┌───────────────────────┐
+                  │      User Query       │
+                  └──────────┬────────────┘
+                             │
+         ┌───────────────────┼───────────────────┐
+         ▼                   ▼                   ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│   FAISS HNSW    │ │    BM25S Lex    │ │ NetworkX Graph  │
+│ Dense Vector    │ │  Sparse Keyword │ │ Entity & Citations│
+└────────┬────────┘ └────────┬────────┘ └────────┬────────┘
+         │                   │                   │
+         └───────────────────┼───────────────────┘
+                             ▼
+              ┌─────────────────────────────┐
+              │ Reciprocal Rank Fusion (k=60)│
+              │  + Temporal Scoping & Rank  │
+              └──────────────┬──────────────┘
+                             ▼
+              ┌─────────────────────────────┐
+              │  Explainable Evidence Set   │
+              └─────────────────────────────┘
+```
+
+### Design stance
+
+- **Fail closed** on malformed provider output, corrupt persistence, partial batches, and invalid benchmark provenance.
+- **Derived indexes are projections**, not authoritative records. SQLite remains the single source of truth.
+- **Live provider calls are opt-in and budgeted**; the offline test suite makes zero provider calls.
+- **No answer-string shortcuts**: answer-string overlap is not counted as retrieval evidence recall.
+
+---
+
+## ⚙️ Technical Architecture
 
 1. **Time-Aware Hybrid Fusion**. Reciprocal Rank Fusion ($k=60$) blends 4096-dimensional dense vectors, BM25 lexical ranks, typed graph proximity, and query-derived time relevance. Request-level `search_mode` controls make vector, sparse, graph, and hybrid ablations real rather than approximate weight changes.
-2. **Optional Cross-Encoder Reranking**. When enabled and available, `mixedbread-ai/mxbai-rerank-large-v2` reranks a bounded fusion pool with normalized score blending. Search responses expose whether it executed.
-3. **Optional Query Decomposition**. `engine/query_decomposition.py` can split a multi-step question into two or three bounded sub-questions through the centralized LLM policy. It rejects novel named entities, duplicate/oversized output, and lost temporal qualifiers; improvement remains an empirical question.
-4. **4096-Dimensional Embedding Invariant**. A remote TEI or OpenAI-compatible embedding endpoint must return exactly 4096 values. Startup, ingestion, and vector insertion fail on any mismatch; there is no local, projected, padded, or lower-dimensional fallback.
-5. **Structured Fact Fields**. Narrative facts can carry entities, event time, validity, one of four memory kinds (world, experience, observation, opinion), confidence, supersession state, and optional causal/temporal relations. These fields are only credited when the selected retrieval path consumes them.
-6. **Optional Salience and Derived Summaries**. Salience is a configurable recency/access/degree score multiplier. Consolidation creates lossy, provenance-linked retrieval summaries; it is not an Observer/Reflector architecture and cannot archive or replace exact source facts.
-7. **Storage Layer (`.mind`)**:
+2. **Tri-Signal Retrieval (`POST /retrieve`)**. Three independent channels rank each scope: exact dense search over native 4096-d vectors, BM25S sparse search, and an entity–memory graph ported from EMG (exact parity with upstream on its LoCoMo artifacts) with query-derived anchors and optional HippoRAG-2 personalized PageRank. Results are fused (RRF k=60, DBSF, z-score), optionally reranked inside a fixed pool, and packed into a token-budgeted evidence set with stable evidence IDs. See `docs/REPRODUCTION_MAP.md`.
+3. **Optional Cross-Encoder Reranking**. When enabled, `BAAI/bge-reranker-v2-m3` (local, or via a TEI `/rerank` endpoint) reranks a bounded fusion pool. Responses expose whether it executed.
+4. **Optional Query Decomposition**. `engine/query_decomposition.py` can split a multi-step question into two or three bounded sub-questions through the centralized LLM policy. It rejects novel named entities, duplicate/oversized output, and lost temporal qualifiers; improvement remains an empirical question.
+5. **4096-Dimensional Embedding Invariant**. A remote TEI or OpenAI-compatible embedding endpoint must return exactly 4096 values. Startup, ingestion, and vector insertion fail on any mismatch; there is no local, projected, padded, or lower-dimensional fallback.
+6. **Structured Fact Fields**. Narrative facts can carry entities, event time, validity, one of four memory kinds (world, experience, observation, opinion), confidence, supersession state, and optional causal/temporal relations. These fields are only credited when the selected retrieval path consumes them.
+7. **Optional Salience and Derived Summaries**. Salience is a configurable recency/access/degree score multiplier. Consolidation creates lossy, provenance-linked retrieval summaries; it is not an Observer/Reflector architecture and cannot archive or replace exact source facts.
+8. **Storage Layer (`.mind`)**:
    - SQLite (`store.db` in WAL mode) for nodes, edges, sessions, and metadata
    - `vectors.json`, `graph.jsonl`, and `bm25.jsonl` safe derived-index data
    - `manifest.json` with SHA256 checksums and configured backup rotation
@@ -46,7 +96,7 @@ This project does not replace a transformer KV cache. Its 10M–100M-token targe
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
 ```bash
 python3 -m venv .venv
@@ -99,19 +149,20 @@ python eval_locomo_retrieval.py --search-mode vector_only --vector-weight 1 --gr
 
 ---
 
-## API Summary
+## 🔌 API Summary
 
 | Category | Endpoints |
 |---|---|
 | Nodes | `POST /nodes`, `GET /nodes`, `GET /nodes/{id}`, `PUT /nodes/{id}`, `DELETE /nodes/{id}` |
 | Edges | `POST /edges`, `GET /edges`, `DELETE /edges/{id}`, `GET /edges/node/{id}` |
 | Search | `POST /search/vector`, `GET /search/graph`, `POST /search/hybrid`, `POST /search/compare` |
+| Tri-signal retrieval | `POST /retrieve` (channels, fusion, rerank pool, evidence budget, scope) |
 | Ingest | `POST /ingest/session-facts` (structured LLM fact extraction) |
 | Ops | `GET /health`, `GET /ready`, `POST /snapshot`, `GET /database` |
 
 ---
 
-## Documentation Index
+## 📚 Documentation Index
 
 - [AGENTS.md](AGENTS.md) — agent/developer contract: rules, load-bearing map, doc ownership
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — request/data flow, storage engines, security posture

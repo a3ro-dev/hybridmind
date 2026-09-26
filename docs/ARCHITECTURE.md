@@ -31,6 +31,17 @@ search request
 rerankers so they remain signal ablations. Graph-only requires explicit anchors;
 an anchor recovered by dense search makes the overall procedure vector+graph.
 
+### Tri-signal path
+
+`POST /retrieve` resolves `scope` to live, non-chunk nodes
+(`SQLiteStore.list_scope_nodes`) and builds a `ScopedCorpus` in chronological
+order. It then lazily builds that scope's BM25S index, dense matrix (from
+stored embeddings) and entity-memory graph. These are cached by
+`(scope, corpus_generation, as_of)`, so any write invalidates them. Every
+index is derived and rebuildable. The only new authoritative data is
+`node_entity_extractions`, which holds persisted LLM entity extractions.
+Lexical extractions are recomputed from text.
+
 ## Storage
 
 - `storage/sqlite_store.py`: nodes, versions, edges, metadata, embeddings,

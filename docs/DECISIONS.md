@@ -151,3 +151,103 @@ stages with cumulative per-plan spend, failure receipts, resume.
 
 **Reversal notes.** memorybench remains useful for cross-provider demos. To use
 it for research numbers, first fix the six issues above (and upstream them).
+
+## 2026-09-26 — Tri-signal engine is a new `/retrieve` path, not a rewrite of `/search/hybrid`
+
+**Context.** `HybridRanker.search` truncates the dense+sparse union on a
+heuristic score before RRF and seeds its graph signal from the top three
+dense/sparse hits, so its channels are neither independent nor separately
+measurable (tmp survey: engine map). Rewriting it would break ~40 tested
+behaviours callers rely on.
+
+**Decision.** Add `engine/trisignal.py` behind `POST /retrieve` (SDK
+`retrieve()`, MCP `retrieve`). Each channel ranks a scope-local corpus built
+from SQLite (cached by `corpus_generation`): exact dense inner product
+(HNSW optional, with a per-query recall audit), BM25S Lucene with scope-local
+IDF, and the entity-memory graph with query-derived anchors. Cross-channel
+seeding exists only when requested (`ppr_passage_seed_channel`) and is
+recorded as `depends_on`. `/search/hybrid` is unchanged.
+
+**Reversal notes.** Retire `/search/hybrid` once clients migrate and the
+tri-signal defaults are measured on the 4096-d arm; keep the two paths from
+sharing mutable state.
+
+## 2026-09-26 — Graph channel = EMG entity-memory graph; PPR is an arm
+
+**Context.** Of the graph methods with released code, only EMG
+(arXiv 2608.27925, MIT) reports evidence-ID recall against a matched dense
+control on conversational memory (+4.74 R@25 on LoCoMo). HippoRAG 2 (MIT) has
+the proven PPR walk but no conversational evidence, and our earlier term-graph
+PPR was null.
+
+**Decision.** Port EMG's recall path with exact upstream parity (19,860/19,860
+identical rankings on shipped artifacts, `scripts/reproduce_emg_locomo.py
+--port`) as the default `graph_method="emg"`; port HippoRAG-2 seeding + PPR
+(damping 0.5, top-5 entity seeds weighted by node specificity) as
+`graph_method="ppr"`. PPR uses a scipy power iteration instead of igraph
+(GPL); parity with networkx within 1e-8. The NLTK stopword list is vendored
+(198 words) so no corpus download happens at runtime.
+
+**Reversal notes.** Switch the default to PPR only if a preregistered arm on
+the 4096-d track beats EMG; reference-track PPR graph-only was 62.6 vs 66.1.
+
+## 2026-09-26 — Offline `lexical-v1` entity extractor is the default graph source
+
+**Context.** EMG's extractor is an LLM call per turn (gpt-3.5-turbo); the
+owner asked for zero spend. On EMG's own LoCoMo artifacts the deterministic
+`lexical-v1` extractor (speakers, capitalized spans, time/number expressions,
+RAKE-style phrases) gave graph-only recall@25 66.06 vs 66.09 for the LLM
+graph, and +4.10 [3.14, 4.93] over dense when fused (LLM graph: +4.65).
+
+**Decision.** Default `trisignal_graph_extractor="lexical-v1"`; LLM
+extractions persist in `node_entity_extractions` and are selected by name.
+Partial LLM coverage of a scope is refused, not mixed.
+
+**Reversal notes.** Re-measure on the 4096-d track and on LongMemEval; the
+parity is one dataset with 1536-d reference vectors.
+
+## 2026-09-26 — Provisional `/retrieve` defaults: RRF k=60 over all three channels
+
+**Context.** The dense arm cannot be measured on 4096-d vectors without spend;
+reference-track (1536-d) results already show equal-weight RRF including
+sparse is below dense+graph on LoCoMo.
+
+**Decision.** Keep equal-weight RRF k=60 (the fusion contract) over all three
+channels as the provisional server default, exposed per request, and let the
+VPS 4096-d ablation set channels/weights/fusion. The reference-track numbers
+are not used to tune defaults.
+
+**Reversal notes.** Change `trisignal_channels`/`trisignal_fusion` after the
+4096-d run on both datasets, with the paired CIs recorded in
+`benchmarks/results/BENCHMARK_REPORT.md`.
+
+## 2026-09-26 — Reranker default, TEI reranker and keyless loopback TEI
+
+**Context.** The default `mixedbread-ai/mxbai-rerank-large-v2` needs
+sentence-transformers >= 5.4 (the venv has 5.3) and its accuracy comment had
+no source. The VPS plan runs TEI next to the API, where no credential exists.
+
+**Decision.** Default `reranker_model` is `BAAI/bge-reranker-v2-m3`
+(Apache-2.0; used by LazyMem). New `rerank_mode="tei"` calls TEI `/rerank`
+(schema checked against TEI 1.9.4 OpenAPI) and fails closed on missing or
+duplicate indices. `LOCAL_TEI_EMBEDDING_URL` and loopback `reranker_tei_url`
+accept only loopback hosts and never carry a credential; RunPod URLs stay
+bound to `RUNPOD_API_KEY`.
+
+**Reversal notes.** mxbai-v2 can return after the dependency is upgraded and
+its load path is tested.
+
+## 2026-09-26 — Evaluation hygiene: backups, licences, reference vectors
+
+**Context.** `tests/conftest.py` did not isolate `HYBRIDMIND_BACKUP_DIR`, so
+every suite run wrote shutdown snapshots into `data/backups/` and pruned the
+operator's `.mind.zip` backups to three. The LoCoMo recall code is
+CC-BY-NC-4.0. EMG's shipped vectors are 1536-d.
+
+**Decision.** Tests write backups to their temp dir. LoCoMo recall is
+reimplemented from its definition (no code copied). EMG's 1536-d vectors are
+used only by the reference-track harness (`--dense emg-reference`), never by
+the runtime engine, and every such result is labelled "reference track".
+
+**Reversal notes.** None for the first two. Drop the reference track once the
+4096-d LoCoMo cache exists.

@@ -29,6 +29,39 @@ evidence of optimality.
 
 ---
 
+### 1.3 Tri-signal channels on `/retrieve` (`engine/trisignal.py`)
+
+The legacy formula above ranks a truncated dense+sparse union. `/retrieve`
+instead runs three independent channels over one scope-local corpus:
+
+- **Dense:** exact cosine over stored 4096-d vectors (`engine/dense_channel.py`);
+  HNSW is optional, and `ann_audit` reports its recall@k against exact search.
+- **Sparse:** BM25S, Lucene variant (k1=1.5, b=0.75, Lucene English stopwords,
+  Snowball stemming), with IDF computed over the scope.
+- **Graph:** the EMG entity-memory graph (`engine/entity_graph.py`). Turns and
+  entities are linked by mention edges, and consecutive turns by NEXT/PREV
+  edges. Query keys are softly matched to entity keys with BM25: each key's
+  scores are divided by the best score, an exact key match counts as 1.0, and
+  only matches of at least 0.5 and the top 20 per key are kept.
+  - Entity strength is `Σ match / |matched query keys| · 1/ln(1+deg(e))`.
+  - A turn scores the maximum strength over its mentioned entities. Turns
+    reached only through speaker ("Who") entities are multiplied by 0.25.
+  - Each ±1 neighbour of a scored turn gets `max(existing, 0.5·seed)`.
+  - The `ppr` alternative runs HippoRAG-2 personalized PageRank (damping 0.5,
+    undirected). Seeds are `match(e)/|turns(e)|` on the top 5 entities, plus
+    optional passage seeds `minmax(s)·0.05`.
+
+Fusion is weighted RRF `Σ w_c/(k+rank_c)` with k=60 by default. `dbsf` uses
+Qdrant's `(s-(μ-3σ))/(6σ)` per list. `zscore` sums `w_c·z_c` over complete
+score maps. `minmax_linear` sums `w_c·minmax_c`.
+
+Evidence assembly reuses the E-series operators: `turn` takes hits in rank
+order; `window` adds ±w turns from the same session; `propagate` sets
+`v_j = max(s_j, λ·max(s_{j±1}))` over same-session neighbours, with λ=0.7;
+`session` takes whole sessions scored by max, sum or DCG. Units are packed
+greedily and skipped whole, never truncated, when the token budget would be
+exceeded.
+
 ## 2. Pre-trained Cross-Encoder Reranking
 
 ### 2.1 Candidate Selection & Reranking
