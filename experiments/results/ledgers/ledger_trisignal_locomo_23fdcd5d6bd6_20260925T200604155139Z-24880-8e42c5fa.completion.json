@@ -1,0 +1,16 @@
+{
+  "benchmark": "trisignal_locomo",
+  "budget": null,
+  "completed_at_utc": "2026-09-25T20:15:09.640579+00:00",
+  "ledger_file": "ledger_trisignal_locomo_23fdcd5d6bd6_20260925T200604155139Z-24880-8e42c5fa.jsonl",
+  "ledger_sha256": "515e8954b5b591dacd7aa8b3e6c7663128fd900f7cee967378044e2507413170",
+  "manifest_sha256": "8405c25c577706d25e9e42f49f0781769b762f5991a234dab804cf877cf9e06b",
+  "row_count": 1986,
+  "run_id": "20260925T200604155139Z-24880-8e42c5fa",
+  "schema": "hybridmind.eval-run-completion/v2",
+  "status": "completed",
+  "summary": {
+    "label": "emg-reference-20260926",
+    "n": 1986
+  }
+}

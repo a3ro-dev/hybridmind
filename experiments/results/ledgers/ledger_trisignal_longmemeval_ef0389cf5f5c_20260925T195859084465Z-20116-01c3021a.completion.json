@@ -1,0 +1,16 @@
+{
+  "benchmark": "trisignal_longmemeval",
+  "budget": null,
+  "completed_at_utc": "2026-09-25T20:05:11.994857+00:00",
+  "ledger_file": "ledger_trisignal_longmemeval_ef0389cf5f5c_20260925T195859084465Z-20116-01c3021a.jsonl",
+  "ledger_sha256": "db100f9b4ca39599dd35516fabb846ca51960a02ef050c09d403caae36b1c2da",
+  "manifest_sha256": "d460d2f424ecf059da2507ae49ce171e4c41ca47ac2170cee9315edc67e24921",
+  "row_count": 500,
+  "run_id": "20260925T195859084465Z-20116-01c3021a",
+  "schema": "hybridmind.eval-run-completion/v2",
+  "status": "completed",
+  "summary": {
+    "label": "offline-20260926",
+    "n": 500
+  }
+}

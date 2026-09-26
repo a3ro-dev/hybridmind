@@ -33,6 +33,12 @@ are held fixed — and which gains were just more text?**
    the reader dominates (Gemini 3 Pro full-context 92.0% on LME-S); LoCoMo is saturated by full
    context (92.6% vs a 93.6% annotation ceiling), so LoCoMo gains only matter at budgets ≪ history.
 
+7. **Graph retrieval is dataset-dependent, not universally additive** (R1 + tri-signal runs,
+   2026-09-26). EMG's entity-memory graph reproduces its LoCoMo fusion gain (+4.65 vs +4.74 R@25,
+   exact port parity) and PPR-seeded tri-signal fusion is +3.7 R@25 over dense on the reference
+   track; on LongMemEval-S with the offline lexical graph, adding the graph to BM25 costs −0.081
+   recall_all@10. A free lexical extractor matched the LLM extractor on LoCoMo (66.06 vs 66.09).
+
 ## Lessons and constraints
 
 - BM25S tie order depends on k (47/1,977 LoCoMo top-10 sets differ) — break ties explicitly.
