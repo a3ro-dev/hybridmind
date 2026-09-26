@@ -1,102 +1,90 @@
 <p align="center">
-  <img src="docs/assets/banner.png" alt="HybridMind — Vector + Graph Native Database for AI Retrieval" width="100%" />
+  <img src="docs/assets/banner.png" alt="HybridMind: dense, sparse, and graph retrieval for AI memory" width="100%" />
 </p>
 
 <p align="center">
-  <strong>Local-first dense, sparse, and graph retrieval service for AI memory experiments.</strong>
+  <strong>local dense, sparse, and graph retrieval for AI memory experiments.</strong>
 </p>
 
 <p align="center">
   <a href="#quick-start"><img src="https://img.shields.io/badge/Status-Active%20Research-00e5ff?style=for-the-badge&logoColor=black" alt="Status"></a>
-  <a href="#technical-architecture"><img src="https://img.shields.io/badge/Architecture-Dense%20%2B%20Sparse%20%2B%20Graph-ff007f?style=for-the-badge" alt="Architecture"></a>
+  <a href="#how-its-built"><img src="https://img.shields.io/badge/Architecture-Dense%20%2B%20Sparse%20%2B%20Graph-ff007f?style=for-the-badge" alt="Architecture"></a>
   <a href="tests/"><img src="https://img.shields.io/badge/Tests-390%2B%20Offline%20Passing-00d2d3?style=for-the-badge" alt="Tests"></a>
   <a href="AGENTS.md"><img src="https://img.shields.io/badge/Storage-Authoritative%20SQLite-16e0bd?style=for-the-badge" alt="Storage"></a>
 </p>
 
 ---
 
-## 🪟 The Premise
+most memory systems for AI agents can't answer a simple question: why did you pull that? they hand back a few chunks and a similarity score and ask you to trust them.
 
-most vector databases give you semantic similarity but stay completely blind to explicit graph relationships, and keyword search usually lives in a disconnected silo. HybridMind fixes that retrieval disconnect locally without turning it into a bloated cloud cluster.
+HybridMind is my attempt at the opposite. it's a local retrieval service that searches three ways at once (dense vectors, BM25 keywords, and a typed graph), fuses the results, and keeps enough receipts to show what it retrieved, why, and whether that evidence actually helped the answer.
 
-HybridMind is a local-first dense, sparse, and graph retrieval service designed for agent memory and long-context experiments. instead of treating retrieval like a black box, it unifies FAISS HNSW vector indexing, BM25/BM25S lexical search, and NetworkX structural traversals on top of an authoritative, bitemporal SQLite/WAL persistence layer.
+the bet is that inspectable retrieval grounds an agent better than pouring raw tokens into a huge context window and hoping. it's a bet, not a result. HybridMind is not a KV-cache replacement, and it has not proven it can stand in for a 10M–100M-token context. that's a research target with preregistered gates, and the honest status lives in [PHASE_IMPLEMENTATION_STATUS.md](PHASE_IMPLEMENTATION_STATUS.md).
 
-all candidates are merged through weighted reciprocal rank fusion (RRF) with temporal filtering, giving you explainable, provenance-backed memory instead of hallucinated context. everything packages into portable, cryptographically verified `.mind` snapshots, backed by ~400 offline unit and contract tests with zero network leaks.
+## what's inside
 
-the bet here is simple: local, inspectable hybrid retrieval gives agents way more reliable grounded reasoning than throwing raw tokens into massive context windows and hoping for the best.
-
----
-
-## ⚡ At a glance
-
-| Area | What HybridMind does |
+| area | what it does |
 |---|---|
-| **Retrieval** | FAISS HNSW dense search, Okapi BM25 (`bm25s` + PyStemmer), and a typed NetworkX directed multigraph |
-| **Ranking** | Time-aware weighted reciprocal-rank fusion (`k=60`), with independently controlled retrieval modes |
-| **Evidence** | Corpus/session scoping and exact evidence IDs for retrieval metrics |
-| **Persistence** | SQLite/WAL as authoritative source of truth; runtime indexes rebuilt from validated data |
-| **Portability** | Verified `.mind.zip` snapshots using checksummed JSON/JSONL, never executable pickles |
-| **Embeddings** | Remote native embeddings only, validated to exactly 4096 dimensions |
+| retrieval | FAISS HNSW dense search, Okapi BM25 (`bm25s` + PyStemmer), and a typed NetworkX directed multigraph |
+| ranking | time-aware weighted reciprocal-rank fusion (`k=60`), with each retrieval path switchable on its own |
+| evidence | corpus/session scoping and exact evidence IDs for retrieval metrics |
+| persistence | SQLite in WAL mode is the source of truth; every index is rebuilt from it |
+| portability | checksummed `.mind.zip` snapshots in JSON/JSONL, never executable pickles |
+| embeddings | remote native embeddings only, validated to exactly 4096 dimensions |
 
----
+## why three paths
 
-## 🕹️ Why Hybrid Retrieval
+vector search is good at meaning and bad at exact terms. it'll miss the one ticket number or function name you actually asked about. keyword search has the reverse problem. a graph catches explicit relations, like "this fact replaced that one", but gets brittle when it's sparse or noisy.
 
-Pure vector search can miss an explicit relation or exact term. Graph-only retrieval loses semantic flexibility and gets brittle when the graph is sparse or noisy. HybridMind keeps these as separate candidate paths, then fuses them so each path can be measured, ablated, and improved independently.
+so HybridMind keeps them as separate candidate paths and fuses them at the end. the point isn't that fusion is magic. it's that you can turn each path off, measure what it contributed, and stop guessing.
 
 ```
-                  ┌───────────────────────┐
-                  │      User Query       │
-                  └──────────┬────────────┘
-                             │
-         ┌───────────────────┼───────────────────┐
-         ▼                   ▼                   ▼
-┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│   FAISS HNSW    │ │    BM25S Lex    │ │ NetworkX Graph  │
-│ Dense Vector    │ │  Sparse Keyword │ │ Entity & Citations│
-└────────┬────────┘ └────────┬────────┘ └────────┬────────┘
-         │                   │                   │
-         └───────────────────┼───────────────────┘
-                             ▼
-              ┌─────────────────────────────┐
-              │ Reciprocal Rank Fusion (k=60)│
-              │  + Temporal Scoping & Rank  │
-              └──────────────┬──────────────┘
-                             ▼
-              ┌─────────────────────────────┐
-              │  Explainable Evidence Set   │
-              └─────────────────────────────┘
+                        ┌──────────────┐
+                        │  user query  │
+                        └──────┬───────┘
+          ┌────────────────────┼────────────────────┐
+          ▼                    ▼                    ▼
+ ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+ │   FAISS HNSW    │  │      BM25S      │  │ NetworkX graph  │
+ │  dense vectors  │  │ sparse keywords │  │ entities, links │
+ └────────┬────────┘  └────────┬────────┘  └────────┬────────┘
+          └────────────────────┼────────────────────┘
+                               ▼
+                ┌──────────────────────────────┐
+                │ reciprocal rank fusion, k=60 │
+                │    + temporal scoping        │
+                └──────────────┬───────────────┘
+                               ▼
+                ┌──────────────────────────────┐
+                │ evidence set with stable IDs │
+                └──────────────────────────────┘
 ```
 
-### Design stance
+## how it's built
 
-- **Fail closed** on malformed provider output, corrupt persistence, partial batches, and invalid benchmark provenance.
-- **Derived indexes are projections**, not authoritative records. SQLite remains the single source of truth.
-- **Live provider calls are opt-in and budgeted**; the offline test suite makes zero provider calls.
-- **No answer-string shortcuts**: answer-string overlap is not counted as retrieval evidence recall.
+- **fusion.** reciprocal-rank fusion with $k=60$ blends dense ranks, BM25 ranks, graph proximity, and time relevance pulled from the query. `search_mode` (`vector_only`, `sparse_only`, `vector_sparse`, `graph_only`, `hybrid`) makes ablations real code paths, not weight tweaks.
+- **tri-signal retrieval (`POST /retrieve`).** three independent channels rank each scope: exact dense search over native 4096-d vectors, BM25S, and an entity–memory graph ported from EMG (exact parity with upstream on its LoCoMo artifacts) with query-derived anchors and optional HippoRAG-2 personalized PageRank. results are fused (RRF k=60, DBSF, or z-score), optionally reranked inside a fixed pool, and packed into a token-budgeted evidence set with stable IDs. see [docs/REPRODUCTION_MAP.md](docs/REPRODUCTION_MAP.md).
+- **reranking, optional.** when it's enabled, `BAAI/bge-reranker-v2-m3` (local, or through a TEI `/rerank` endpoint) reranks a bounded pool. responses say whether it actually ran.
+- **query decomposition, optional.** `engine/query_decomposition.py` can split a multi-step question into two or three sub-questions. it rejects invented entities, duplicates, and dropped time qualifiers. whether it helps is still an open question.
+- **the 4096 rule.** the embedding endpoint (TEI or OpenAI-compatible) must return exactly 4096 finite values. anything else fails at startup, ingestion, or insert. there is no local, padded, or projected fallback, on purpose.
+- **structured facts.** a fact can carry entities, event time, validity, a memory kind (world, experience, observation, opinion), confidence, and supersession. these only get credit when the retrieval path actually reads them.
+- **salience and summaries, optional.** salience is a recency/access/degree multiplier. consolidation writes lossy summaries linked back to their sources. it never replaces the source facts.
 
----
+a live `.mind` directory holds:
 
-## ⚙️ Technical Architecture
+- `store.db`, the SQLite database for nodes, edges, sessions, and metadata
+- `vectors.json`, `graph.jsonl`, `bm25.jsonl`, the derived index data
+- `manifest.json`, with SHA-256 checksums and backup rotation
+- in-memory FAISS, NetworkX, and BM25 indexes rebuilt from all of the above
 
-1. **Time-Aware Hybrid Fusion**. Reciprocal Rank Fusion ($k=60$) blends 4096-dimensional dense vectors, BM25 lexical ranks, typed graph proximity, and query-derived time relevance. Request-level `search_mode` controls make vector, sparse, graph, and hybrid ablations real rather than approximate weight changes.
-2. **Tri-Signal Retrieval (`POST /retrieve`)**. Three independent channels rank each scope: exact dense search over native 4096-d vectors, BM25S sparse search, and an entity–memory graph ported from EMG (exact parity with upstream on its LoCoMo artifacts) with query-derived anchors and optional HippoRAG-2 personalized PageRank. Results are fused (RRF k=60, DBSF, z-score), optionally reranked inside a fixed pool, and packed into a token-budgeted evidence set with stable evidence IDs. See `docs/REPRODUCTION_MAP.md`.
-3. **Optional Cross-Encoder Reranking**. When enabled, `BAAI/bge-reranker-v2-m3` (local, or via a TEI `/rerank` endpoint) reranks a bounded fusion pool. Responses expose whether it executed.
-4. **Optional Query Decomposition**. `engine/query_decomposition.py` can split a multi-step question into two or three bounded sub-questions through the centralized LLM policy. It rejects novel named entities, duplicate/oversized output, and lost temporal qualifiers; improvement remains an empirical question.
-5. **4096-Dimensional Embedding Invariant**. A remote TEI or OpenAI-compatible embedding endpoint must return exactly 4096 values. Startup, ingestion, and vector insertion fail on any mismatch; there is no local, projected, padded, or lower-dimensional fallback.
-6. **Structured Fact Fields**. Narrative facts can carry entities, event time, validity, one of four memory kinds (world, experience, observation, opinion), confidence, supersession state, and optional causal/temporal relations. These fields are only credited when the selected retrieval path consumes them.
-7. **Optional Salience and Derived Summaries**. Salience is a configurable recency/access/degree score multiplier. Consolidation creates lossy, provenance-linked retrieval summaries; it is not an Observer/Reflector architecture and cannot archive or replace exact source facts.
-8. **Storage Layer (`.mind`)**:
-   - SQLite (`store.db` in WAL mode) for nodes, edges, sessions, and metadata
-   - `vectors.json`, `graph.jsonl`, and `bm25.jsonl` safe derived-index data
-   - `manifest.json` with SHA256 checksums and configured backup rotation
-   - runtime FAISS, NetworkX, and BM25 indexes rebuilt from validated data
+## a few rules i hold it to
 
-This project does not replace a transformer KV cache. Its 10M–100M-token target is a preregistered research goal for **retrieval-conditioned effective context**: answer over a large external corpus while sending a bounded evidence subset to a reader. See the protocol below; corpus capacity alone is not evidence that the goal works.
+- fail closed on malformed provider output, corrupt files, partial batches, and bad benchmark provenance.
+- indexes are projections. SQLite is the record.
+- anything that calls a paid provider is opt-in and budgeted. the offline test suite makes zero provider calls.
+- answer-string overlap doesn't count as retrieval evidence. exact evidence IDs do.
 
----
-
-## 🚀 Quick Start
+## quick start
 
 ```bash
 python3 -m venv .venv
@@ -104,18 +92,16 @@ python3 -m venv .venv
 # Unix: source .venv/bin/activate
 pip install -r requirements.txt      # or: python install.py (venv + .env + MCP wiring)
 cp .env.example .env                 # fill in provider keys; config.py is authoritative
-# First create an offline resource report and a matching live-plan file.
+# first create an offline resource report and a matching live-plan file
 python scripts/offline_resource_frontier.py --output benchmarks/results/offline_resource_frontier.json
 python scripts/preflight.py --plan path/to/live-plan.json --validate-only
-# Omit --validate-only only when the bounded plan is ready to spend/warm.
+# drop --validate-only only when the bounded plan is ready to spend
 python -m uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
-Preflight is deliberately default-deny: a bare command makes no provider calls.
-See `docs/RESOURCE_SPEED_TOKENOMICS.md` and
-`docs/LIVE_EVAL_PLAN.example.json`.
+preflight is default-deny. running it bare makes no provider calls. the details are in [docs/RESOURCE_SPEED_TOKENOMICS.md](docs/RESOURCE_SPEED_TOKENOMICS.md) and [docs/LIVE_EVAL_PLAN.example.json](docs/LIVE_EVAL_PLAN.example.json).
 
-### Python SDK (`sdk/memory.py`)
+### python SDK
 
 ```python
 from sdk.memory import HybridMemory
@@ -126,56 +112,54 @@ memory.relate(nid, "target-node-uuid", "derived_from")
 results = memory.recall("attention mechanisms", top_k=5, mode="hybrid")
 ```
 
-### CLI & Evaluation
+### CLI and evaluation
 
 ```bash
-# search CLI
+# search
 python -m cli.main search "attention mechanism" --mode hybrid --top-k 5
 
-# evaluation & statistical significance testing
+# evaluation and significance testing
 python eval_locomo_retrieval.py --with-answers
 python eval_stats.py compare <ledger_A> <ledger_B>
 
-# review the controlled experiment matrix without making network calls
+# look at the experiment matrix without touching the network
 python scripts/ablation_matrix.py --list
 python scripts/ablation_matrix.py --dry-run --benchmark locomo
 
-# issue a client-request-controlled signal ablation after preflight/server startup;
-# this does not by itself attest the external server commit, config, or corpus
+# a client-controlled single-signal ablation, after preflight and server startup.
+# this alone doesn't attest the server's commit, config, or corpus.
 python eval_locomo_retrieval.py --search-mode vector_only --vector-weight 1 --graph-weight 0 --bm25-boost 0 --rerank-pool 0 --no-route-weights --no-track-access
-# Graph-only additionally requires a gold-independent explicit anchor manifest;
-# a vector-derived anchor is not a pure graph-only ablation.
+# graph-only also needs a gold-independent anchor manifest;
+# a vector-derived anchor is not a pure graph-only run.
 ```
 
----
+## API
 
-## 🔌 API Summary
-
-| Category | Endpoints |
+| category | endpoints |
 |---|---|
-| Nodes | `POST /nodes`, `GET /nodes`, `GET /nodes/{id}`, `PUT /nodes/{id}`, `DELETE /nodes/{id}` |
-| Edges | `POST /edges`, `GET /edges`, `DELETE /edges/{id}`, `GET /edges/node/{id}` |
-| Search | `POST /search/vector`, `GET /search/graph`, `POST /search/hybrid`, `POST /search/compare` |
-| Tri-signal retrieval | `POST /retrieve` (channels, fusion, rerank pool, evidence budget, scope) |
-| Ingest | `POST /ingest/session-facts` (structured LLM fact extraction) |
-| Ops | `GET /health`, `GET /ready`, `POST /snapshot`, `GET /database` |
+| nodes | `POST /nodes`, `GET /nodes`, `GET /nodes/{id}`, `PUT /nodes/{id}`, `DELETE /nodes/{id}` |
+| edges | `POST /edges`, `GET /edges`, `DELETE /edges/{id}`, `GET /edges/node/{id}` |
+| search | `POST /search/vector`, `GET /search/graph`, `POST /search/hybrid`, `POST /search/compare` |
+| tri-signal retrieval | `POST /retrieve` (channels, fusion, rerank pool, evidence budget, scope) |
+| ingest | `POST /ingest/session-facts` (structured LLM fact extraction) |
+| ops | `GET /health`, `GET /ready`, `POST /snapshot`, `GET /database` |
 
----
+## where to read next
 
-## 📚 Documentation Index
+- [AGENTS.md](AGENTS.md): the working contract for anyone editing the code, human or agent
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): request and data flow, storage, security posture
+- [docs/ALGORITHM.md](docs/ALGORITHM.md): the RRF math and reranker score blending
+- [docs/EVALUATION.md](docs/EVALUATION.md): evaluators, ledger schema, statistics
+- [docs/REPRODUCTION_MAP.md](docs/REPRODUCTION_MAP.md): how the tri-signal path maps to the work it reproduces
+- [docs/AGENT_INTEGRATION.md](docs/AGENT_INTEGRATION.md): SDK, MCP, and ingestion contracts
+- [cli/README.md](cli/README.md): the command-line tools
+- [PHASE_IMPLEMENTATION_STATUS.md](PHASE_IMPLEMENTATION_STATUS.md): what's real and what's still scaffolding
+- [docs/ADVERSARIAL_AUDIT_REMEDIATION.md](docs/ADVERSARIAL_AUDIT_REMEDIATION.md): the audit, what got fixed, what's still risky
+- [docs/KV_CACHE_RESEARCH.md](docs/KV_CACHE_RESEARCH.md): the KV working-set hypotheses, including the ones that failed
+- [docs/RETRIEVAL_RESEARCH_PROTOCOL.md](docs/RETRIEVAL_RESEARCH_PROTOCOL.md): preregistered quality, scale, latency, and cost gates
+- [docs/RESOURCE_SPEED_TOKENOMICS.md](docs/RESOURCE_SPEED_TOKENOMICS.md): local measurements and the live-spend gate
+- [demos/techspec.md](demos/techspec.md): a spec for six user-facing demos
 
-- [AGENTS.md](AGENTS.md) — agent/developer contract: rules, load-bearing map, doc ownership
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — request/data flow, storage engines, security posture
-- [docs/ALGORITHM.md](docs/ALGORITHM.md) — RRF fusion formulas and cross-encoder score normalization
-- [docs/EVALUATION.md](docs/EVALUATION.md) — evaluator usage, ledger schema, statistical conventions
-- [docs/AGENT_INTEGRATION.md](docs/AGENT_INTEGRATION.md) — SDK / MCP / structured-ingestion contracts
-- [cli/README.md](cli/README.md) — CLI command surfaces
-- [PHASE_IMPLEMENTATION_STATUS.md](PHASE_IMPLEMENTATION_STATUS.md) — real vs scaffolded inventory
-- [docs/ADVERSARIAL_AUDIT_REMEDIATION.md](docs/ADVERSARIAL_AUDIT_REMEDIATION.md) — baseline audit, remediation evidence, residual risks, and scores
-- [docs/KV_CACHE_RESEARCH.md](docs/KV_CACHE_RESEARCH.md) — KV working-set hypotheses and evidence
-- [docs/RETRIEVAL_RESEARCH_PROTOCOL.md](docs/RETRIEVAL_RESEARCH_PROTOCOL.md) — preregistered quality, scale, latency, resource, and cost gates
-- [docs/RESOURCE_SPEED_TOKENOMICS.md](docs/RESOURCE_SPEED_TOKENOMICS.md) — bounded local measurements and live spend admission control
-- [demos/techspec.md](demos/techspec.md) — no-code specification for six user-facing demos
+every tracked doc, with who owns it and when it changes, is listed in the documentation map in [AGENTS.md](AGENTS.md).
 
-The full registry of every tracked document (with ownership and update
-triggers) is the Documentation Map in `AGENTS.md`.
+the big claim, that retrieval can stand in for most of a giant prompt, hasn't been earned yet. this repo is where i'm trying to earn it, or find out that it can't be done.
