@@ -1,62 +1,55 @@
-# HybridMind Command-Line Interfaces
+# command-line tools
 
-Three CLIs ship with the repository. All of them talk to the API server or
-read `.mind` directories directly; none of them wake a remote provider.
+three CLIs ship with the repo. they either talk to the API server or read `.mind` directories directly. none of them wake a remote provider on their own.
 
-1. **Admin CLI** (`cli/main.py`) — search, node/edge writes, stats, server launch.
-2. **Interactive memory shell** (`cli/agent.py`) — an LLM chat loop backed by recall.
-3. **`.mind` inspector** (`cli/mind.py`) — offline manifest/database tooling.
+1. **admin CLI** (`cli/main.py`): search, node and edge writes, stats, server launch.
+2. **memory shell** (`cli/agent.py`): an LLM chat loop that recalls memory before each turn.
+3. **`.mind` inspector** (`cli/mind.py`): offline manifest and database tooling.
 
-Start the API first (default `http://127.0.0.1:8000`); see the README Quick
-Start for the preflight rules that govern live provider use.
+start the API first (default `http://127.0.0.1:8000`). the preflight rules for live provider use are in the README quick start.
 
----
-
-## 1. Admin CLI (`cli/main.py`)
+## admin CLI
 
 ```bash
 python -m cli.main <command> [options]
 ```
 
-| Command | Purpose |
+| command | what it does |
 |---|---|
-| `search "query" --mode hybrid --top-k 10 --json` | Run vector/graph/hybrid search (`--mode`, weights, `--json`). |
-| `compare "query" [--anchor <node-id>]` | Side-by-side vector vs graph vs hybrid results. |
-| `add_node "text" [--title T] [--tags a,b] [--json]` | Store a node via `POST /nodes`. |
-| `get_node <id> [--json]` | Fetch one node. |
-| `add_edge <src> <dst> [--type related_to] [--weight 1.0]` | Create an edge. |
-| `stats` | Node/edge/index counts and health summary. |
-| `serve [--host 127.0.0.1] [--port 8000] [--reload]` | Launch `main:app` with uvicorn. |
-| `load_demo` | Ingest the bundled research-papers demo dataset. |
+| `search "query" --mode hybrid --top-k 10 --json` | vector, graph, or hybrid search (`--mode`, weights, `--json`) |
+| `compare "query" [--anchor <node-id>]` | vector vs graph vs hybrid, side by side |
+| `add_node "text" [--title T] [--tags a,b] [--json]` | store a node via `POST /nodes` |
+| `get_node <id> [--json]` | fetch one node |
+| `add_edge <src> <dst> [--type related_to] [--weight 1.0]` | create an edge |
+| `stats` | node, edge, and index counts plus health |
+| `serve [--host 127.0.0.1] [--port 8000] [--reload]` | run `main:app` with uvicorn |
+| `load_demo` | ingest the bundled research-papers demo dataset |
 
-There are no delete/snapshot subcommands; destructive and snapshot operations
-are API-only by design (`DELETE /nodes/{id}`, `POST /snapshot`), so they stay
-behind the API security layer.
+there are no delete or snapshot subcommands. those stay API-only (`DELETE /nodes/{id}`, `POST /snapshot`) so they sit behind the API's security layer.
 
-## 2. Interactive memory shell (`cli/agent.py`)
+## memory shell
 
 ```bash
 python cli/agent.py [--memory-url http://127.0.0.1:8000] [--session <id>]
 ```
 
-A chat shell that recalls session-scoped and cross-session memories before each
-turn (LLM provider follows `engine/llm_client.py` policy). Slash commands:
+a chat shell that pulls session-scoped and cross-session memories before every turn. the LLM provider follows the policy in `engine/llm_client.py`.
 
-| Command | Action |
+| command | what it does |
 |---|---|
-| `/memory` | Show memories recalled on the previous turn. |
-| `/stats` | Node/edge counts from `memory.stats()`. |
-| `/sessions` | List sessions. |
-| `/archive` | Archive the current session, then exit. |
-| `/forget <text>` | Recall the nearest node to `<text>`, confirm, soft-delete it by ID. |
-| `/clear`, `/help`, `/exit` (`/quit`) | Terminal control. |
+| `/memory` | show what got recalled on the last turn |
+| `/stats` | node and edge counts from `memory.stats()` |
+| `/sessions` | list sessions |
+| `/archive` | archive the current session, then exit |
+| `/forget <text>` | find the nearest node to `<text>`, confirm, soft-delete it by ID |
+| `/clear`, `/help`, `/exit` (`/quit`) | terminal control |
 
-## 3. `.mind` inspector (`cli/mind.py`)
+## `.mind` inspector
 
-Offline tooling over storage directories — never contacts the API:
+offline tooling over storage directories. it never contacts the API.
 
 ```bash
-python cli/mind.py info     path/to/store.mind    # header/size summary
+python cli/mind.py info     path/to/store.mind    # header and size summary
 python cli/mind.py create   path/to/store.mind    # new empty database
 python cli/mind.py export   path/to/store.mind -o out.mind.zip
 python cli/mind.py import   archive.mind.zip target/
@@ -65,6 +58,4 @@ python cli/mind.py delete   path/to/store.mind [-f]
 python cli/mind.py manifest path/to/store.mind    # print manifest.json
 ```
 
-`export` produces the checksummed v2 portable archive described in
-`docs/ARCHITECTURE.md`; `import` performs the same path/checksum/semantic
-validation as the API restore path.
+`export` writes the checksummed v2 archive described in `docs/ARCHITECTURE.md`. `import` runs the same path, checksum, and semantic checks as the API restore path.

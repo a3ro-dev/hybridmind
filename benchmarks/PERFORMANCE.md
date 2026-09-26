@@ -1,4 +1,4 @@
-# HybridMind resource characterization
+# resource characterization
 
 The only current validated performance artifact is
 `benchmarks/results/offline_resource_frontier.json`. It is a bounded synthetic

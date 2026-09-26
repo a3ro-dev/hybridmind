@@ -1,11 +1,10 @@
-# HybridMind Visual Memory — RunPod Serverless Deployment
+# visual memory on RunPod serverless
 
-This deploys the ColQwen2.5 image embedding server to RunPod Serverless.
-Budget: **$10-15** for occasional use with scale-to-zero workers.
+this deploys the ColQwen2.5 image embedding server to RunPod serverless. the budget i planned around is **$10–15** for occasional use, with workers scaling to zero when idle.
 
-## Quick Start
+it's an opt-in experiment. the visual path isn't part of the default retrieval stack.
 
-### 1. Build Docker image
+## 1. build the image
 
 ```bash
 docker build -f deploy/Dockerfile.image_server -t hybridmind-image-server .
@@ -13,26 +12,26 @@ docker tag hybridmind-image-server <your-dockerhub>/hybridmind-image-server:late
 docker push <your-dockerhub>/hybridmind-image-server:latest
 ```
 
-### 2. Create RunPod Serverless endpoint
+## 2. create the endpoint
 
-1. Go to [RunPod Serverless](https://www.runpod.io/console/serverless)
-2. Click **New Endpoint**
-3. Select your Docker image
-4. GPU: **A100 SXM** (80GB) — ColQwen2.5 needs ~16GB VRAM
-5. Set **Min Workers = 0** (scale to zero when idle → $0 idle cost)
-6. Set **Max Workers = 1**
-7. Note your **Endpoint ID**
+1. open [RunPod serverless](https://www.runpod.io/console/serverless)
+2. click **New Endpoint**
+3. pick your Docker image
+4. GPU: A100 SXM (80GB). ColQwen2.5 needs about 16GB of VRAM
+5. min workers = 0, so idle costs nothing
+6. max workers = 1
+7. copy the endpoint ID
 
-### 3. Configure HybridMind
+## 3. point HybridMind at it
 
-Add to your `.env`:
+add to `.env`:
 
 ```bash
 HYBRIDMIND_IMAGE_EMBEDDING_URL=https://api.runpod.ai/v2/{YOUR_ENDPOINT_ID}/runsync
 HYBRIDMIND_IMAGE_RUNPOD_KEY=your_runpod_api_key
 ```
 
-### 4. Test
+## 4. check it works
 
 ```python
 from engine.image_embedding import get_image_embedding_engine
@@ -47,25 +46,25 @@ patches = engine.embed_image(b64)
 print(f"Got {len(patches)} patch vectors of dim {len(patches[0])}")
 ```
 
-## Cost Estimate
+## rough cost
 
-| Operation | Time | Cost (A100 @ ~$2/hr) |
+these are estimates at about $2/hr for an A100, not measured bills.
+
+| operation | time | cost |
 |-----------|------|-------|
-| Cold start | ~60s | ~$0.03 |
-| Image embed (warm) | ~2s | ~$0.001 |
+| cold start | ~60s | ~$0.03 |
+| one image, warm | ~2s | ~$0.001 |
 | 1000 images | ~35min | ~$1.17 |
-| Monthly idle (0 workers) | — | $0 |
+| a month idle at 0 workers | n/a | $0 |
 
-**For $10-15**: ~10,000 image embeddings with comfortable margin.
+so $10–15 covers roughly 10,000 image embeddings with room to spare.
 
-## Local Testing
-
-To test locally without RunPod:
+## running it locally
 
 ```bash
 python -m venv .venv_image
 .venv_image/Scripts/pip install -r deploy/requirements_image_server.txt
-python deploy/runpod_image_handler.py  # starts local FastAPI on port 8001
+python deploy/runpod_image_handler.py  # local FastAPI on port 8001
 ```
 
-Then set `HYBRIDMIND_IMAGE_EMBEDDING_URL=http://localhost:8001` in `.env`.
+then set `HYBRIDMIND_IMAGE_EMBEDDING_URL=http://localhost:8001` in `.env`.

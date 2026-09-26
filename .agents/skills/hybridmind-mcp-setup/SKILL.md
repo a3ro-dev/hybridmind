@@ -123,7 +123,7 @@ After connecting, ask your AI client:
 > "Use the remember tool to store: 'My name is Alice and I like hiking.'"
 > "Use the recall tool to find memories about Alice."
 
-You should get back the stored memory. ✅
+You should get back the stored memory.
 
 ---
 
