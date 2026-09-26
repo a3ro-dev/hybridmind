@@ -49,6 +49,30 @@ def validate_provider_url(
     return candidate
 
 
+_LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "::1")
+
+
+def validate_loopback_url(url: str, service: str) -> str:
+    """Return a normalized base URL for a keyless self-hosted loopback service.
+
+    Loopback endpoints (a TEI container on the same VPS) never receive a
+    provider credential, so plain HTTP is acceptable; anything that is not a
+    loopback host is refused rather than silently treated as trusted.
+    """
+    candidate = url.strip().rstrip("/")
+    parsed = urlsplit(candidate)
+    if parsed.scheme.lower() not in ("http", "https") or not parsed.hostname:
+        raise ValueError(f"{service} endpoint must be an absolute http(s) URL")
+    if parsed.username or parsed.password or parsed.query or parsed.fragment:
+        raise ValueError(f"{service} endpoint cannot contain credentials, query, or fragment")
+    if parsed.hostname.lower().rstrip(".") not in _LOOPBACK_HOSTS:
+        raise ValueError(
+            f"{service} keyless endpoint must be a loopback host "
+            f"({', '.join(_LOOPBACK_HOSTS)}); got {parsed.hostname!r}"
+        )
+    return candidate
+
+
 def validate_runpod_endpoint_id(endpoint_id: str) -> str:
     """Reject path/query injection in RunPod endpoint identifiers."""
     candidate = endpoint_id.strip()

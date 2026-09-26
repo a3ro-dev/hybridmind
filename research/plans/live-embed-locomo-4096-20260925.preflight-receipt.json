@@ -1,0 +1,17 @@
+{
+ "plan": "research/plans/live-embed-locomo-4096-20260925.json",
+ "stage": "preflight (live)",
+ "status": "failed_dependency_down",
+ "provider": "RunPod TEI (Qwen3-Embedding-8B, strict 4096)",
+ "error": "ReadTimeout after 3 attempts",
+ "provider_check_wall_seconds": 179.371,
+ "usage_actual": {
+  "embedding_calls": 3,
+  "embedding_input_tokens": 24,
+  "provider_runtime_seconds": 180
+ },
+ "max_modeled_cost_usd": 0.499,
+ "evaluation_admitted": false,
+ "retries_beyond_policy": 0,
+ "recorded_at": "2026-09-25T17:49:12.532947+00:00"
+}

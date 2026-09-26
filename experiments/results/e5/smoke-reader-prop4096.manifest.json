@@ -1,0 +1,27 @@
+{
+ "schema": "hybridmind.budgeted_answer_eval.v2",
+ "stage": "reader",
+ "arm": "raw|prop0.7|4096",
+ "kind": "longmemeval",
+ "dataset_sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442",
+ "plan_sha256": "990e25fcd71db6707be6378e00dc19c110ae5c84789bdcf12d1776f38e66792f",
+ "gate": {
+  "report_sha256": "1b0b4485791dd50c57fe2acef11ff1a974bfa13e391c1b199e66dd2943724ae6",
+  "projected_cost_usd": 0.0,
+  "available_memory_bytes": 3934666752,
+  "free_disk_bytes": 15373402112,
+  "checked_at": "2026-09-25T18:14:09.443530+00:00"
+ },
+ "provider": "zai",
+ "model": "glm-4.7-flash",
+ "thinking": "disabled",
+ "temperature": 0,
+ "max_tokens": 800,
+ "prompt_version": "longmemeval-official-cot-v1",
+ "judge_label": "yes-substring (official)",
+ "answers_sha256": null,
+ "workers": 1,
+ "questions": 3,
+ "resumed_ok": 0,
+ "started_at": "2026-09-25T18:14:09.692956+00:00"
+}

@@ -1,0 +1,36 @@
+# Autoresearch central state (adapted to AGENTS.md: scripts live in scripts/,
+# raw results in experiments/results/, this directory holds protocols/synthesis).
+project:
+  title: "HybridMind evidence-to-answer under a fixed budget"
+  question: >
+    At a fixed evidence-token and inference budget, which changes recover missing
+    evidence, preserve all evidence needed for multi-hop answers, and turn that
+    evidence into correct, supported answers?
+  status: active
+  started: "2026-09-25"
+  domain: "long-term conversational memory retrieval + RAG evaluation"
+constraints:
+  - "weak laptop (i5-13420H, 16 GB, RTX 4050 6 GB): no heavy local compute; small sequential runs"
+  - "runtime embeddings remote native 4096-d; live calls only via priced checksum-bound preflight"
+  - "LoCoMo is fully inspected = exploratory only; untouched official LongMemEval reserved for confirmation"
+literature:
+  key_papers: []
+  open_problems: []
+hypotheses: []
+experiments:
+  proxy_metric: "complete-evidence coverage (all gold IDs) at fixed evidence-token budget; answer accuracy when budget admitted"
+  baseline_value: null
+  best_value: null
+  total_runs: 0
+  trajectory: []
+outer_loop:
+  cycle: 0
+  last_direction: null
+  last_reflection: ""
+workspace:
+  findings: "research/findings.md"
+  log: "research/research-log.md"
+  literature_dir: "research/literature/"
+  experiments_dir: "research/experiments/"
+  to_human_dir: "research/to_human/"
+  paper_dir: "research/paper/"

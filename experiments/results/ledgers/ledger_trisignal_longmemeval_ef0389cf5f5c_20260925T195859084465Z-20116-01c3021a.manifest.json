@@ -1,0 +1,229 @@
+{
+  "benchmark": "trisignal_longmemeval",
+  "completion_file": "ledger_trisignal_longmemeval_ef0389cf5f5c_20260925T195859084465Z-20116-01c3021a.completion.json",
+  "config": {
+    "arms": {
+      "graph": {
+        "config": {
+          "add_speaker_as_entity": true,
+          "ann_audit": false,
+          "bm25_b": 0.75,
+          "bm25_k1": 1.5,
+          "channel_k": 100,
+          "channels": [
+            "graph"
+          ],
+          "degree_discount": true,
+          "dense_mode": "exact",
+          "entity_min_rel_score": 0.5,
+          "entity_top_k_per_key": 20,
+          "evidence_budget_tokens": null,
+          "evidence_lambda": 0.7,
+          "evidence_order": "chronological",
+          "evidence_strategy": "turn",
+          "evidence_window": 1,
+          "fusion": "rrf",
+          "graph_extractor": "lexical-v1",
+          "graph_method": "emg",
+          "graph_query_extractor": "lexical-v1",
+          "hnsw_ef_construction": 40,
+          "hnsw_ef_search": 64,
+          "hnsw_m": 32,
+          "ppr_damping": 0.5,
+          "ppr_linking_top_k": 5,
+          "ppr_passage_node_weight": 0.05,
+          "ppr_passage_seed_channel": null,
+          "ppr_sequence_edges": true,
+          "rerank_pool": 0,
+          "rrf_k": 60,
+          "sequence_expansion": true,
+          "sequence_scale": 0.5,
+          "top_k": 50,
+          "weights": {
+            "graph": 1.0
+          },
+          "who_only_dampen": 0.25
+        },
+        "sha256": "d7025e5f10b5dd8b95d346275d4cdf5118fe7cde3021cbee327a7a9cc6e7e823"
+      },
+      "graph-ppr": {
+        "config": {
+          "add_speaker_as_entity": true,
+          "ann_audit": false,
+          "bm25_b": 0.75,
+          "bm25_k1": 1.5,
+          "channel_k": 100,
+          "channels": [
+            "graph"
+          ],
+          "degree_discount": true,
+          "dense_mode": "exact",
+          "entity_min_rel_score": 0.5,
+          "entity_top_k_per_key": 20,
+          "evidence_budget_tokens": null,
+          "evidence_lambda": 0.7,
+          "evidence_order": "chronological",
+          "evidence_strategy": "turn",
+          "evidence_window": 1,
+          "fusion": "rrf",
+          "graph_extractor": "lexical-v1",
+          "graph_method": "ppr",
+          "graph_query_extractor": "lexical-v1",
+          "hnsw_ef_construction": 40,
+          "hnsw_ef_search": 64,
+          "hnsw_m": 32,
+          "ppr_damping": 0.5,
+          "ppr_linking_top_k": 5,
+          "ppr_passage_node_weight": 0.05,
+          "ppr_passage_seed_channel": null,
+          "ppr_sequence_edges": true,
+          "rerank_pool": 0,
+          "rrf_k": 60,
+          "sequence_expansion": true,
+          "sequence_scale": 0.5,
+          "top_k": 50,
+          "weights": {
+            "graph": 1.0
+          },
+          "who_only_dampen": 0.25
+        },
+        "sha256": "6693473f32ae316b51686d0b6893b6109b7e39573896f759e9d12d50891407ae"
+      },
+      "sparse": {
+        "config": {
+          "add_speaker_as_entity": true,
+          "ann_audit": false,
+          "bm25_b": 0.75,
+          "bm25_k1": 1.5,
+          "channel_k": 100,
+          "channels": [
+            "sparse"
+          ],
+          "degree_discount": true,
+          "dense_mode": "exact",
+          "entity_min_rel_score": 0.5,
+          "entity_top_k_per_key": 20,
+          "evidence_budget_tokens": null,
+          "evidence_lambda": 0.7,
+          "evidence_order": "chronological",
+          "evidence_strategy": "turn",
+          "evidence_window": 1,
+          "fusion": "rrf",
+          "graph_extractor": "lexical-v1",
+          "graph_method": "emg",
+          "graph_query_extractor": "lexical-v1",
+          "hnsw_ef_construction": 40,
+          "hnsw_ef_search": 64,
+          "hnsw_m": 32,
+          "ppr_damping": 0.5,
+          "ppr_linking_top_k": 5,
+          "ppr_passage_node_weight": 0.05,
+          "ppr_passage_seed_channel": null,
+          "ppr_sequence_edges": true,
+          "rerank_pool": 0,
+          "rrf_k": 60,
+          "sequence_expansion": true,
+          "sequence_scale": 0.5,
+          "top_k": 50,
+          "weights": {
+            "sparse": 1.0
+          },
+          "who_only_dampen": 0.25
+        },
+        "sha256": "03518ff4a93923a801977517e6e7d58b410238924857974449339046a9e0bf88"
+      },
+      "sparse+graph": {
+        "config": {
+          "add_speaker_as_entity": true,
+          "ann_audit": false,
+          "bm25_b": 0.75,
+          "bm25_k1": 1.5,
+          "channel_k": 100,
+          "channels": [
+            "sparse",
+            "graph"
+          ],
+          "degree_discount": true,
+          "dense_mode": "exact",
+          "entity_min_rel_score": 0.5,
+          "entity_top_k_per_key": 20,
+          "evidence_budget_tokens": null,
+          "evidence_lambda": 0.7,
+          "evidence_order": "chronological",
+          "evidence_strategy": "turn",
+          "evidence_window": 1,
+          "fusion": "rrf",
+          "graph_extractor": "lexical-v1",
+          "graph_method": "emg",
+          "graph_query_extractor": "lexical-v1",
+          "hnsw_ef_construction": 40,
+          "hnsw_ef_search": 64,
+          "hnsw_m": 32,
+          "ppr_damping": 0.5,
+          "ppr_linking_top_k": 5,
+          "ppr_passage_node_weight": 0.05,
+          "ppr_passage_seed_channel": null,
+          "ppr_sequence_edges": true,
+          "rerank_pool": 0,
+          "rrf_k": 60,
+          "sequence_expansion": true,
+          "sequence_scale": 0.5,
+          "top_k": 50,
+          "weights": {
+            "graph": 1.0,
+            "sparse": 1.0
+          },
+          "who_only_dampen": 0.25
+        },
+        "sha256": "800d4d29be6f7206a3542ed6022647e80b63fbbc3affaf358f3d1edff4d33763"
+      }
+    },
+    "budgets": [
+      1024,
+      2048,
+      4096
+    ],
+    "dataset": "longmemeval",
+    "dense": "none",
+    "embed_model": "Qwen/Qwen3-Embedding-8B",
+    "ks": [
+      1,
+      5,
+      10,
+      25,
+      50
+    ],
+    "label": "offline-20260926",
+    "protocol": "lme_any_role",
+    "query_instruction": ""
+  },
+  "config_hash": "ef0389cf5f5c",
+  "created_at_utc": "2026-09-25T19:58:59.084505+00:00",
+  "ledger_file": "ledger_trisignal_longmemeval_ef0389cf5f5c_20260925T195859084465Z-20116-01c3021a.jsonl",
+  "manifest_sha256": "d460d2f424ecf059da2507ae49ce171e4c41ca47ac2170cee9315edc67e24921",
+  "provenance": {
+    "dataset": {
+      "bytes": 277383467,
+      "known": "longmemeval_s_cleaned",
+      "path": "D:\\hybridmind\\memorybench\\data\\benchmarks\\longmemeval\\longmemeval_s_cleaned.json",
+      "sha256": "d6f21ea9d60a0d56f34a05b609c79c88a451d2ae03597821ea3d5a9678c3a442"
+    },
+    "git_commit": "a201d8fb35acced11b355a7a49c93c0a34180794",
+    "git_worktree": {
+      "dirty": true,
+      "status_sha256": "e7485e318eddc3ae79aa79c528d783c1d520d5ebfd98d5ddbe4f3ed6ee613ada"
+    },
+    "python": "3.13.5",
+    "runtime": {
+      "platform": "Windows-11-10.0.26100-SP0",
+      "python_version": "3.13.5",
+      "source_sha256": {
+        "D:\\hybridmind\\eval_ledger.py": "6b092c9f0ec131ba0602757c1d98da5a6b75169c6ffa121f41f16180e5e15f18",
+        "D:\\hybridmind\\eval_trisignal.py": "5b7162995a6f2c76b7f21c2abbecb612d74f3a47f9f38648deba9bfb853b549c"
+      }
+    }
+  },
+  "run_id": "20260925T195859084465Z-20116-01c3021a",
+  "schema": "hybridmind.eval-run/v2",
+  "seed": 42
+}

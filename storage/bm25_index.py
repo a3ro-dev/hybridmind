@@ -555,7 +555,7 @@ class BM25SBackend:
             show_progress=False,
         )
         self._retriever = _bm25s_lib.BM25(k1=self.k1, b=self.b)
-        self._retriever.index(tokens)
+        self._retriever.index(tokens, show_progress=False)
         self._dirty = False
         logger.debug(f"BM25SBackend: rebuilt index over {len(self._corpus)} docs")
 
@@ -576,7 +576,7 @@ class BM25SBackend:
             stopwords="en",
             show_progress=False,
         )
-        results, scores = self._retriever.retrieve(query_tokens, k=k)
+        results, scores = self._retriever.retrieve(query_tokens, k=k, show_progress=False)
         out = []
         for idx, score in zip(results[0], scores[0]):
             score = float(score)

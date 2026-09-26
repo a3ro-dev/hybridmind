@@ -177,12 +177,39 @@ class DatabaseManager:
             reranker=reranker,
         )
 
+        # Tri-signal retrieval reads scope-local derived indexes built lazily
+        # from SQLite and keyed by corpus generation (engine/trisignal.py).
+        from engine.trisignal import ScopeRegistry, TriSignalRetriever
+
+        self.scope_registry = ScopeRegistry(
+            self.sqlite_store, max_scopes=settings.trisignal_max_scopes,
+        )
+        self.trisignal = TriSignalRetriever(
+            embed_query=self._embed_trisignal_query,
+            reranker=reranker if getattr(reranker, "enabled", False) else None,
+            embedder_identity={
+                "model": settings.embedding_model,
+                "dimension": settings.embedding_dimension,
+                "query_instruction": settings.trisignal_query_instruction,
+                "query_style": settings.trisignal_query_instruction_style,
+            },
+        )
+
         # Rebuild indexes from SQLite on startup
         self._rebuild_indexes()
         
         self._initialized = True
         logger.info("HybridMind database components initialized successfully")
     
+    def _embed_trisignal_query(self, query: str):
+        """Embed a retrieval query, applying the configured query instruction."""
+        instruction = settings.trisignal_query_instruction
+        if not instruction:
+            return self.embedding_engine.embed(query)
+        return self.embedding_engine.embed_query(
+            query, instruction=instruction, style=settings.trisignal_query_instruction_style,
+        )
+
     def _rebuild_indexes(self):
         """Fully replace every derived index from authoritative live SQLite rows."""
         try:

@@ -1,0 +1,59 @@
+{
+ "schema_version": "hybridmind-live-eval-plan/v1",
+ "offline_report_path": "offline-resource-report-20260925.json",
+ "offline_report_sha256": "1b0b4485791dd50c57fe2acef11ff1a974bfa13e391c1b199e66dd2943724ae6",
+ "providers": [
+  "zai"
+ ],
+ "preflight_usage_included": true,
+ "resource_limits": {
+  "max_report_age_hours": 24,
+  "max_component_sequence_p95_ms": 10.0,
+  "max_component_sequence_p99_ms": 20.0,
+  "max_observed_peak_rss_bytes": 536870912,
+  "max_serialized_total_bytes": 104857600,
+  "max_total_index_build_seconds": 10.0,
+  "min_available_memory_bytes": 1073741824,
+  "min_free_disk_bytes": 1073741824
+ },
+ "purpose": "E5 reader passes (glm-4.7-flash, free tier) on LongMemEval-S cleaned",
+ "operator_approval": "2026-09-25: 'Free reader + GLM-4.6 judge, cap $4'",
+ "rate_source": "docs.bigmodel.cn pricing: GLM-4.7-Flash input/output free (fetched 2026-09-25)",
+ "planned_usage": {
+  "queries": 0,
+  "embedding_calls": 0,
+  "embedding_input_tokens": 0,
+  "reranker_calls": 0,
+  "reranker_pairs": 0,
+  "reranker_input_tokens": 0,
+  "llm_calls": 2110,
+  "reader_input_tokens": 23000000,
+  "reader_output_tokens": 800000,
+  "provider_runtime_seconds": 36000
+ },
+ "usage_ceiling": {
+  "queries": 0,
+  "embedding_calls": 0,
+  "embedding_input_tokens": 0,
+  "reranker_calls": 0,
+  "reranker_pairs": 0,
+  "reranker_input_tokens": 0,
+  "llm_calls": 2400,
+  "reader_input_tokens": 32000000,
+  "reader_output_tokens": 1900000,
+  "provider_runtime_seconds": 172800
+ },
+ "rates": {
+  "pricing_mode": "priced",
+  "embedding_usd_per_million_input_tokens": 0.0,
+  "reranker_usd_per_million_input_tokens": 0.0,
+  "reader_usd_per_million_input_tokens": 0.0,
+  "reader_usd_per_million_output_tokens": 0.0,
+  "fixed_usd_per_embedding_call": 0.0,
+  "fixed_usd_per_reranker_call": 0.0,
+  "fixed_usd_per_llm_call": 0.0,
+  "provider_runtime_usd_per_second": 0.0
+ },
+ "max_estimated_spend_usd": 0.0,
+ "max_wall_seconds": 172800
+}

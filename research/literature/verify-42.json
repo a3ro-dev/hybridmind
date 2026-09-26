@@ -1,0 +1,298 @@
+{
+ "verified": [
+  {
+   "system": "LongMemEval paper (Wu et al., ICLR 2025): long-context baseline, Figure 3b",
+   "claim_as_reported": "GPT-4o S 0.606 / Oracle 0.870 (no CoN), 0.640 / 0.924 (CoN); L3.1-70B 0.334/0.744 (0.286/0.848 CoN); L3.1-8B 0.454/0.710; Phi-3-14B 0.380/0.702; Phi-3.5-mini 0.342/0.660",
+   "verdict": "confirmed",
+   "correct_statement": "I checked the Figure 3b page image. The numbers are QA accuracy (LLM judge) on LongMemEval_S (full history of about 115k tokens) and on the Oracle setting (evidence sessions only). Without CoN: GPT-4o 0.870/0.606 (a 30.3% drop), Llama-3.1-70B 0.744/0.334, Llama-3.1-8B 0.710/0.454, Phi-3 128k 14B 0.702/0.380, Phi-3.5-mini 0.660/0.342. With CoN: GPT-4o 0.924/0.640, 70B 0.848/0.286, 8B 0.710/0.420, Phi-3 14B 0.722/0.344, Phi-3.5-mini 0.652/0.324. The judge is gpt-4o-2024-08-06 with a prompt per question type, which the paper says has more than 97% agreement with human experts. The runs date from August 2024 on the original release. The figure never states the denominator; 500 questions including abstention is implied, not printed. The 60.2% for full-context GPT-4o is Zep's rerun, not this paper's number.",
+   "primary_url": "https://arxiv.org/abs/2410.10813"
+  },
+  {
+   "system": "LongMemEval paper: reading strategy with oracle evidence, Figure 6",
+   "claim_as_reported": "GPT-4o 0.862/0.822/0.910/0.924; L70B 0.762/0.744/0.800/0.848; L8B 0.710/0.746/0.710/0.756",
+   "verdict": "confirmed",
+   "correct_statement": "Confirmed from the page image. These are QA accuracies in the oracle retrieval setting for four reading formats: NL + direct, JSON + direct, NL + CoN, JSON + CoN. The paper says a weak reading strategy costs up to 10 points even with perfect retrieval. JSON + CoN (0.924) is the paper's best GPT-4o oracle result.",
+   "primary_url": "https://arxiv.org/abs/2410.10813"
+  },
+  {
+   "system": "LongMemEval paper: key and value design on LongMemEval_M, Table 3 (both angles' round and session claims)",
+   "claim_as_reported": "Round K=V+fact R@5 0.644, R@10 0.784, GPT-4o QA 0.657/0.720; Session K=V+fact R@5 0.732, R@10 0.862, QA 0.714/0.700; summary-only key collapses to 0.252; etc.",
+   "verdict": "confirmed",
+   "correct_statement": "Every figure matches Table 3, which is run on LongMemEval_M. Stella V5 1.5B is the retriever; Llama-3.1-8B extracts the facts; only user-side utterances are used as keys; the reader uses CoN + JSON with items sorted by time. Round K=V: R@5 0.582, R@10 0.692, GPT-4o 0.615/0.670. Round K=V+fact: 0.644/0.498/0.784/0.536; GPT-4o 0.657/0.720, 70B 0.638/0.682, 8B 0.566/0.572. Session K=V+fact: R@5 0.732, NDCG@5 0.620, R@10 0.862, NDCG@10 0.652; GPT-4o 0.714/0.700, 70B 0.588/0.584, 8B 0.530/0.490. Session K=summary: R@10 0.648, GPT-4o top-10 0.252. The paper reports average gains of +9.4% recall@k and +5.4% accuracy. Caveats: the paper only says 'Recall@k' and never says whether that means any or all gold items. Appendix E.5 mentions 'strict retrieval evaluation criteria', which points to recall_all, but that is an inference. Table 9 prints Stella session K=V+fact NDCG@5 as 0.520 where Table 3 has 0.620, so the paper is internally inconsistent there. The retrieval metrics use 470 questions (abstention skipped, per the README); QA uses 500.",
+   "primary_url": "https://arxiv.org/abs/2410.10813"
+  },
+  {
+   "system": "LongMemEval paper: time-aware query expansion, Table 4",
+   "claim_as_reported": "Session K=V+fact R@5 0.684→0.722, R@10 0.721→0.797; Round K=V+fact R@5 0.489→0.526, R@10 0.550→0.722; Llama-8B extractor gains small or negative",
+   "verdict": "confirmed",
+   "correct_statement": "Confirmed from the image. This is retrieval Recall/NDCG on the temporal-reasoning subset of LongMemEval_M; no QA accuracy is reported, and the table does not give the subset size. Session K=V: R@5 0.639→0.654 and R@10 0.651→0.707 with GPT-4o (Llama-8B: 0.624/0.647). Round K=V: R@10 0.499→0.495 (a slight drop), R@5 0.421→0.451 (Llama-8B 0.384). With a strong extractor the average gains are +11.3% (round) and +6.8% (session). Appendix Table 11 shows Llama-8B inventing time ranges for questions with no time reference.",
+   "primary_url": "https://arxiv.org/abs/2410.10813"
+  },
+  {
+   "system": "LongMemEval paper: commercial pilot, Figure 3a",
+   "claim_as_reported": "Offline GPT-4o 0.9184; ChatGPT 0.5773 (4o) / 0.7113 (4o-mini); Coze 0.3299 / 0.2474; 97 questions",
+   "verdict": "confirmed",
+   "correct_statement": "Confirmed. These are 97 randomly chosen questions with short histories of 3-6 sessions (about 10x shorter than S), typed in by human annotators during the first two weeks of August 2024. They cannot be compared with S results.",
+   "primary_url": "https://arxiv.org/abs/2410.10813"
+  },
+  {
+   "system": "LongMemEval paper: extra results (Table 8 more LLMs, Table 9 retrievers, Table 10 rank vs key merging, Figure 5, Figure 14 error split)",
+   "claim_as_reported": "Table 8 S round K=V→K=V+fact and LC-direct numbers; Table 9 R@10 BM25/Contriever/Stella; Table 10 RM vs KM; Fig 14 64.0/13.2/14.8/8.0 etc.",
+   "verdict": "confirmed",
+   "correct_statement": "All values match the appendix page images. Table 8 (S, round values): Mistral-Nemo 0.640→0.666, Qwen2.5-7B 0.452→0.462, Phi-3.5-mini 0.550→0.570, Llama-3.2-3B 0.466→0.508, Llama-3.2-1B 0.312→0.336. Long-context direct on S: 0.162/0.128/0.312/0.008/0.010. Table 9 (R@10): session K=V BM25 0.710, Contriever 0.823, Stella 0.794; round K=V 0.538/0.747/0.784; session K=V+fact 0.757/0.862/0.862; round K=V+fact 0.608/0.756/0.784. Table 9 does not name M, but its values match Table 3, which is M. Table 10 is M: round K=V+fact rank merging 0.478/0.568 with GPT-4o top-10 0.596, vs key merging 0.644/0.784/0.720. Figure 14 (round, K=V+fact, CoN, JSON, top-10): GPT-4o 64.0/13.2/14.8/8.0, 70B 62.6/14.6/17.2/5.6, 8B 52.6/24.6/18.8/4.0. 'Correct R' means correct Recall@10, and the denominator is not stated. Figure 5 is qualitative only; the text confirms that Llama-8B degrades beyond about 3k retrieved tokens while GPT-4o keeps improving past 20k.",
+   "primary_url": "https://arxiv.org/abs/2410.10813"
+  },
+  {
+   "system": "LongMemEval official retrieval scoring and cleaned release",
+   "claim_as_reported": "recall_any/recall_all/ndcg_any at k in {1,3,5,10,30,50}; gold = ids containing 'answer'; '_abs' skipped; Sept-2025 cleaned HF release, MIT",
+   "verdict": "confirmed",
+   "correct_statement": "run_retrieval.py skips any question_id containing '_abs', sets correct_docs to the corpus ids containing 'answer', loops k over [1,3,5,10,30,50], and logs recall_any@k, recall_all@k and ndcg_any@k. It also computes turn-to-session metrics. In eval_utils.py, recall_any = any(gold in top-k) and recall_all = all(gold in top-k). The README says retrieval evaluation 'always skip[s] the 30 abstention instances' and the default judge command uses gpt-4o. Its news entry dated 2025/09 says the history sessions were cleaned. The HF card for xiaowu0162/longmemeval-cleaned is MIT, lists the splits longmemeval_oracle, longmemeval_s_cleaned and longmemeval_m_cleaned, and says the release 'removes noisy history sessions that interfere with the answer correctness'. Repo license is MIT (1.1k stars). I did not verify the claim that questions without user-side has_answer turns are also skipped.",
+   "primary_url": "https://github.com/xiaowu0162/LongMemEval"
+  },
+  {
+   "system": "Engram (ahammadnafiz/engram): retrieval hit rate",
+   "claim_as_reported": "100% hit rate on 470/470; 99.7% mean session recall; 60 memories, 17,707 vs 101,601 tokens",
+   "verdict": "confirmed",
+   "correct_statement": "The benchmarks page says 'all 470 answerable questions (100% hit-rate, 99.7% mean session recall)'. Hit rate is defined as 'did at least one gold answer session make it into the evidence?', which is a session-level any-hit over 60 memories (17,707 tokens vs 101,601 for full context, 82.6% compression). Embeddings are all-MiniLM-L6-v2. This is a generous any-hit at a large budget; it cannot be compared with R@5, recall_all, or QA accuracy. The dataset file (original or cleaned) is not stated. GitHub reports the LICENSE as Apache-2.0; the repo has 8 stars. The page says the harness writes traces.jsonl and judgments.jsonl, but I did not find them published.",
+   "primary_url": "https://ahammadnafiz.github.io/engram/benchmarks/"
+  },
+  {
+   "system": "Engram: end-to-end QA",
+   "claim_as_reported": "90.8% (454/500), reader claude-sonnet-4-6, judge claude-opus-4-8 with partial-credit/semantic-equivalence rubric",
+   "verdict": "corrected",
+   "correct_statement": "The numbers are right: 454/500 = 90.8%. KU 77/78, SSU 69/70, SSA 53/56, pref 27/30, temporal 119/133, multi-session 109/133; these sum to 454. Abstention (29/30) is a subset that cuts across those categories, not an extra one. The composer (reader) is claude-sonnet-4-6 and the judge is claude-opus-4-8, both from the same vendor. Cost is $0.074 per question for the composer; latency p50/avg/p95 is 25.7/25.9/36.5 s; run dated 2026-07-08. The correction: the 'partial-credit / semantic-equivalence' rubric on the page is described for LoCoMo-10. The LongMemEval judge prompt is not documented, so do not treat this as a score judged with the official GPT-4o evaluate_qa.py prompts.",
+   "primary_url": "https://ahammadnafiz.github.io/engram/benchmarks/"
+  },
+  {
+   "system": "Zep / Graphiti (arXiv 2501.13956)",
+   "claim_as_reported": "gpt-4o Zep 71.2% vs FC 60.2%; gpt-4o-mini 63.8% vs 55.4%; per-type values; 1.6k tokens; 2.58 s / 3.20 s",
+   "verdict": "confirmed",
+   "correct_statement": "Tables 2-3 of the arXiv HTML give LLM-judged QA accuracy on LongMemEval_S (about 115k tokens), evaluated Dec 2024-Jan 2025. The judge is GPT-4o with 'question-specific prompts provided in [LongMemEval]', and retrieval takes the top 10 nodes and edges. gpt-4o-mini: full context 55.4% (31.3 s) vs Zep 63.8% (3.20 s, 1.6k tokens). gpt-4o: 60.2% (28.9 s) vs 71.2% (2.58 s). By type with gpt-4o (full context → Zep): preference 20.0→56.7, SSA 94.6→80.4 (-17.7%), temporal 45.1→62.4, multi-session 44.3→57.9, KU 78.2→83.3, SSU 81.4→92.9. By type with gpt-4o-mini: preference 30.0→53.3, SSA 81.8→75.0, temporal 36.5→54.1, multi-session 40.6→47.4, KU 76.9→74.4, SSU 81.4→92.9. The paper never prints the question count; the percentages fit 500. It only promises notebooks; I found no per-question artifacts. Graphiti is Apache-2.0.",
+   "primary_url": "https://arxiv.org/abs/2501.13956"
+  },
+  {
+   "system": "Emergence AI (EmergenceMem)",
+   "claim_as_reported": "Internal 86.00%, Simple 82.40%, Fast 79.00%, Faster 76.80%; baselines incl. Oracle GPT-4o 82.40%, Oracle o3 92.00%",
+   "verdict": "confirmed",
+   "correct_statement": "The blog (dated June 18, 2025) reports LLM-judged QA on LongMemEval_S with 500 haystack-question pairs. Internal 86.00% (5.65 s), Simple 82.40% (7.12 s), Simple Fast 79.00% (3.59 s), Simple Faster 76.80% (2.97 s). Naive RAG 52.00%, full-context GPT-4o 63.80% (10.43 s), full-context o3 76.00%, Oracle GPT-4o 82.40%, Oracle o3 92.00%, Oracle Accumulator 88.60%. Internal by category: KU 83.33, MS 81.20, SSA 100, pref 60.00, SSU 98.57, temporal 85.71. The reader is gpt-4o-2024-08-06 with a brief chain of thought. The blog does not name the judge model or say whether the official prompts were used. The '42→20' figure counts retrieved turns, which are then grouped and scored as sessions by NDCG after cross-encoder reranking. The released emergence_simple_fast repo reads longmemeval_s.json (original), uses all-MiniLM-L6-v2, and has no LICENSE file according to the GitHub API. Their oracle GPT-4o (82.4%) is well below the paper's 0.870-0.924, so their prompt or judge differs.",
+   "primary_url": "https://www.emergence.ai/blog/sota-on-longmemeval-with-rag"
+  },
+  {
+   "system": "Mastra RAG (semantic recall)",
+   "claim_as_reported": "80.05% at topK 20 (78.59/73.98/63.41 at 10/5/2); per-category at topK 20",
+   "verdict": "confirmed",
+   "correct_statement": "The page (Jul 17, 2025) gives topK 2 63.41%, topK 5 73.98%, topK 10 78.59%, topK 20 '80%'. At topK 20 by category: KU 84.6, MS 76.7, SSA 100, pref 46.7, SSU 97.1, temporal 75.2. The reader is gpt-4o on longmemeval_s. The page does not name the judge or the lastMessages setting.",
+   "primary_url": "https://mastra.ai/research/use-rag-for-agent-memory"
+  },
+  {
+   "system": "Mastra Observational Memory",
+   "claim_as_reported": "gpt-5-mini 94.87%, gemini-3-pro 93.27%, gemini-3-flash 89.20%, gpt-4o 84.23%; judge gpt-4o; '~10% judge-prompt swings'",
+   "verdict": "corrected",
+   "correct_statement": "The scores are right: 94.87 / 93.27 / 89.20 / 84.23. Per-category for gpt-4o: KU 67/78, MS 106/133, SSA 46/56, pref 22/30, SSU 69/70, temporal 114/133. The run uses the longmemeval_s set (500 questions, about 57M tokens), a gpt-4o binary judge using LongMemEval's question-specific prompts, a gemini-2.5-flash observer, about 30k tokens of average context, dated Feb 9, 2026. The '+2 points over the oracle' compares against Emergence's 82.4% oracle, not the paper's 0.870-0.924. The correction: the '~10% scoring difference' from judge prompts is said about LoCoMo, not LongMemEval. The mastra repo is Apache-2.0 except the ee/ directories (GitHub shows NOASSERTION); explorations/longmemeval exists.",
+   "primary_url": "https://mastra.ai/research/observational-memory"
+  },
+  {
+   "system": "Supermemory",
+   "claim_as_reported": "QA 81.6/84.6/85.2 (GPT-4o/GPT-5/Gemini-3); README 95% Recall@15, ~720 tokens; research page 97% Recall@20 beside Zep QA; ~99% ASMR parody",
+   "verdict": "confirmed",
+   "correct_statement": "The research page headlines '97% Overall Recall@20' and places it in the same table as Zep's 71.2% and full context's 60.2%. Those two rows, including every per-category value, are exactly the QA accuracies from Zep's paper, so the page puts a retrieval metric next to answer accuracy. The README claims '95% Recall@15 with a 99.4% context reduction' (about 720 tokens), with recall by category KU 99, SSA 100, SSU 97, MS 93, temporal 91, pref 90. QA accuracy (GPT-4o judge, per Hindsight's Table 3, copied from Supermemory's report): GPT-4o 81.6, GPT-5 84.6, Gemini-3 85.2. The repo is MIT. The ASMR post (Mar 2026) is now titled '...(A Parody)'. Search snippets say 98.60% counted a question correct if any of 8 prompt variants got it right, but the URL rendered only the blog index for me, so that detail is secondary. The 85.86% tweet was not verified. OmniMemEval's rerun gives 66.07.",
+   "primary_url": "https://supermemory.ai/research/longmembench/"
+  },
+  {
+   "system": "Hindsight (arXiv 2512.12818)",
+   "claim_as_reported": "OSS-20B 83.6, OSS-120B 89.0, Gemini-3 91.4; judge GPT-OSS-120B; per-question viewer at hindsight-benchmarks.vercel.app",
+   "verdict": "corrected",
+   "correct_statement": "Table 3 is confirmed: full-context GPT-4o 60.2, full-context OSS-20B 39.0, Zep 71.2, Supermemory 81.6/84.6/85.2, Hindsight OSS-20B 83.6, OSS-120B 89.0, Gemini-3 91.4. Hindsight Gemini-3 by category: SSU 97.1, SSA 96.4, pref 80.0, KU 94.9, temporal 91.0, MS 87.2. The Hindsight rows are judged by GPT-OSS-120B at temperature 0, while the baseline rows are copied from Supermemory's report, which used a GPT-4o judge. The rows therefore use different judges and are not a controlled comparison. The code repo is MIT; the paper is CC BY 4.0. The correction: hindsight-benchmarks.vercel.app now shows only the aggregate AMB score (94.6%), with no per-question LongMemEval outputs, so I could not confirm the per-question viewer.",
+   "primary_url": "https://arxiv.org/abs/2512.12818"
+  },
+  {
+   "system": "Hindsight on Agent Memory Benchmark (AMB, run by Vectorize)",
+   "claim_as_reported": "94.6%, 43.6k tokens, answer gemini-3.1-pro-preview, judge gemini-2.5-flash-lite, hybrid baseline 74.0%",
+   "verdict": "corrected",
+   "correct_statement": "The 94.6% LongMemEvalS figure appears on Hindsight's own benchmark site. Search snippets from the AMB dataset page give 500 queries, 23,867 docs, Hindsight 43.6k context tokens and 675 ms, and hybrid-search 74.0% at 23.2k tokens. The AMB pages did not render for me, so those details are secondary. The gemini-3.1-pro-preview answerer and gemini-2.5-flash-lite judge are documented only for AutoMem's own AMB run, not for Hindsight's. The vectorize-io/agent-memory-benchmark repo has no LICENSE file according to the GitHub API. Vectorize runs the benchmark and also sells Hindsight. OmniMemEval's rerun gives Hindsight 72.20 (SSA 14.29).",
+   "primary_url": "https://benchmarks.hindsight.vectorize.io/"
+  },
+  {
+   "system": "EverMemOS (arXiv 2601.02163)",
+   "claim_as_reported": "83.00% overall; baselines from MemOS leaderboard; ablation 83.00→79.60→71.20",
+   "verdict": "corrected",
+   "correct_statement": "83.00% on LongMemEval S (500 questions, about 115k tokens) is confirmed. By category: SSU 97.14, SSA 85.71, pref 93.33, MS 73.68, KU 89.74, temporal 77.44. The backbone is GPT-4.1-mini. Each answer is judged by GPT-4o-mini plus two auxiliary judges and the scores are averaged. Baselines (MemU 38.40, Zep 63.80, Mem0 66.40, MemOS 77.80) are copied 'from the official MemOS leaderboard'. The paper does not state the baseline backbone, so the GPT-4o-mini attribution is unverified. The correction: the numbers 79.60 and 71.20 do not appear in the paper, and the ablations are reported on LoCoMo. Default budget is N=10 MemScenes and K=10 episodes. The EverMemOS repo is Apache-2.0.",
+   "primary_url": "https://arxiv.org/abs/2601.02163"
+  },
+  {
+   "system": "MemOS (MemTensor) via its own OmniMemEval",
+   "claim_as_reported": "89.20%, 4,151 tokens, cleaned S, gpt-4.1-mini reader, gpt-4o-mini judge",
+   "verdict": "confirmed",
+   "correct_statement": "The OmniMemEval results.md table gives MemOS 89.20 overall (SSU/SSA/pref 100/100/100, temporal 89.47, MS 78.95, KU 84.62) at 4,151 context tokens. The answer model is gpt-4.1-mini-2025-04-14 and the judge gpt-4o-mini-2024-07-18, and the pipeline 'uses the cleaned LongMemEval-S data by default'. The MemOS README repeats 89.20 'evaluated via OmniMemEval'. MemTensor builds both the system and the harness, so this is a vendor self-evaluation. MemOS and OmniMemEval are Apache-2.0. I did not open the 77.80 MemOS-leaderboard figure; it is taken as cited by EverMemOS.",
+   "primary_url": "https://github.com/MemTensor/OmniMemEval/blob/main/docs/user_memory/results.md"
+  },
+  {
+   "system": "OmniMemEval third-party reruns",
+   "claim_as_reported": "graphiti-zep 79.80 (117,106 tok); Letta 77.67; mem9 78.00; EverOS 80.40; Hindsight 72.20; Supermemory 66.07; MemMachine 63.60; Viking 61.07; Mem0 56.00 (856 tok); Cognee 51.80; Memori 20.80",
+   "verdict": "confirmed",
+   "correct_statement": "All overall numbers match. These are reruns by a competitor under one harness: gpt-4.1-mini reader, gpt-4o-mini judge, cleaned S. Several per-category cells look like integration failures rather than weak memory: Mem0 SSU 8.57%, Hindsight SSA 14.29%, Memori SSA 1.79%, Supermemory SSA 41.07%. Read these as adversarial and possibly broken reproductions. Some cells, such as Supermemory pref 65.56, are not multiples of 1/30, which suggests averaged runs. I did not check the claim that this is Letta's only LongMemEval number.",
+   "primary_url": "https://github.com/MemTensor/OmniMemEval/blob/main/docs/user_memory/results.md"
+  },
+  {
+   "system": "TiMem (arXiv 2601.02845)",
+   "claim_as_reported": "76.88±0.30, official judge prompts, k=20, 1,270.62 tokens, P50/P95 1.76/4.48 s; code github.com/TiMEM-AI/timem",
+   "verdict": "confirmed",
+   "correct_statement": "Confirmed: 76.88±0.30 with gpt-4o-mini-2024-07-18 as reader, and 78.96±0.26 with gpt-4o-2024-11-20. The paper uses the official LongMemEval-S evaluation prompt, but its baseline table is labelled as judged by GPT-4o-mini, not GPT-4o. Rerun baselines: MemOS 68.68±0.16, Mem0 64.96±0.41, A-MEM 55.44. The repo license is dual: Apache-2.0 for the core engine and MIT for tools (GitHub shows NOASSERTION). The paper is CC BY 4.0.",
+   "primary_url": "https://arxiv.org/abs/2601.02845"
+  },
+  {
+   "system": "LiCoMemory (arXiv 2511.01448)",
+   "claim_as_reported": "GPT-4o-mini 73.80% acc / 76.63% recall; Llama-3.1-70B 69.20 / 72.39; code EverM0re/LiCoMemory",
+   "verdict": "confirmed",
+   "correct_statement": "Confirmed: 73.80±0.60 accuracy, 76.63±0.57 recall, 1.74 s, 1.7k tokens (GPT-4o-mini); 69.20±0.62 and 72.39±0.58 (Llama-3.1-70B). Results are the mean of 5 runs. Recall is 'the proportion of ground-truth targets retrieved within the top-15 items'. Accuracy uses the LongMemEval LLM-as-judge protocol, and the variant is not specified. The code repo has no LICENSE file according to the GitHub API.",
+   "primary_url": "https://arxiv.org/abs/2511.01448"
+  },
+  {
+   "system": "MemPalace",
+   "claim_as_reported": "raw 96.6% R@5; hybrid v4 98.4% on 450 held-out; 100% contaminated; LoCoMo R@10 88.9%; MIT; result files committed",
+   "verdict": "confirmed",
+   "correct_statement": "BENCHMARKS.md reports retrieval only: 'is the labelled session for this question inside the top-5 retrieved candidates?' Raw mode (ChromaDB default all-MiniLM-L6-v2, one document per session) gets 96.6% R@5 over 500 questions. That denominator includes the 30 abstention questions that the official retrieval evaluation skips. Hybrid v4 + Haiku rerank gets 98.4% R@5 on 450 held-out questions at about $0.001 per query. The 100% came from 'three targeted fixes for the three questions that failed', which the authors call teaching to the test. LoCoMo: 88.9% R@10 over 1,986 questions (hybrid v5). No LongMemEval QA accuracy is published. Committed files include results_raw_full500.jsonl and results_lme_hybrid_v4_held_out_450_*.json. The repo is MIT.",
+   "primary_url": "https://github.com/MemPalace/mempalace/blob/main/benchmarks/BENCHMARKS.md"
+  },
+  {
+   "system": "Honcho (Plastic Labs)",
+   "claim_as_reported": "S 90.4% (Haiku 4.5), oracle 91.8%, Haiku alone 62.6/89.2, Gemini 3 Pro 92.6 vs 92.0 alone; M 88.8% on 98 Qs; GPT-4o judge",
+   "verdict": "confirmed",
+   "correct_statement": "Confirmed (Dec 19, 2025). The per-category counts 54+74+66+27+118+113 = 452/500 = 90.4%. Gemini 3 Pro alone scores 92.0% with the full S context (about 115k tokens in-window), against 92.6% with Honcho. The judge is GPT-4o with 'a prompt defined in the LongMem paper'. Ingestion uses gemini-2.5-flash-lite, the chat endpoint claude-haiku-4-5, and context use is a median 5% / mean 11%. The post does not say how the 98 M questions were chosen or whether the data is original or cleaned. For feasibility: plastic-labs/honcho is AGPL-3.0, and honcho-benchmarks has no LICENSE file.",
+   "primary_url": "https://plasticlabs.ai/blog/research/Benchmarking-Honcho"
+  },
+  {
+   "system": "OMEGA (omega-memory)",
+   "claim_as_reported": "95.4% (466/500), GPT-4.1 reader and judge, Apache-2.0",
+   "verdict": "confirmed",
+   "correct_statement": "Confirmed: 125/126 + 30/30 + 111/133 + 75/78 + 125/133 = 466/500 (95.4%), over 5 merged categories. GPT-4.1 both answers and grades. Embeddings are bge-small-en-v1.5 ONNX; measured February 2026. The repo is Apache-2.0 with 217 stars. No per-question results or LongMemEval harness are published, and the model grading itself makes this a weak result.",
+   "primary_url": "https://omegamax.co/benchmarks"
+  },
+  {
+   "system": "agentmemory (JordanMcCann)",
+   "claim_as_reported": "96.20% (481/500), Opus 4.6 reader, GPT-4o judge with official templates, MIT, artifacts",
+   "verdict": "confirmed",
+   "correct_statement": "Confirmed. Counts: SSU 70/70, KU 76/78, pref 29/30, SSA 54/56, temporal 128/133, MS 124/133, which sum to 481; abstention 30/30. Claude Opus 4.6 at T=0 answers; GPT-4o at T=0 with seed 42 judges using templates copied verbatim from evaluate_qa.py. USE_DIRECT_CONTEXT=False is asserted; an earlier 98% run with oracle leakage was discarded. The full run used 4,308,380 tokens; development took about 300M tokens and about $1,000 over 16 days. Artifacts include longmemeval_results_opus6.json and LEGITIMACY.md. The repo is MIT. No held-out split is described, so the system was tuned against the test set.",
+   "primary_url": "https://github.com/JordanMcCann/agentmemory"
+  },
+  {
+   "system": "agentmemory (rohitg00): retrieval only",
+   "claim_as_reported": "Hybrid R@5 95.2, R@10 98.6, NDCG@10 87.9, MRR 88.2; BM25-only 86.2/94.6",
+   "verdict": "confirmed",
+   "correct_statement": "Confirmed. The metric is explicitly recall_any@K ('does ANY gold session appear in top-K'), run on xiaowu0162/longmemeval-cleaned S with a stated 500 questions and all-MiniLM-L6-v2. BM25-only: NDCG@10 73.0, MRR 71.5. The file says 'We do NOT claim these as LongMemEval scores'. The repo is Apache-2.0.",
+   "primary_url": "https://github.com/rohitg00/agentmemory/blob/main/benchmark/LONGMEMEVAL.md"
+  },
+  {
+   "system": "Backboard",
+   "claim_as_reported": "93.4% (467/500), gpt-4.1, primary judge GPT-4o-mini, s_cleaned",
+   "verdict": "confirmed",
+   "correct_statement": "Confirmed: 55+68+73+122+122+27 = 467/500. gpt-4.1 answers on the s_cleaned set. Four judges were run (GPT-4, GPT-4o-mini, Gemini 3 Pro, GPT-5.2), and the headline table uses GPT-4o-mini explicitly because it gave the 'highest overall accuracy'. That is choosing the most lenient judge after the fact. The repo has no LICENSE file, and I found no per-question files listed.",
+   "primary_url": "https://github.com/Backboard-io/Backboard-longmemEval-results"
+  },
+  {
+   "system": "Chronos (PwC, arXiv 2603.16862)",
+   "claim_as_reported": "Low (GPT-4o) 92.60%, High (Opus 4.6) 95.60% (478/500); official judge; no code",
+   "verdict": "confirmed",
+   "correct_statement": "Confirmed. The per-category results for High (KU 100, MS 88.72, SSA 100, pref 100, SSU 98.57, temporal 95.50) are consistent with 478/500. Embeddings are text-embedding-3-large. The paper 'implement[s] LongMemEval's LLM judge ... routing to a specific prompt based on the question's category' but does not name the judge model version or the dataset file (original or cleaned). Baselines are cited rather than rerun: Honcho 90.40, Emergence 86.00, Mastra 84.80, Hindsight 83.60, Supermemory 81.60, Zep 71.20, FC 60.20. Ablations use a stratified 116-question subset, no dev/test split is disclosed, and no code is released. The paper flags the gold label of question 6d550036.",
+   "primary_url": "https://arxiv.org/abs/2603.16862"
+  },
+  {
+   "system": "Agent Zero Memory (arXiv 2608.29606)",
+   "claim_as_reported": "95.60% best (gpt-5.5), 8 backbones 92.20-95.60, $0.0348/question; ties Chronos without citing",
+   "verdict": "corrected",
+   "correct_statement": "Table 5 across eight backbones: gpt-5.5 95.60, gpt-5.6-sol 95.20, gpt-5.6-terra 94.00, opus4.8 93.80, sonnet5 93.20, glm5.2fast 93.00, glm5.2 92.60, deepseek-v4-pro 92.20. For gpt-5.5: 12,224.8 prompt tokens (5,324.8 cached), 446.1 completion tokens, $0.034788 per question, 16.31 s median. The correction: the claimed '+0.73' improvement is measured against Mastra OM's 94.87%, not Chronos. The judge model and dataset variant are not named, and there is no code.",
+   "primary_url": "https://arxiv.org/abs/2608.29606"
+  },
+  {
+   "system": "Mem0 (memory-benchmarks, platform v3)",
+   "claim_as_reported": "94.4% (472/500) top-200; 94.8% (474/500) top-50; earlier 93.4%; reader/judge not stated",
+   "verdict": "corrected",
+   "correct_statement": "The README currently shows 94.4% (472/500) at top-200 and 94.8% (474/500) at top-50, but the latest commit (2026-05-13, #8) changed only README.md. The per-question files actually committed tell a different story. results/platform/longmemeval_results.json (2026-04-06) shows 93.4% (467/500) at top_200 with generation model gpt-5. longmemeval_top50_results.json (2026-04-07) shows 90.4% (452/500) at top_50 with answerer_model gpt-5, judge_model gpt-5 (Azure) and evaluate_only=true. The headline 94.4/94.8 therefore has no released per-question artifacts, and its answerer and judge are not stated; the harness defaults to gpt-4o for both. The OSS pipeline scores 91.0% with GPT-5 as answerer and judge. The license is Apache-2.0 (changed from MIT on 2026-04-13). I did not verify the '<7k tokens per query' figure.",
+   "primary_url": "https://github.com/mem0ai/memory-benchmarks"
+  },
+  {
+   "system": "Memanto (Moorcheh, arXiv 2604.22085)",
+   "claim_as_reported": "89.8% (Gemini 3), judge Claude Sonnet 4; staged 56.6→77.0→79.2→85.0→89.8; code github.com/moorcheh-ai/memanto-evaluation, CC BY-SA 4.0",
+   "verdict": "corrected",
+   "correct_statement": "The numbers are confirmed. Final 89.8% with Gemini 3 answering: SSU 95.7, SSA 100, pref 93.3, KU 93.6, temporal 88.0, MS 81.2. Claude Sonnet 4 is the judge at every stage, with prompts adapted from the Hindsight repo. Stages (LongMemEval / LoCoMo): k=10 at threshold 0.15 gives 56.6/76.2; k=40 at 0.10 gives 77.0/82.8; a prompt change gives 79.2/82.9; k=100 at 0.05 gives 85.0/86.3; switching to Gemini 3 gives 89.8/87.1. k and the threshold change together, so their effects are confounded. The correction: CC BY-SA 4.0 is the paper's license. The memanto-evaluation repo has no LICENSE file according to the GitHub API.",
+   "primary_url": "https://arxiv.org/abs/2604.22085"
+  },
+  {
+   "system": "ByteRover",
+   "claim_as_reported": "92.8% (464/500), justifier Gemini 3.1 Pro, curation + judge Gemini 3 Flash, cleaned, p50/p95 1.6/2.3 s",
+   "verdict": "confirmed",
+   "correct_statement": "Confirmed: 77+69+55+29+122+112 = 464/500. Curation uses Gemini 3 Flash, the justifier Gemini 3.1 Pro, and the judge Gemini 3 Flash, which is not the official judge. Cold retrieval p50 is 1.6 s and p95 2.3 s. The post cites 23,867 documents but does not say 'cleaned' in the part I could read. The brv-bench repo (campfirein/brv-bench) has no LICENSE file.",
+   "primary_url": "https://www.byterover.dev/blog/benchmark_ai_agent_memory_real_production_byterover_top_market_accuracy_longmemeval"
+  },
+  {
+   "system": "Maximem Synap",
+   "claim_as_reported": "92.0%, gpt-5-mini answer + judge, binary single run; harness gives Zep 63.8, Mem0 57.5, Supermemory 71.3",
+   "verdict": "corrected",
+   "correct_statement": "92.0% on the full 500 is confirmed, with gpt-5-mini answering and judging, binary CORRECT/WRONG, single run. The harness repo is MIT. As rendered, the results repo (eval_benchmark_runs_output, no SPDX license) gives Synap per category as SSU 70/70, pref 30/30, KU 78/78, temporal 133/133, SSA 49/56, MS 100/133, which sums to 460. For other vendors it lists their own published numbers: Supermemory 85.2 and 84.6, Zep 71.2, Mem0 'not published'. It does not show harness reruns of 63.8, 57.5 or 71.3, so I could not verify those. Per-run artifacts are available only on request.",
+   "primary_url": "https://github.com/maximem-ai/memory_and_context_eval_harness"
+  },
+  {
+   "system": "Training-Free Lexical-Dense Fusion (Lysenstøen, arXiv 2606.04194)",
+   "claim_as_reported": "LoCoMo fusion Hit@1 0.752 / R@5 0.894 / NDCG@5 0.829; cross-encoder -6.88 pp; code github.com/Chrislysen/opsem, CC BY 4.0",
+   "verdict": "corrected",
+   "correct_statement": "The numbers are confirmed. With e5-large-v2, fusion reaches Hit@1 0.752, R@5 0.894, NDCG@5 0.829, against a BM25 Hit@1 of 0.640. Reranking the fused top-10 with a cross-encoder drops Hit@1 from 0.701 to 0.633 (-6.88 pp, 95% CI [-9.34, -4.34]). LoCoMo n=1,978 across all 5 categories, including 446 adversarial. The bootstrap resamples whole conversations, 4,000 times. On the 150-question LongMemEval-S subset (MiniLM), fusion beats BM25 by +0.67 pp R@1, CI [-2.67, +4.00], p=0.43, which is not significant. The correction: CC BY 4.0 is the paper's license. The opsem repo's LICENSE file is MIT.",
+   "primary_url": "https://arxiv.org/abs/2606.04194"
+  },
+  {
+   "system": "SmartSearch (arXiv 2603.15599)",
+   "claim_as_reported": "LME-S 88.4% at 3,392 tokens; LoCoMo 91.9% at 3,141; pool recall 98.6%, 22.5% survives truncation, gold rank 195→8; reranker MiniLM→mxbai-large +6.0 pp",
+   "verdict": "corrected",
+   "correct_statement": "LME-S (500): index-free 88.4% at 3,392 tokens and indexed 87.6% at 3,393, against a full-context baseline of 65.6%. All LME systems use gpt-4.1-mini as the answer model and gpt-4o-mini as the judge. LoCoMo (1,540, category 5 excluded): 91.9% at 3,141 tokens vs full context 77.1% at 26,792, and 93.5% under the aligned protocol. The grep candidate pool reaches 98.6% recall on LoCoMo; with no reranker only 22.5% of gold evidence survives truncation. Mean gold rank improves from 195 to 8 on LoCoMo and from 47 to 2 on LME-S. Latency is about 650 ms on CPU. Corrections: the +6.0 pp reranker upgrade is MiniLM→bge-large, not mxbai-large, and ColBERT RRF adds +1.2 pp. I could not confirm a code release.",
+   "primary_url": "https://arxiv.org/abs/2603.15599"
+  },
+  {
+   "system": "Fidelity Before Structure (arXiv 2601.00821)",
+   "claim_as_reported": "LME-S chunks 67.4 vs artifacts 45.4; LoCoMo 1-3 43.9 vs 28.0; gpt-4o reader, gpt-4o-mini judge; code tao-hpu/cog-canvas",
+   "verdict": "confirmed",
+   "correct_statement": "Confirmed. LME-S: chunks 67.4 vs artifacts 45.4. By category: information extraction 84.7 vs 50.7, multi-session 62.8 vs 34.7, KU 77.8 vs 69.4 (not significant), temporal 50.4 vs 36.2, abstention 46.7 vs 43.3. LoCoMo categories 1-3: 43.9 vs 28.0. RAG 14.0% and RAG+Rerank 16.5% are temporal-category scores. The reader is GPT-4o and the judge GPT-4o-mini, with κ=0.897 against humans. Retrieval uses bge-m3 and bge-reranker-v2-m3, top-15 of 30, a 5,000-token cap, and 512-character chunks. Cost is $12.5 vs $14.9 per 1,000 correct answers. The cog-canvas repo is MIT.",
+   "primary_url": "https://arxiv.org/abs/2601.00821"
+  },
+  {
+   "system": "LazyMem (arXiv 2607.22690)",
+   "claim_as_reported": "All@50 and accuracy by radius; RAG Top20/Top50; LazyMem-4B 0.85 @213 tokens, LazyMem-32B 0.93 @1,041; Qwen3-32B reader; DeepSeek-V4-Pro judge",
+   "verdict": "confirmed",
+   "correct_statement": "Confirmed. LongMemEval results use only a 100-question test split, from a stratified 360/40/100 split of the 500. For w=0 to 3: LongMemEval All@50 0.950/0.970/0.980/0.980 with accuracy 0.77/0.82/0.85/0.85; LoCoMo 0.781/0.847/0.889/0.892 with 0.63/0.64/0.68/0.69. All@50 is complete gold coverage after adding neighbour turns to the top-50. RAG Top20 scores 0.71 at 8,401 tokens and Top50 0.75 at 14,628. LazyMem-4B scores 0.85 with 213 tokens and LazyMem-32B 0.93 with 1,041. The reader is Qwen3-32B in thinking mode and the judge DeepSeek-V4-Pro. The 0.93 is out of n=100, not the full benchmark. The repo has no LICENSE file.",
+   "primary_url": "https://arxiv.org/abs/2607.22690"
+  },
+  {
+   "system": "MemMachine (arXiv 2604.04853)",
+   "claim_as_reported": "GPT-5 k=20 0.855→user-prefix 0.870, k=30 0.912, k=50 0.890; GPT-5-mini k=20 0.922, k=100 0.930; LoCoMo 0.9169; judge gpt-4o-mini; Apache-2.0",
+   "verdict": "confirmed",
+   "correct_statement": "Configurations C6 0.870 (k=20), C7 0.912 (k=30), C8 0.890 (k=50), C12 0.922 (GPT-5-mini, k=20, with chunking) and C15 0.930 (k=100) are confirmed. The best LongMemEval_S result is 93.0% with a GPT-4o-mini judge. LoCoMo scores 0.9169 with gpt-4.1-mini in agent mode on 1,540 questions, using 4.20M input tokens vs Mem0's 19.21M. I did not see the 0.855 baseline row in the extract. The repo is Apache-2.0 and the paper CC BY 4.0.",
+   "primary_url": "https://arxiv.org/abs/2604.04853"
+  },
+  {
+   "system": "FluctlightDB (arXiv 2608.12365)",
+   "claim_as_reported": "Session recall@8 97.6% (488/500) 'v4 unified'; QA 97.4% GPT-4o judge; MIT",
+   "verdict": "confirmed",
+   "correct_statement": "Confirmed. session_recall@8 is 97.6% (488/500) from the v4 harness (hybrid BM25 + dense with mpnet, dual-key indexing, heuristic query expansion and pref-facts engrams). The 500 denominator includes the abstention questions, and the paper does not say whether recall is any or all. QA is 487/500 = 97.4% with a mixed 'gpt-4o/5 reader' and GPT-4o judge templates. On LoCoMo, hybrid and vector-only tie at k=50 (about 90.2 vs 90.3). voxmastery/FluctlightDB is MIT. This is non-standard and should not be compared directly.",
+   "primary_url": "https://arxiv.org/abs/2608.12365"
+  },
+  {
+   "system": "EMem / EMem-G (arXiv 2511.17208)",
+   "claim_as_reported": "EMem-G 77.9%, EMem 76.0% on LME-S (n=470); ablation EDU filter 0.780→0.733 (LoCoMo)",
+   "verdict": "corrected",
+   "correct_statement": "LongMemEval_S accuracy with gpt-4o-mini is confirmed: EMem-G 77.9% (1.0-3.6K tokens) and EMem 76.0% (0.6-2.5K). The judge is gpt-4o-mini over 3 runs. The paper's LongMemEval ablations are: removing the EDU filter 77.9→73.1, removing QA CoT 77.9→73.4, removing graph/PPR 77.9→76.0. The use of 470 questions is indicated by Table 4, but I did not fully verify it. The repo is MIT.",
+   "primary_url": "https://arxiv.org/abs/2511.17208"
+  },
+  {
+   "system": "RMM Reflective Memory Management (arXiv 2503.08026)",
+   "claim_as_reported": "GTE RAG 63.6 vs RMM 70.4; Recall@5 62.4→69.8; long-context 57.4",
+   "verdict": "confirmed",
+   "correct_statement": "Confirmed. RAG with GTE: R@5 62.4, accuracy 63.6. RMM with GTE: 69.8 and 70.4. With Contriever, RAG gets 54.3/58.8 and RMM 60.4/61.2. Long context scores 57.4, MemoryBank 59.6, LD-Agent 59.2. Gemini-1.5-Flash generates and Gemini-1.5-Pro judges. The LongMemEval variant and subset are not specified; some analyses use 100 random instances. Do not compare these with S results.",
+   "primary_url": "https://arxiv.org/abs/2503.08026"
+  },
+  {
+   "system": "CueMem, MEMTIER, TSM, SwiftMem, LightMem, MemoryAgentBench, PPRO, Nano-Memory",
+   "claim_as_reported": "Various ablation numbers (all below 85% or retrieval-only)",
+   "verdict": "unverifiable",
+   "correct_statement": "I did not open these papers in this pass, so their numbers are unverified and not image-checked. I checked licenses through the GitHub API. TSM (cosmicexotic/TSM): MIT. SwiftMem (EdwardTex/SwiftMem): no LICENSE. Nano-Memory (yuqian2003/Nano-Memory): no LICENSE. LazyMem: no LICENSE. EMem: MIT. The original claims already flagged CueMem as internally inconsistent (81.1 vs 84.07) and self-judged.",
+   "primary_url": "https://arxiv.org/abs/2609.12354"
+  }
+ ]
+}

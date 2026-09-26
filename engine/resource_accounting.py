@@ -577,6 +577,10 @@ def validate_live_plan(plan: Mapping[str, Any], *, plan_path: Path) -> LiveGateR
     max_spend = _finite_nonnegative(plan.get("max_estimated_spend_usd"), "max_estimated_spend_usd")
     if projected_cost > max_spend:
         raise ResourceAccountingError("projected provider spend exceeds the live ceiling")
+    # A run may consume up to its ceiling, so the ceiling must also fit the spend cap.
+    ceiling_cost = tokenomics_projection(usage_ceiling, rates)["projected_cost_usd"]
+    if ceiling_cost is None or float(ceiling_cost) > max_spend:
+        raise ResourceAccountingError("usage ceiling spend exceeds the live ceiling")
 
     max_wall_seconds = _finite_nonnegative(plan.get("max_wall_seconds"), "max_wall_seconds")
     if max_wall_seconds <= 0:

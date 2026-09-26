@@ -27,6 +27,9 @@ def _edge_type(edge_type: str) -> str:
 
 
 def _request(method: str, path: str, **kwargs: Any) -> Any:
+    api_key = os.getenv("HYBRIDMIND_API_KEY", "").strip()
+    if api_key:
+        kwargs["headers"] = {**kwargs.get("headers", {}), "X-HybridMind-API-Key": api_key}
     with httpx.Client(timeout=TIMEOUT_SECONDS) as client:
         response = client.request(method, f"{API_URL}{path}", **kwargs)
         response.raise_for_status()
@@ -52,6 +55,28 @@ def recall(query: str, top_k: int = 10, mode: str = "hybrid") -> List[Dict[str, 
         payload = {"query_text": query, "top_k": top_k}
         data = _request("POST", "/search/hybrid", json=payload)
     return data.get("results", [])
+
+
+@mcp.tool()
+def retrieve(
+    query: str,
+    scope: Optional[Dict[str, Any]] = None,
+    top_k: int = 10,
+    channels: Optional[List[str]] = None,
+    evidence_budget_tokens: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Tri-signal retrieval (dense + sparse + graph) within a metadata scope.
+
+    Returns ranked hits with stable evidence IDs and per-channel ranks; with
+    ``evidence_budget_tokens`` it also returns a packed, chronologically ordered
+    evidence set that fits the budget.
+    """
+    payload: Dict[str, Any] = {"query": query, "scope": scope or {}, "top_k": max(1, min(int(top_k), 200))}
+    if channels:
+        payload["channels"] = channels
+    if evidence_budget_tokens:
+        payload["evidence"] = {"strategy": "propagate", "budget_tokens": int(evidence_budget_tokens)}
+    return _request("POST", "/retrieve", json=payload)
 
 
 @mcp.tool()

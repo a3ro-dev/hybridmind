@@ -1,0 +1,59 @@
+{
+ "schema_version": "hybridmind-live-eval-plan/v1",
+ "purpose": "E7 dense arm: embed LoCoMo turns + questions (bare and Qwen3-instructed) with production native-4096 TEI",
+ "operator_approval": "user approved 'Yes, cap $3' for LoCoMo native-4096 embeddings on 2026-09-25",
+ "offline_report_path": "offline-resource-report-20260925.json",
+ "offline_report_sha256": "1b0b4485791dd50c57fe2acef11ff1a974bfa13e391c1b199e66dd2943724ae6",
+ "providers": [
+  "tei"
+ ],
+ "preflight_usage_included": true,
+ "planned_usage": {
+  "queries": 0,
+  "embedding_calls": 320,
+  "embedding_input_tokens": 350000,
+  "reranker_calls": 0,
+  "reranker_pairs": 0,
+  "reranker_input_tokens": 0,
+  "llm_calls": 0,
+  "reader_input_tokens": 0,
+  "reader_output_tokens": 0,
+  "provider_runtime_seconds": 480
+ },
+ "usage_ceiling": {
+  "queries": 0,
+  "embedding_calls": 360,
+  "embedding_input_tokens": 600000,
+  "reranker_calls": 0,
+  "reranker_pairs": 0,
+  "reranker_input_tokens": 0,
+  "llm_calls": 0,
+  "reader_input_tokens": 0,
+  "reader_output_tokens": 0,
+  "provider_runtime_seconds": 1000
+ },
+ "rates": {
+  "pricing_mode": "priced",
+  "embedding_usd_per_million_input_tokens": 0.0,
+  "reranker_usd_per_million_input_tokens": 0.0,
+  "reader_usd_per_million_input_tokens": 0.0,
+  "reader_usd_per_million_output_tokens": 0.0,
+  "fixed_usd_per_embedding_call": 0.0,
+  "fixed_usd_per_reranker_call": 0.0,
+  "fixed_usd_per_llm_call": 0.0,
+  "provider_runtime_usd_per_second": 0.0027722222
+ },
+ "rate_source": "RunPod serverless GPU-second rate copied from benchmarks/results/live_tei_canary_plan.json (unverified against invoice)",
+ "max_estimated_spend_usd": 3.0,
+ "max_wall_seconds": 1200,
+ "resource_limits": {
+  "max_report_age_hours": 24,
+  "max_component_sequence_p95_ms": 10.0,
+  "max_component_sequence_p99_ms": 20.0,
+  "max_observed_peak_rss_bytes": 536870912,
+  "max_serialized_total_bytes": 104857600,
+  "max_total_index_build_seconds": 10.0,
+  "min_available_memory_bytes": 1073741824,
+  "min_free_disk_bytes": 1073741824
+ }
+}

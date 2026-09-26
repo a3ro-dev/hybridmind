@@ -250,6 +250,20 @@ class SQLiteStore:
                 "CREATE INDEX IF NOT EXISTS idx_node_entities_key ON node_entities(entity_key)"
             )
 
+            # Typed entity-graph extractions (engine.entity_extraction), one
+            # JSON payload per (node, extractor version). Derived, but stored
+            # so LLM extractions are paid for once and graphs are rebuildable.
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS node_entity_extractions (
+                    node_id TEXT NOT NULL,
+                    extractor TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    PRIMARY KEY (node_id, extractor),
+                    FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE
+                )
+            """)
+
             # Persistent corpus generation used to scope search caches and
             # attest exactly which authoritative SQLite generation produced a
             # response. Triggers participate in the caller's transaction, so a
@@ -266,7 +280,7 @@ class SQLiteStore:
                 INSERT OR IGNORE INTO system_state (key, integer_value)
                 VALUES ('corpus_generation', 0)
             """)
-            for table in ("nodes", "edges", "node_entities"):
+            for table in ("nodes", "edges", "node_entities", "node_entity_extractions"):
                 for operation in ("INSERT", "UPDATE", "DELETE"):
                     trigger = f"trg_{table}_{operation.lower()}_corpus_generation"
                     cursor.execute(f"""
@@ -1124,6 +1138,76 @@ class SQLiteStore:
             
             return results
     
+    _SCOPE_KEY = re.compile(r"[A-Za-z0-9_]+")
+    _CONTAINER_KEYS = ("containerTag", "container_tag", "container")
+
+    def list_scope_nodes(
+        self, filters: Dict[str, Any], as_of: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Live retrieval units whose metadata matches every scope filter exactly.
+
+        Sentence chunks are excluded (their parent turn is the unit). Container
+        aliases (``containerTag``/``container_tag``/``container``) match each
+        other. With ``as_of`` only nodes valid at that instant are returned
+        (half-open ``[valid_from, valid_until)``).
+        """
+        clauses = [
+            "deleted_at IS NULL",
+            "archived_at IS NULL",
+            "COALESCE(json_extract(metadata, '$.is_sentence_chunk'), 0) = 0",
+        ]
+        params: List[Any] = []
+        for key, value in sorted(filters.items()):
+            if not self._SCOPE_KEY.fullmatch(key):
+                raise ValueError(f"unsupported scope key {key!r}")
+            if isinstance(value, bool):
+                value = int(value)
+            if key in self._CONTAINER_KEYS:
+                paths = ", ".join(f"json_extract(metadata, '$.{k}')" for k in self._CONTAINER_KEYS)
+                clauses.append(f"COALESCE({paths}) = ?")
+            else:
+                clauses.append(f"json_extract(metadata, '$.{key}') = ?")
+            params.append(value)
+        with self._cursor() as cursor:
+            cursor.execute(
+                "SELECT id, text, metadata, event_time, valid_from, valid_until, memory_kind, "
+                "confidence, created_at FROM nodes WHERE " + " AND ".join(clauses)
+                + " ORDER BY created_at, id",
+                params,
+            )
+            rows = cursor.fetchall()
+        nodes = []
+        for row in rows:
+            node = dict(row)
+            node["metadata"] = json.loads(node["metadata"] or "{}")
+            nodes.append(node)
+        if as_of is None:
+            return nodes
+        from engine.temporal import validity_relevance
+
+        instant = datetime.fromisoformat(as_of)
+        return [n for n in nodes if validity_relevance(n, None, now=instant) > 0.0]
+
+    def get_node_embeddings(self, node_ids: List[str]) -> Dict[str, np.ndarray]:
+        """Validated native embeddings for ``node_ids`` (nodes without one are absent).
+
+        ``raw_embedding`` holds the provider's vector when ``embedding`` was
+        graph-conditioned on other nodes; it is NULL when the two are equal.
+        """
+        out: Dict[str, np.ndarray] = {}
+        with self._cursor() as cursor:
+            for start in range(0, len(node_ids), 500):
+                chunk = node_ids[start:start + 500]
+                cursor.execute(
+                    f"SELECT id, COALESCE(raw_embedding, embedding) AS embedding FROM nodes "
+                    f"WHERE embedding IS NOT NULL "
+                    f"AND id IN ({','.join('?' * len(chunk))})",
+                    chunk,
+                )
+                for row in cursor.fetchall():
+                    out[row["id"]] = self._deserialize_embedding(row["embedding"])
+        return out
+
     def count_nodes(self) -> int:
         """Get total active node count."""
         with self._cursor() as cursor:
@@ -1186,6 +1270,49 @@ class SQLiteStore:
                 (node_id,),
             )
             return [dict(row) for row in cursor.fetchall()]
+
+    def put_entity_extraction(self, node_id: str, extractor: str, mentions: List[Any]) -> int:
+        """Replace one node's typed mentions for one extractor version.
+
+        ``mentions`` are ``EntityMention``-like objects (``.to_dict()``) or
+        ``{"key", "value", "type"}`` mappings; order is preserved.
+        """
+        if not str(extractor or "").strip():
+            raise ValueError("extractor must be a non-empty version string")
+        rows = []
+        for item in mentions:
+            data = item.to_dict() if hasattr(item, "to_dict") else item
+            row = {name: str(data[name]) for name in ("key", "value", "type")}
+            if not row["key"]:
+                raise ValueError(f"entity mention for {node_id!r} has an empty key")
+            rows.append(row)
+        payload = json.dumps(rows, ensure_ascii=False, separators=(",", ":"))
+        with self._cursor() as cursor:
+            cursor.execute(
+                """INSERT OR REPLACE INTO node_entity_extractions
+                   (node_id, extractor, payload, created_at) VALUES (?, ?, ?, ?)""",
+                (node_id, extractor, payload, self._assertion_time()),
+            )
+        return len(rows)
+
+    def get_entity_extractions(
+        self, node_ids: List[str], extractor: str
+    ) -> Dict[str, List[Dict[str, str]]]:
+        """Stored mentions ``{node_id: [{key, value, type}]}``; absent nodes are omitted."""
+        ids = list(dict.fromkeys(str(n) for n in node_ids))
+        out: Dict[str, List[Dict[str, str]]] = {}
+        with self._cursor() as cursor:
+            for start in range(0, len(ids), 500):  # SQLite bound-parameter limit
+                chunk = ids[start:start + 500]
+                marks = ",".join("?" for _ in chunk)
+                cursor.execute(
+                    f"""SELECT node_id, payload FROM node_entity_extractions
+                        WHERE extractor = ? AND node_id IN ({marks})""",
+                    [extractor, *chunk],
+                )
+                for row in cursor.fetchall():
+                    out[row["node_id"]] = json.loads(row["payload"])
+        return out
 
     def search_nodes_by_entity(
         self,

@@ -21,6 +21,8 @@ ROOT = Path(__file__).resolve().parents[1]
 # Registered documents, mirroring the Documentation Map table in AGENTS.md.
 EXPECTED_DOCS: dict[str, str] = {
     "README.md": "human front door",
+    "THIRD_PARTY_NOTICES.md": "ported-code licences and attribution",
+    "docs/REPRODUCTION_MAP.md": "upstream mechanism to port mapping and verification",
     "PHASE_IMPLEMENTATION_STATUS.md": "real-vs-scaffolded inventory",
     "AGENTS.md": "agent entry point / contract",
     "docs/ADVERSARIAL_AUDIT_REMEDIATION.md": "historical audit record",

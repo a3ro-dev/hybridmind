@@ -42,6 +42,34 @@ Mode contract: `hybrid`, `vector_only`, `sparse_only`, `vector_sparse`, and
 anchors must come from somewhere other than gold labels. Explicit weights you
 pass are never overridden by server-side query routing.
 
+### Tri-signal retrieval (`POST /retrieve`)
+
+```python
+out = memory.retrieve(
+    "When did Caroline go to the support group?",
+    scope={"containerTag": "user-42"},          # exact-match metadata scope
+    top_k=10,
+    channels=["dense", "sparse", "graph"],     # any non-empty subset
+    fusion="rrf",                                # rrf | dbsf | zscore | minmax_linear
+    evidence={"strategy": "propagate", "budget_tokens": 2048},
+)
+out["hits"][0]["evidence_id"], out["hits"][0]["channel_ranks"], out["trace"]["resolved_config_sha256"]
+```
+
+- Unknown request fields are rejected (422). Omitted options take the
+  `trisignal_*` server defaults.
+- Each hit carries `evidence_id` (metadata `evidence_id`/`dia_id`/`source_id`,
+  else the node id), `sources`, and per-channel ranks and scores.
+- `evidence.items` are chronological; `role="context"` items name the hit they
+  were expanded from and are not retrieval hits.
+- A requested stage that cannot execute (no embedder, no stored vectors for
+  the scope, missing LLM extraction, rerank without a reranker) returns 503,
+  never a silently reduced ranking. A corpus change mid-request returns 409.
+- Store turns with `session_id`, `turn_index`, `speaker` and an evidence id in
+  metadata so sequence edges, neighbour expansion and evidence IDs work.
+- The MCP `retrieve` tool exposes `query`, `scope`, `top_k`, `channels` and
+  `evidence_budget_tokens`, and sends `HYBRIDMIND_API_KEY` when it is set.
+
 ## 2. MCP server
 
 `mcp_server/main.py` is a stdio FastMCP adapter over the API:

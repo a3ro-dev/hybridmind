@@ -1,6 +1,6 @@
 # HybridMind — agent entry point
 
-Updated: August 2026. Read top to bottom before changing anything; it is
+Updated: September 2026. Read top to bottom before changing anything; it is
 short on purpose. `README.md` is the human-facing front door; this file is
 the working contract for anyone editing the code.
 
@@ -44,7 +44,10 @@ python -m compileall -q main.py config.py api engine storage models cli sdk mcp_
 | `storage/vector_index.py`, `bm25_index.py`, `graph_index.py` | Derived rebuildable indexes | Must stay rebuildable-from-SQLite; never authoritative |
 | `storage/mindfile.py` | `.mind` snapshot publish/restore validation | Security-sensitive path/checksum/semantic gates |
 | `engine/hybrid_ranker.py` | Candidate generation, temporal filtering, RRF fusion, optional rerank stages | Retrieval semantics + measured numbers depend on exact behavior |
-| `engine/fusion.py` | RRF implementation (`k=60`, weight validation) | Fusion contract |
+| `engine/fusion.py` | RRF (`k=60`, weight validation) plus DBSF, z-score and min-max linear fusion | Fusion contract |
+| `engine/trisignal.py` + `api/retrieve.py` | `POST /retrieve`: independent dense/sparse/graph channels over scope-local corpora, fusion, fixed-pool rerank, evidence packing | Tri-signal semantics + measured ablations; channel independence is a contract |
+| `engine/entity_graph.py`, `engine/entity_extraction.py` | EMG entity-memory graph (exact upstream parity) and HippoRAG-2 PPR; lexical/LLM entity extraction | Graph channel; port parity test `tests/test_emg_port_parity.py` |
+| `eval_trisignal.py`, `benchmarks/conversational_*.py` | Engine-driven LoCoMo/LongMemEval-S ablations, official metrics, ledgers | Current valid retrieval numbers |
 | `engine/embedding.py`, `provider_policy.py` | Remote-only native 4096-d embeddings; endpoint-bound keys | Fail-closed contract, rule 3/4 |
 | `engine/llm_client.py` (+ `llm.py`, `runpod_llm.py`) | Centralized LLM policy chain | Provider routing/spend discipline |
 | `main.py` + `api/*.py` | App assembly, security middleware, routers | Auth/rate/limit logic lives in `main.py` ASGI middleware |
@@ -87,8 +90,11 @@ absent. A scaffold, config field, or untrained checkpoint is not a result.
 - Default fusion is weighted reciprocal-rank fusion with `k=60`. Explicit
   request weights must not be silently overridden by routing.
 - `search_mode` controls `vector_only`, `sparse_only`, `vector_sparse`,
-  `graph_only`, and `hybrid`. Graph-only requires explicit, gold-independent
-  anchors. A positive rerank pool must produce execution evidence; pool `0`
+  `graph_only`, and `hybrid` on the legacy `/search/hybrid` path; there,
+  graph-only requires explicit, gold-independent anchors. On `/retrieve` the
+  graph channel derives anchors from the query text (or caller-supplied
+  query keys), never from gold, and no channel may seed another unless the
+  request names that dependency (`ppr_passage_seed_channel`). A positive rerank pool must produce execution evidence; pool `0`
   means off.
 - Exact evidence IDs and corpus/session scoping are required for retrieval
   metrics. Answer-string overlap is not evidence recall and the deterministic
@@ -121,6 +127,8 @@ doc in its row — do not leave prose describing code that no longer exists.
 |---|---|---|
 | `AGENTS.md` | This contract: rules, map, covenants | Any rule/architecture/doc-map change |
 | `README.md` | Human front door: overview, quick start, API summary | User-visible behavior/install changes |
+| `THIRD_PARTY_NOTICES.md` | Licences and attribution for ported/reimplemented code | Any code ported or vendored |
+| `docs/REPRODUCTION_MAP.md` | Upstream mechanism → commit/licence → port → deviations → verification → measured result | Any port, parity check or reproduction run |
 | `PHASE_IMPLEMENTATION_STATUS.md` | Honest real-vs-scaffolded inventory | Any module's implementation status changes |
 | `docs/CURRENT_STATE.md` | Rolling session handoff | Start AND end of every work session |
 | `docs/DECISIONS.md` | Append-only judgment-call log | Whenever you make a call someone might reverse |
@@ -133,6 +141,7 @@ doc in its row — do not leave prose describing code that no longer exists.
 | `experiments/reports/baseline.md` | Pre-change measurement snapshot | Never edited; superseded snapshots get new files |
 | `docs/KV_CACHE_RESEARCH.md` | KV-hypothesis history and failed results | New hypothesis evidence |
 | `docs/research/*` | Research program, prior-art ledger, claim ledger | New experiments/claims (append; don't rewrite verdicts) |
+| `research/*` | Autoresearch workspace: `findings.md`, `research-log.md`, `research-state.yaml`, per-experiment `protocol.md`/`analysis.md`, priced `plans/`, `literature/` sweeps | Protocol committed before its results; findings after each experiment |
 | `docs/ADVERSARIAL_AUDIT_REMEDIATION.md` | Historical audit record | Never (frozen audit) |
 | `docs/AGENT_INTEGRATION.md` | SDK/MCP/API integration contracts | SDK/MCP/request-schema changes |
 | `cli/README.md` | CLI command surfaces | cli/* changes |

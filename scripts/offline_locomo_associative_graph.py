@@ -40,6 +40,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts.offline_locomo_sparse_baseline import (
+    CATEGORY,
     DEFAULT_DATASET,
     _canonical_id,
     _gold_evidence,
@@ -55,13 +56,6 @@ STOPWORDS = frozenset(
 )
 TOKENIZER = "unicode_word_boundary_v2"
 SESSION_KEY = re.compile(r"^session_(\d+)$")
-CATEGORY = {
-    1: "single-hop",
-    2: "temporal",
-    3: "multi-hop",
-    4: "world-knowledge",
-    5: "adversarial",
-}
 CONDITIONS = (
     "bm25s_speaker_prefix",
     "graph_ppr",

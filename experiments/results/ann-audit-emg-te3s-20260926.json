@@ -1,0 +1,3025 @@
+{
+  "schema": "hybridmind_ann_audit_v1",
+  "created_at": "2026-09-25T19:03:11.581014+00:00",
+  "label": "EMG shipped reference vectors: 1536-d OpenAI text-embedding-3-small (memory_emb_extract_v4_gpt35_tes docs; locomo10_047d8e25 question vectors, role=context). NOT the 4096-d HybridMind runtime model (Qwen3-Embedding-8B); ANN recall here does not transfer to runtime vectors without a rerun.",
+  "evidence_class": "measured_offline",
+  "provider_calls": 0,
+  "command": "scripts/ann_audit.py --docs-npz tmp/upstream/em_graph_memory/outputs/em_graph/conv-26_memory_emb_extract_v4_gpt35_tes_text-embedding-3-small.npz tmp/upstream/em_graph_memory/outputs/em_graph/conv-30_memory_emb_extract_v4_gpt35_tes_text-embedding-3-small.npz tmp/upstream/em_graph_memory/outputs/em_graph/conv-41_memory_emb_extract_v4_gpt35_tes_text-embedding-3-small.npz tmp/upstream/em_graph_memory/outputs/em_graph/conv-42_memory_emb_extract_v4_gpt35_tes_text-embedding-3-small.npz tmp/upstream/em_graph_memory/outputs/em_graph/conv-43_memory_emb_extract_v4_gpt35_tes_text-embedding-3-small.npz tmp/upstream/em_graph_memory/outputs/em_graph/conv-44_memory_emb_extract_v4_gpt35_tes_text-embedding-3-small.npz tmp/upstream/em_graph_memory/outputs/em_graph/conv-47_memory_emb_extract_v4_gpt35_tes_text-embedding-3-small.npz tmp/upstream/em_graph_memory/outputs/em_graph/conv-48_memory_emb_extract_v4_gpt35_tes_text-embedding-3-small.npz tmp/upstream/em_graph_memory/outputs/em_graph/conv-49_memory_emb_extract_v4_gpt35_tes_text-embedding-3-small.npz tmp/upstream/em_graph_memory/outputs/em_graph/conv-50_memory_emb_extract_v4_gpt35_tes_text-embedding-3-small.npz --query-npz tmp/upstream/em_graph_memory/outputs/em_graph/query_embeddings/locomo10_047d8e25_text-embedding-3-small_v1.npz --query-scope-key qa_sample_ids --query-link-key qa_question_digests --query-row-key question_digests --scope-regex conv-\\d+ --expected-dim 1536 --config 32:16,32,64,128,256 --config 16:64 --config 48:64 --ef-construction 40 --k 10 25 100 --label EMG shipped reference vectors: 1536-d OpenAI text-embedding-3-small (memory_emb_extract_v4_gpt35_tes docs; locomo10_047d8e25 question vectors, role=context). NOT the 4096-d HybridMind runtime model (Qwen3-Embedding-8B); ANN recall here does not transfer to runtime vectors without a rerun. --output experiments/results/ann-audit-emg-te3s-20260926.json",
+  "provenance": {
+    "git_commit": "a201d8fb35acced11b355a7a49c93c0a34180794",
+    "git_dirty_paths": [
+      "?? engine/dense_channel.py",
+      "?? scripts/ann_audit.py"
+    ],
+    "inputs_sha256": {
+      "tmp/upstream/em_graph_memory/outputs/em_graph/conv-26_memory_emb_extract_v4_gpt35_tes_text-embedding-3-small.npz": "e739ec614f7948483a2218840e8334d9997cb46e9e49359ec572aa0c68872b72",
+      "tmp/upstream/em_graph_memory/outputs/em_graph/conv-30_memory_emb_extract_v4_gpt35_tes_text-embedding-3-small.npz": "f5320c23bea0e2eb06abab9743479f08f6276491dd71abf35a71c1a4d946e8d9",
+      "tmp/upstream/em_graph_memory/outputs/em_graph/conv-41_memory_emb_extract_v4_gpt35_tes_text-embedding-3-small.npz": "2d884abeea9d22a74be93403649d82771277c7b7463dbefd28111da975f526e1",
+      "tmp/upstream/em_graph_memory/outputs/em_graph/conv-42_memory_emb_extract_v4_gpt35_tes_text-embedding-3-small.npz": "48ea37e37b7fc16c2e69f0da9d1049b9d688a9da29e4aa9a17b28891c83d9383",
+      "tmp/upstream/em_graph_memory/outputs/em_graph/conv-43_memory_emb_extract_v4_gpt35_tes_text-embedding-3-small.npz": "67557dd264e0e17a27abc70d1376c4466a82e164d5bd50ae0c55cfa1616779dd",
+      "tmp/upstream/em_graph_memory/outputs/em_graph/conv-44_memory_emb_extract_v4_gpt35_tes_text-embedding-3-small.npz": "f03fcfa0c02666adf180ecd86f94306c6f399395b9d2fb62b6e9512336b261d5",
+      "tmp/upstream/em_graph_memory/outputs/em_graph/conv-47_memory_emb_extract_v4_gpt35_tes_text-embedding-3-small.npz": "14e846e5369875590245db3712e78bd58df0a3c3a8469616bb6f6c25a5c47bfd",
+      "tmp/upstream/em_graph_memory/outputs/em_graph/conv-48_memory_emb_extract_v4_gpt35_tes_text-embedding-3-small.npz": "e8aba3921b94968d54eb63bc1b3fac11281e5ffdb3818af5655ad8e24cb220f9",
+      "tmp/upstream/em_graph_memory/outputs/em_graph/conv-49_memory_emb_extract_v4_gpt35_tes_text-embedding-3-small.npz": "e686d93c9432cd7dda093c8cf18861f379b833729fbc8672fd0c51aa15853c04",
+      "tmp/upstream/em_graph_memory/outputs/em_graph/conv-50_memory_emb_extract_v4_gpt35_tes_text-embedding-3-small.npz": "ad37acff0a1247e0abb892a2e5c7f2e8b89ac2dbaf17faa5e9d8ebea02ac6735",
+      "tmp/upstream/em_graph_memory/outputs/em_graph/query_embeddings/locomo10_047d8e25_text-embedding-3-small_v1.npz": "bef99a912383f201e18f2ccecfda0e28ae745b006016a6b38e6ce661eb986f9f"
+    },
+    "faiss_version": "1.13.2",
+    "numpy_version": "2.4.3",
+    "faiss_cpu_distribution": "1.13.2",
+    "python": "3.13.5",
+    "faiss_threads": 1
+  },
+  "params": {
+    "configs": [
+      {
+        "m": 32,
+        "ef_search_grid": [
+          16,
+          32,
+          64,
+          128,
+          256
+        ]
+      },
+      {
+        "m": 16,
+        "ef_search_grid": [
+          64
+        ]
+      },
+      {
+        "m": 48,
+        "ef_search_grid": [
+          64
+        ]
+      }
+    ],
+    "ef_construction": 40,
+    "ks": [
+      10,
+      25,
+      100
+    ],
+    "query_mode": "query_npz",
+    "docs_key": "vectors",
+    "ids": "row_index",
+    "query_keys": {
+      "vectors": "vectors",
+      "scope": "qa_sample_ids",
+      "link": "qa_question_digests",
+      "row": "question_digests"
+    },
+    "expected_dim": 1536,
+    "max_queries": null
+  },
+  "summary": [
+    {
+      "m": 32,
+      "ef_search": 16,
+      "n_scopes": 10,
+      "macro_recall_at_k": {
+        "10": 0.9933084805571518,
+        "25": 0.9838719520250464,
+        "100": 0.9133062836706435
+      },
+      "worst_scope_recall_at_k": {
+        "10": 0.9875647668393782,
+        "25": 0.9753367875647669,
+        "100": 0.8909230769230768
+      }
+    },
+    {
+      "m": 32,
+      "ef_search": 32,
+      "n_scopes": 10,
+      "macro_recall_at_k": {
+        "10": 0.9994556466343172,
+        "25": 0.9979781393449146,
+        "100": 0.9771529350805299
+      },
+      "worst_scope_recall_at_k": {
+        "10": 0.9986842105263157,
+        "25": 0.9966839378238342,
+        "100": 0.9572692307692308
+      }
+    },
+    {
+      "m": 32,
+      "ef_search": 64,
+      "n_scopes": 10,
+      "macro_recall_at_k": {
+        "10": 0.9998621864578802,
+        "25": 0.9998627533135916,
+        "100": 0.9974375487852644
+      },
+      "worst_scope_recall_at_k": {
+        "10": 0.9994736842105263,
+        "25": 0.9993684210526316,
+        "100": 0.9934615384615385
+      }
+    },
+    {
+      "m": 32,
+      "ef_search": 128,
+      "n_scopes": 10,
+      "macro_recall_at_k": {
+        "10": 0.9999561403508771,
+        "25": 0.9999824561403509,
+        "100": 0.9999143309386213
+      },
+      "worst_scope_recall_at_k": {
+        "10": 0.999561403508772,
+        "25": 0.9998245614035088,
+        "100": 0.9998076923076925
+      }
+    },
+    {
+      "m": 32,
+      "ef_search": 256,
+      "n_scopes": 10,
+      "macro_recall_at_k": {
+        "10": 1.0,
+        "25": 1.0,
+        "100": 1.0
+      },
+      "worst_scope_recall_at_k": {
+        "10": 1.0,
+        "25": 1.0,
+        "100": 1.0
+      }
+    },
+    {
+      "m": 16,
+      "ef_search": 64,
+      "n_scopes": 10,
+      "macro_recall_at_k": {
+        "10": 0.997701756220947,
+        "25": 0.9925097226938815,
+        "100": 0.9539082985796062
+      },
+      "worst_scope_recall_at_k": {
+        "10": 0.9956140350877193,
+        "25": 0.9836269430051815,
+        "100": 0.9275129533678756
+      }
+    },
+    {
+      "m": 48,
+      "ef_search": 64,
+      "n_scopes": 10,
+      "macro_recall_at_k": {
+        "10": 0.9999586776859504,
+        "25": 0.9999627456857791,
+        "100": 0.9987742440879357
+      },
+      "worst_scope_recall_at_k": {
+        "10": 0.9995867768595041,
+        "25": 0.9997927461139897,
+        "100": 0.9966923076923079
+      }
+    }
+  ],
+  "scopes": [
+    {
+      "scope": "conv-26",
+      "n_vectors": 419,
+      "n_queries": 199,
+      "audits": [
+        {
+          "n_vectors": 419,
+          "dim": 1536,
+          "n_queries": 199,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 32,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              16,
+              32,
+              64,
+              128,
+              256
+            ]
+          },
+          "build_seconds": 0.017573199998878408,
+          "exact_latency_ms": {
+            "mean": 0.08513869335418614,
+            "p50": 0.0810999990790151,
+            "p95": 0.09547999761707614,
+            "max": 0.3233999996155035
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 16,
+              "recall_at_k": {
+                "10": 0.9894472361809047,
+                "25": 0.982713567839196,
+                "100": 0.9235678391959797
+              },
+              "min_recall_at_k": {
+                "10": 0.8,
+                "25": 0.84,
+                "100": 0.77
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": true,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.05740552744521039,
+                "p50": 0.05610000152955763,
+                "p95": 0.06738999873050487,
+                "max": 0.1340000017080456
+              }
+            },
+            {
+              "ef_search": 32,
+              "recall_at_k": {
+                "10": 0.9994974874371859,
+                "25": 0.9985929648241206,
+                "100": 0.9832160804020101
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.96,
+                "100": 0.9
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.0701286432682244,
+                "p50": 0.06750000102329068,
+                "p95": 0.08678999838593882,
+                "max": 0.18379999892204069
+              }
+            },
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.9987437185929648
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.98
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.07779849245287267,
+                "p50": 0.076299998909235,
+                "p95": 0.08899999775167089,
+                "max": 0.21469999774126336
+              }
+            },
+            {
+              "ef_search": 128,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": false
+              },
+              "latency_ms": {
+                "mean": 0.09128592967101953,
+                "p50": 0.08710000111022964,
+                "p95": 0.10335000079066958,
+                "max": 0.2749999985098839
+              }
+            },
+            {
+              "ef_search": 256,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": false
+              },
+              "latency_ms": {
+                "mean": 0.11835075375488281,
+                "p50": 0.11559999984456226,
+                "p95": 0.13248000068415422,
+                "max": 0.18220000129076652
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        },
+        {
+          "n_vectors": 419,
+          "dim": 1536,
+          "n_queries": 199,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 16,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              64
+            ]
+          },
+          "build_seconds": 0.011715200002072379,
+          "exact_latency_ms": {
+            "mean": 0.08304472353827705,
+            "p50": 0.0805000017862767,
+            "p95": 0.08992000039143022,
+            "max": 0.18899999849963933
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 0.9974874371859297,
+                "25": 0.9927638190954774,
+                "100": 0.961356783919598
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.88,
+                "100": 0.86
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.06446984929855136,
+                "p50": 0.06260000009206124,
+                "p95": 0.07769999720039773,
+                "max": 0.11369999992894009
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        },
+        {
+          "n_vectors": 419,
+          "dim": 1536,
+          "n_queries": 199,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 48,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              64
+            ]
+          },
+          "build_seconds": 0.015814400001545437,
+          "exact_latency_ms": {
+            "mean": 0.08382060290176782,
+            "p50": 0.08040000102482736,
+            "p95": 0.09655999856477136,
+            "max": 0.18139999883715063
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.9994472361809046
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.98
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.08270653275054547,
+                "p50": 0.08139999772538431,
+                "p95": 0.09222999979101587,
+                "max": 0.14020000162418
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        }
+      ]
+    },
+    {
+      "scope": "conv-30",
+      "n_vectors": 369,
+      "n_queries": 104,
+      "audits": [
+        {
+          "n_vectors": 369,
+          "dim": 1536,
+          "n_queries": 104,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 32,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              16,
+              32,
+              64,
+              128,
+              256
+            ]
+          },
+          "build_seconds": 0.013168400000722613,
+          "exact_latency_ms": {
+            "mean": 0.07387403841746093,
+            "p50": 0.07160000131989364,
+            "p95": 0.08287000164273195,
+            "max": 0.1297999988310039
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 16,
+              "recall_at_k": {
+                "10": 0.9961538461538461,
+                "25": 0.9915384615384616,
+                "100": 0.943173076923077
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.88,
+                "100": 0.83
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": true,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.05132019224709858,
+                "p50": 0.0502499988215277,
+                "p95": 0.06658500133198686,
+                "max": 0.11180000001331791
+              }
+            },
+            {
+              "ef_search": 32,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 0.9984615384615385,
+                "100": 0.9873076923076923
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 0.96,
+                "100": 0.93
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.06056634618709303,
+                "p50": 0.05919999966863543,
+                "p95": 0.07286499931069557,
+                "max": 0.08370000068680383
+              }
+            },
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.9984615384615385
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.98
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.07111923087694987,
+                "p50": 0.07084999924700242,
+                "p95": 0.07837999764888082,
+                "max": 0.08709999747225083
+              }
+            },
+            {
+              "ef_search": 128,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": false
+              },
+              "latency_ms": {
+                "mean": 0.08456634633638224,
+                "p50": 0.08309999975608662,
+                "p95": 0.09305499970650999,
+                "max": 0.11499999891384505
+              }
+            },
+            {
+              "ef_search": 256,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": false
+              },
+              "latency_ms": {
+                "mean": 0.11473750020321369,
+                "p50": 0.11180000001331791,
+                "p95": 0.12234999830980087,
+                "max": 0.2693999995244667
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        },
+        {
+          "n_vectors": 369,
+          "dim": 1536,
+          "n_queries": 104,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 16,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              64
+            ]
+          },
+          "build_seconds": 0.009431999998923857,
+          "exact_latency_ms": {
+            "mean": 0.07774423081103193,
+            "p50": 0.07289999848580919,
+            "p95": 0.10851000170077893,
+            "max": 0.17870000010589138
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 0.9971153846153845,
+                "25": 0.9953846153846155,
+                "100": 0.9648076923076924
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.92,
+                "100": 0.89
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.05960576919068654,
+                "p50": 0.05715000042982865,
+                "p95": 0.07270500154845645,
+                "max": 0.13140000010025688
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        },
+        {
+          "n_vectors": 369,
+          "dim": 1536,
+          "n_queries": 104,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 48,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              64
+            ]
+          },
+          "build_seconds": 0.01266830000167829,
+          "exact_latency_ms": {
+            "mean": 0.07848653845380446,
+            "p50": 0.0733500000933418,
+            "p95": 0.11704999797075283,
+            "max": 0.17560000196681358
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.9993269230769232
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.98
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.07762884622654663,
+                "p50": 0.07410000034724362,
+                "p95": 0.08672499789099673,
+                "max": 0.16680000044289045
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        }
+      ]
+    },
+    {
+      "scope": "conv-41",
+      "n_vectors": 663,
+      "n_queries": 193,
+      "audits": [
+        {
+          "n_vectors": 663,
+          "dim": 1536,
+          "n_queries": 193,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 32,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              16,
+              32,
+              64,
+              128,
+              256
+            ]
+          },
+          "build_seconds": 0.03572169999824837,
+          "exact_latency_ms": {
+            "mean": 0.13436632116045924,
+            "p50": 0.1283999990846496,
+            "p95": 0.15841999993426722,
+            "max": 0.28589999783434905
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 16,
+              "recall_at_k": {
+                "10": 0.9875647668393782,
+                "25": 0.9753367875647669,
+                "100": 0.8999999999999999
+              },
+              "min_recall_at_k": {
+                "10": 0.7,
+                "25": 0.68,
+                "100": 0.71
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": true,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.07188186521682324,
+                "p50": 0.06909999865456484,
+                "p95": 0.09428000048501414,
+                "max": 0.14110000120126642
+              }
+            },
+            {
+              "ef_search": 32,
+              "recall_at_k": {
+                "10": 0.9989637305699482,
+                "25": 0.9966839378238342,
+                "100": 0.975440414507772
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.92,
+                "100": 0.9
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.09959533683493627,
+                "p50": 0.09049999789567664,
+                "p95": 0.17445999837946136,
+                "max": 0.30110000079730526
+              }
+            },
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.9974093264248705
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.97
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.11845854906244034,
+                "p50": 0.11169999925186858,
+                "p95": 0.16639999885228463,
+                "max": 0.22629999875789508
+              }
+            },
+            {
+              "ef_search": 128,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.9998445595854923
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.99
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": false
+              },
+              "latency_ms": {
+                "mean": 0.1410082901494428,
+                "p50": 0.1340000017080456,
+                "p95": 0.17912000112119128,
+                "max": 0.3187000002071727
+              }
+            },
+            {
+              "ef_search": 256,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": false
+              },
+              "latency_ms": {
+                "mean": 0.20625803097413004,
+                "p50": 0.18799999816110358,
+                "p95": 0.32547999871894684,
+                "max": 0.5276999982015695
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        },
+        {
+          "n_vectors": 663,
+          "dim": 1536,
+          "n_queries": 193,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 16,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              64
+            ]
+          },
+          "build_seconds": 0.028359200001432328,
+          "exact_latency_ms": {
+            "mean": 0.15407150266031552,
+            "p50": 0.14070000179344788,
+            "p95": 0.2226399999926797,
+            "max": 0.4284999995434191
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 0.9958549222797927,
+                "25": 0.9836269430051815,
+                "100": 0.9275129533678756
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.88,
+                "100": 0.83
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.10003316076080329,
+                "p50": 0.0867000017024111,
+                "p95": 0.1589800005604047,
+                "max": 0.4295999970054254
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        },
+        {
+          "n_vectors": 663,
+          "dim": 1536,
+          "n_queries": 193,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 48,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              64
+            ]
+          },
+          "build_seconds": 0.03649869999935618,
+          "exact_latency_ms": {
+            "mean": 0.15835751286044913,
+            "p50": 0.14320000263978727,
+            "p95": 0.2009599986195098,
+            "max": 0.4042000000481494
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 0.9997927461139897,
+                "100": 0.9988082901554404
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 0.96,
+                "100": 0.98
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.11167098441052038,
+                "p50": 0.10800000018207356,
+                "p95": 0.13049999906797893,
+                "max": 0.1993000005313661
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        }
+      ]
+    },
+    {
+      "scope": "conv-42",
+      "n_vectors": 629,
+      "n_queries": 260,
+      "audits": [
+        {
+          "n_vectors": 629,
+          "dim": 1536,
+          "n_queries": 260,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 32,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              16,
+              32,
+              64,
+              128,
+              256
+            ]
+          },
+          "build_seconds": 0.03225249999741209,
+          "exact_latency_ms": {
+            "mean": 0.14160269222954341,
+            "p50": 0.1304500001424458,
+            "p95": 0.20231999988027358,
+            "max": 0.27910000062547624
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 16,
+              "recall_at_k": {
+                "10": 0.9976923076923077,
+                "25": 0.9886153846153847,
+                "100": 0.8909230769230768
+              },
+              "min_recall_at_k": {
+                "10": 0.8,
+                "25": 0.88,
+                "100": 0.71
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": true,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.060691538503586065,
+                "p50": 0.06029999894963112,
+                "p95": 0.07949500050017375,
+                "max": 0.1500999969721306
+              }
+            },
+            {
+              "ef_search": 32,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 0.9983076923076923,
+                "100": 0.9572692307692308
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 0.92,
+                "100": 0.83
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.07658538459229301,
+                "p50": 0.07580000055895653,
+                "p95": 0.09712500068417283,
+                "max": 0.2440999996906612
+              }
+            },
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.9934615384615385
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.93
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.10022499984468315,
+                "p50": 0.09610000051907264,
+                "p95": 0.14302499748737318,
+                "max": 0.22479999825009145
+              }
+            },
+            {
+              "ef_search": 128,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.9998076923076925
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.99
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": false
+              },
+              "latency_ms": {
+                "mean": 0.11360076925764308,
+                "p50": 0.11059999815188348,
+                "p95": 0.13613999963126844,
+                "max": 0.2029999996011611
+              }
+            },
+            {
+              "ef_search": 256,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": false
+              },
+              "latency_ms": {
+                "mean": 0.14590961531771776,
+                "p50": 0.14290000035543926,
+                "p95": 0.16323000218108064,
+                "max": 0.18590000036056153
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        },
+        {
+          "n_vectors": 629,
+          "dim": 1536,
+          "n_queries": 260,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 16,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              64
+            ]
+          },
+          "build_seconds": 0.020352100000309292,
+          "exact_latency_ms": {
+            "mean": 0.12882961533390558,
+            "p50": 0.12040000001434237,
+            "p95": 0.16106000002764628,
+            "max": 0.27629999749478884
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 0.9947692307692307,
+                "100": 0.9302692307692306
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 0.92,
+                "100": 0.8
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.06918153850654982,
+                "p50": 0.06829999983892776,
+                "p95": 0.08810500130493892,
+                "max": 0.1336999994236976
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        },
+        {
+          "n_vectors": 629,
+          "dim": 1536,
+          "n_queries": 260,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 48,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              64
+            ]
+          },
+          "build_seconds": 0.031091999997443054,
+          "exact_latency_ms": {
+            "mean": 0.13173384612365716,
+            "p50": 0.12125000102969352,
+            "p95": 0.1865250003902474,
+            "max": 0.2640000020619482
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.9966923076923079
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.96
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.09976961539975421,
+                "p50": 0.10069999916595407,
+                "p95": 0.11623500067798885,
+                "max": 0.17379999917466193
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        }
+      ]
+    },
+    {
+      "scope": "conv-43",
+      "n_vectors": 680,
+      "n_queries": 242,
+      "audits": [
+        {
+          "n_vectors": 680,
+          "dim": 1536,
+          "n_queries": 242,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 32,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              16,
+              32,
+              64,
+              128,
+              256
+            ]
+          },
+          "build_seconds": 0.03549100000236649,
+          "exact_latency_ms": {
+            "mean": 0.13452355374622038,
+            "p50": 0.1296499995078193,
+            "p95": 0.15607999903295422,
+            "max": 0.28449999808799475
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 16,
+              "recall_at_k": {
+                "10": 0.9979338842975206,
+                "25": 0.988099173553719,
+                "100": 0.9173140495867768
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.88,
+                "100": 0.71
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": true,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.06542561987012313,
+                "p50": 0.06424999810406007,
+                "p95": 0.07908499846962513,
+                "max": 0.10459999975864775
+              }
+            },
+            {
+              "ef_search": 32,
+              "recall_at_k": {
+                "10": 0.9995867768595041,
+                "25": 0.9973553719008265,
+                "100": 0.9797933884297522
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.92,
+                "100": 0.88
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.08310165288672909,
+                "p50": 0.08070000149018597,
+                "p95": 0.10387500151409768,
+                "max": 0.216500000533415
+              }
+            },
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 0.9995867768595041,
+                "25": 0.9998347107438017,
+                "100": 0.9982644628099174
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.96,
+                "100": 0.98
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.09879669417665159,
+                "p50": 0.09819999831961468,
+                "p95": 0.11598999935813481,
+                "max": 0.16150000010384247
+              }
+            },
+            {
+              "ef_search": 128,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.9998347107438017
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.99
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": false
+              },
+              "latency_ms": {
+                "mean": 0.12490785133390887,
+                "p50": 0.12250000145286322,
+                "p95": 0.1538450003863545,
+                "max": 0.20429999858606607
+              }
+            },
+            {
+              "ef_search": 256,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": false
+              },
+              "latency_ms": {
+                "mean": 0.16452809907883226,
+                "p50": 0.16150000010384247,
+                "p95": 0.18788000106724212,
+                "max": 0.28329999986453913
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        },
+        {
+          "n_vectors": 680,
+          "dim": 1536,
+          "n_queries": 242,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 16,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              64
+            ]
+          },
+          "build_seconds": 0.02349540000068373,
+          "exact_latency_ms": {
+            "mean": 0.13631074378747504,
+            "p50": 0.1300999992963625,
+            "p95": 0.1629500005947193,
+            "max": 0.29460000223480165
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 0.9987603305785123,
+                "25": 0.9958677685950413,
+                "100": 0.9669421487603306
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.92,
+                "100": 0.85
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.07779834696287982,
+                "p50": 0.0761499995860504,
+                "p95": 0.09278500165237344,
+                "max": 0.13330000001587905
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        },
+        {
+          "n_vectors": 680,
+          "dim": 1536,
+          "n_queries": 242,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 48,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              64
+            ]
+          },
+          "build_seconds": 0.03617369999847142,
+          "exact_latency_ms": {
+            "mean": 0.13632479334593567,
+            "p50": 0.13140000010025688,
+            "p95": 0.15843499986658569,
+            "max": 0.2815000007103663
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 0.9995867768595041,
+                "25": 0.9998347107438017,
+                "100": 0.9991322314049588
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.96,
+                "100": 0.99
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.11028512394546881,
+                "p50": 0.10834999920916744,
+                "p95": 0.13199499753682176,
+                "max": 0.22159999934956431
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        }
+      ]
+    },
+    {
+      "scope": "conv-44",
+      "n_vectors": 675,
+      "n_queries": 158,
+      "audits": [
+        {
+          "n_vectors": 675,
+          "dim": 1536,
+          "n_queries": 158,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 32,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              16,
+              32,
+              64,
+              128,
+              256
+            ]
+          },
+          "build_seconds": 0.035083999999187654,
+          "exact_latency_ms": {
+            "mean": 0.1364088607088094,
+            "p50": 0.12954999874636997,
+            "p95": 0.16461499835713767,
+            "max": 0.27459999910206534
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 16,
+              "recall_at_k": {
+                "10": 0.989873417721519,
+                "25": 0.9794936708860759,
+                "100": 0.9293037974683543
+              },
+              "min_recall_at_k": {
+                "10": 0.7,
+                "25": 0.84,
+                "100": 0.75
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": true,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.0661531646269568,
+                "p50": 0.06535000102303457,
+                "p95": 0.07822500101610787,
+                "max": 0.11660000018309802
+              }
+            },
+            {
+              "ef_search": 32,
+              "recall_at_k": {
+                "10": 0.9993670886075949,
+                "25": 0.99873417721519,
+                "100": 0.9874050632911392
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.96,
+                "100": 0.92
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.0813360759740492,
+                "p50": 0.08060000072873663,
+                "p95": 0.09458000185986748,
+                "max": 0.11589999849093147
+              }
+            },
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.9993670886075949
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.98
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.09906139247148162,
+                "p50": 0.09815000157686882,
+                "p95": 0.11444499832578003,
+                "max": 0.15799999891896732
+              }
+            },
+            {
+              "ef_search": 128,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": false
+              },
+              "latency_ms": {
+                "mean": 0.1198696204655674,
+                "p50": 0.11839999933727086,
+                "p95": 0.13801999903080286,
+                "max": 0.1633000028959941
+              }
+            },
+            {
+              "ef_search": 256,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": false
+              },
+              "latency_ms": {
+                "mean": 0.15877405070269457,
+                "p50": 0.1568000006955117,
+                "p95": 0.18229499728477094,
+                "max": 0.2086000022245571
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        },
+        {
+          "n_vectors": 675,
+          "dim": 1536,
+          "n_queries": 158,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 16,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              64
+            ]
+          },
+          "build_seconds": 0.023136600000725593,
+          "exact_latency_ms": {
+            "mean": 0.13758291153195226,
+            "p50": 0.1298000006499933,
+            "p95": 0.16619500074739338,
+            "max": 0.2809999969031196
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 0.99873417721519,
+                "25": 0.9946835443037975,
+                "100": 0.9731012658227848
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.88,
+                "100": 0.88
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.07932848087806679,
+                "p50": 0.07725000068603549,
+                "p95": 0.09469999858993107,
+                "max": 0.1336999994236976
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        },
+        {
+          "n_vectors": 675,
+          "dim": 1536,
+          "n_queries": 158,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 48,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              64
+            ]
+          },
+          "build_seconds": 0.034681700002693105,
+          "exact_latency_ms": {
+            "mean": 0.13569873419927014,
+            "p50": 0.12924999828101136,
+            "p95": 0.15857500056881693,
+            "max": 0.3239999969082419
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.9995569620253165
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.99
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.10893480998962746,
+                "p50": 0.10590000056254212,
+                "p95": 0.12924999718961772,
+                "max": 0.1975999985006638
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        }
+      ]
+    },
+    {
+      "scope": "conv-47",
+      "n_vectors": 689,
+      "n_queries": 190,
+      "audits": [
+        {
+          "n_vectors": 689,
+          "dim": 1536,
+          "n_queries": 190,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 32,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              16,
+              32,
+              64,
+              128,
+              256
+            ]
+          },
+          "build_seconds": 0.0423196999981883,
+          "exact_latency_ms": {
+            "mean": 0.14373421060889469,
+            "p50": 0.13565000153903384,
+            "p95": 0.17710000174702142,
+            "max": 0.28699999893433414
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 16,
+              "recall_at_k": {
+                "10": 0.9957894736842104,
+                "25": 0.9793684210526314,
+                "100": 0.8951052631578947
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.84,
+                "100": 0.62
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": true,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.07378736851311068,
+                "p50": 0.06919999941601418,
+                "p95": 0.11122000014438523,
+                "max": 0.2010000025620684
+              }
+            },
+            {
+              "ef_search": 32,
+              "recall_at_k": {
+                "10": 0.9989473684210527,
+                "25": 0.996842105263158,
+                "100": 0.9722631578947366
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.92,
+                "100": 0.87
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.08387421031856272,
+                "p50": 0.08304999937536195,
+                "p95": 0.10717500117607413,
+                "max": 0.1322999996773433
+              }
+            },
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 0.9994736842105263,
+                "25": 0.9993684210526316,
+                "100": 0.9961052631578947
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.96,
+                "100": 0.97
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.10459736833198756,
+                "p50": 0.10269999984302558,
+                "p95": 0.12621499827218938,
+                "max": 0.16399999731220305
+              }
+            },
+            {
+              "ef_search": 128,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.9998421052631581
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.99
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": false
+              },
+              "latency_ms": {
+                "mean": 0.12929052630313795,
+                "p50": 0.12460000107239466,
+                "p95": 0.1589900004546507,
+                "max": 0.2120000026479829
+              }
+            },
+            {
+              "ef_search": 256,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": false
+              },
+              "latency_ms": {
+                "mean": 0.16594105262284806,
+                "p50": 0.1570999993418809,
+                "p95": 0.20153000023128692,
+                "max": 0.3913000000466127
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        },
+        {
+          "n_vectors": 689,
+          "dim": 1536,
+          "n_queries": 190,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 16,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              64
+            ]
+          },
+          "build_seconds": 0.02501489999849582,
+          "exact_latency_ms": {
+            "mean": 0.14123684206998932,
+            "p50": 0.13419999959296547,
+            "p95": 0.17687500039755832,
+            "max": 0.289100000372855
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 0.9994736842105263,
+                "25": 0.9905263157894736,
+                "100": 0.9497894736842104
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.8,
+                "100": 0.71
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.08194421048086185,
+                "p50": 0.07969999933266081,
+                "p95": 0.10877999939111754,
+                "max": 0.14699999883305281
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        },
+        {
+          "n_vectors": 689,
+          "dim": 1536,
+          "n_queries": 190,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 48,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              64
+            ]
+          },
+          "build_seconds": 0.03724149999834481,
+          "exact_latency_ms": {
+            "mean": 0.14221947374033717,
+            "p50": 0.13450000187731348,
+            "p95": 0.17931499805854395,
+            "max": 0.3223999992769677
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.998157894736842
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.97
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.11441999997355436,
+                "p50": 0.11189999713678844,
+                "p95": 0.1396949990521534,
+                "max": 0.1810000030673109
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        }
+      ]
+    },
+    {
+      "scope": "conv-48",
+      "n_vectors": 681,
+      "n_queries": 228,
+      "audits": [
+        {
+          "n_vectors": 681,
+          "dim": 1536,
+          "n_queries": 228,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 32,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              16,
+              32,
+              64,
+              128,
+              256
+            ]
+          },
+          "build_seconds": 0.0372966999966593,
+          "exact_latency_ms": {
+            "mean": 0.14479824544092448,
+            "p50": 0.13729999955103267,
+            "p95": 0.1836699992054489,
+            "max": 0.28170000223326497
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 16,
+              "recall_at_k": {
+                "10": 0.9921052631578948,
+                "25": 0.9831578947368421,
+                "100": 0.915482456140351
+              },
+              "min_recall_at_k": {
+                "10": 0.6,
+                "25": 0.72,
+                "100": 0.74
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": true,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.06979605256530799,
+                "p50": 0.0687000010657357,
+                "p95": 0.08845000065775818,
+                "max": 0.14369999917107634
+              }
+            },
+            {
+              "ef_search": 32,
+              "recall_at_k": {
+                "10": 0.9986842105263157,
+                "25": 0.9984210526315789,
+                "100": 0.979780701754386
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.92,
+                "100": 0.86
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.08412061396755457,
+                "p50": 0.08329999945999589,
+                "p95": 0.09953000117093325,
+                "max": 0.12690000221482478
+              }
+            },
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 0.999561403508772,
+                "25": 0.9998245614035088,
+                "100": 0.9984649122807018
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.96,
+                "100": 0.98
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.1058868421048892,
+                "p50": 0.1020500003505731,
+                "p95": 0.13126000048941927,
+                "max": 0.2393000031588599
+              }
+            },
+            {
+              "ef_search": 128,
+              "recall_at_k": {
+                "10": 0.999561403508772,
+                "25": 0.9998245614035088,
+                "100": 0.9999122807017544
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.96,
+                "100": 0.99
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": false
+              },
+              "latency_ms": {
+                "mean": 0.12662368414582983,
+                "p50": 0.1218999987031566,
+                "p95": 0.15484999930777119,
+                "max": 0.22459999672719277
+              }
+            },
+            {
+              "ef_search": 256,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": false
+              },
+              "latency_ms": {
+                "mean": 0.16540219296171257,
+                "p50": 0.16000000141502824,
+                "p95": 0.2007199993386166,
+                "max": 0.2753000007942319
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        },
+        {
+          "n_vectors": 681,
+          "dim": 1536,
+          "n_queries": 228,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 16,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              64
+            ]
+          },
+          "build_seconds": 0.024649099999805912,
+          "exact_latency_ms": {
+            "mean": 0.1460236843214309,
+            "p50": 0.13795000086247455,
+            "p95": 0.17382000060024436,
+            "max": 0.4488000013225246
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 0.9956140350877193,
+                "25": 0.9933333333333334,
+                "100": 0.966578947368421
+              },
+              "min_recall_at_k": {
+                "10": 0.8,
+                "25": 0.92,
+                "100": 0.83
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.09471842100825406,
+                "p50": 0.07795000055921264,
+                "p95": 0.12951499975315517,
+                "max": 1.2234999994689133
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        },
+        {
+          "n_vectors": 681,
+          "dim": 1536,
+          "n_queries": 228,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 48,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              64
+            ]
+          },
+          "build_seconds": 0.0349951999996847,
+          "exact_latency_ms": {
+            "mean": 0.14512192965891077,
+            "p50": 0.13779999790131114,
+            "p95": 0.17288999843003694,
+            "max": 0.4360000020824373
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.9989035087719298
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.99
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.10688026296727976,
+                "p50": 0.10450000081618782,
+                "p95": 0.12602500064531336,
+                "max": 0.1787999972293619
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        }
+      ]
+    },
+    {
+      "scope": "conv-49",
+      "n_vectors": 509,
+      "n_queries": 196,
+      "audits": [
+        {
+          "n_vectors": 509,
+          "dim": 1536,
+          "n_queries": 196,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 32,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              16,
+              32,
+              64,
+              128,
+              256
+            ]
+          },
+          "build_seconds": 0.022239499998249812,
+          "exact_latency_ms": {
+            "mean": 0.10020459181500233,
+            "p50": 0.09630000022298191,
+            "p95": 0.12015000174869783,
+            "max": 0.20120000044698827
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 16,
+              "recall_at_k": {
+                "10": 0.9938775510204082,
+                "25": 0.9851020408163265,
+                "100": 0.8964285714285714
+              },
+              "min_recall_at_k": {
+                "10": 0.8,
+                "25": 0.84,
+                "100": 0.73
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": true,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.05739693870982963,
+                "p50": 0.05779999992228113,
+                "p95": 0.07069999992381781,
+                "max": 0.12339999739197083
+              }
+            },
+            {
+              "ef_search": 32,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 0.9977551020408163,
+                "100": 0.9683673469387756
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 0.92,
+                "100": 0.87
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.0694770407827324,
+                "p50": 0.069949999669916,
+                "p95": 0.08252500174421584,
+                "max": 0.10960000145132653
+              }
+            },
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 0.9997959183673469,
+                "100": 0.9969897959183674
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 0.96,
+                "100": 0.97
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.08552806137194406,
+                "p50": 0.08510000043315813,
+                "p95": 0.09537500136502786,
+                "max": 0.1263999984075781
+              }
+            },
+            {
+              "ef_search": 128,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": false
+              },
+              "latency_ms": {
+                "mean": 0.10189336730296158,
+                "p50": 0.10004999785451218,
+                "p95": 0.11372500011930242,
+                "max": 0.14460000238614157
+              }
+            },
+            {
+              "ef_search": 256,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": false
+              },
+              "latency_ms": {
+                "mean": 0.13327040838072318,
+                "p50": 0.1303000026382506,
+                "p95": 0.1480999990235432,
+                "max": 0.1604999997653067
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        },
+        {
+          "n_vectors": 509,
+          "dim": 1536,
+          "n_queries": 196,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 16,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              64
+            ]
+          },
+          "build_seconds": 0.014216600000509061,
+          "exact_latency_ms": {
+            "mean": 0.10086173468301482,
+            "p50": 0.09694999971543439,
+            "p95": 0.11344999802531675,
+            "max": 0.21429999833344482
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 0.9964285714285713,
+                "25": 0.9906122448979592,
+                "100": 0.9437244897959184
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.88,
+                "100": 0.86
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.06558265312731014,
+                "p50": 0.06470000153058209,
+                "p95": 0.07502500011469238,
+                "max": 0.12820000119972974
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        },
+        {
+          "n_vectors": 509,
+          "dim": 1536,
+          "n_queries": 196,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 48,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              64
+            ]
+          },
+          "build_seconds": 0.021338399998057866,
+          "exact_latency_ms": {
+            "mean": 0.09974438773719974,
+            "p50": 0.09665000106906518,
+            "p95": 0.11062499925174052,
+            "max": 0.21410000044852495
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.9992857142857143
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.98
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.09255969398138256,
+                "p50": 0.09080000018002465,
+                "p95": 0.10415000178909395,
+                "max": 0.15270000221789815
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        }
+      ]
+    },
+    {
+      "scope": "conv-50",
+      "n_vectors": 568,
+      "n_queries": 204,
+      "audits": [
+        {
+          "n_vectors": 568,
+          "dim": 1536,
+          "n_queries": 204,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 32,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              16,
+              32,
+              64,
+              128,
+              256
+            ]
+          },
+          "build_seconds": 0.02689779999855091,
+          "exact_latency_ms": {
+            "mean": 0.11346323532837001,
+            "p50": 0.10904999908234458,
+            "p95": 0.12988500002393266,
+            "max": 0.24699999994481914
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 16,
+              "recall_at_k": {
+                "10": 0.9926470588235294,
+                "25": 0.9852941176470589,
+                "100": 0.9217647058823527
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.84,
+                "100": 0.72
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": true,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.060912254964790136,
+                "p50": 0.05895000140299089,
+                "p95": 0.0823249985842267,
+                "max": 0.1436000020476058
+              }
+            },
+            {
+              "ef_search": 32,
+              "recall_at_k": {
+                "10": 0.9995098039215686,
+                "25": 0.9986274509803922,
+                "100": 0.980686274509804
+              },
+              "min_recall_at_k": {
+                "10": 0.9,
+                "25": 0.96,
+                "100": 0.88
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.07340245079545889,
+                "p50": 0.07364999873971101,
+                "p95": 0.09025500239658867,
+                "max": 0.12559999959194101
+              }
+            },
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 0.9998039215686275,
+                "100": 0.997107843137255
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 0.96,
+                "100": 0.98
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.08912990199628527,
+                "p50": 0.08815000001050066,
+                "p95": 0.10873999908653786,
+                "max": 0.13919999764766544
+              }
+            },
+            {
+              "ef_search": 128,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.9999019607843138
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.99
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": false
+              },
+              "latency_ms": {
+                "mean": 0.10822352945907886,
+                "p50": 0.10619999920891132,
+                "p95": 0.12135500055592274,
+                "max": 0.1747999995131977
+              }
+            },
+            {
+              "ef_search": 256,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 1.0
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": false
+              },
+              "latency_ms": {
+                "mean": 0.14249068643788204,
+                "p50": 0.140050000482006,
+                "p95": 0.1561850001962739,
+                "max": 0.20370000129332766
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        },
+        {
+          "n_vectors": 568,
+          "dim": 1536,
+          "n_queries": 204,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 16,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              64
+            ]
+          },
+          "build_seconds": 0.01785319999908097,
+          "exact_latency_ms": {
+            "mean": 0.11422450971426146,
+            "p50": 0.11074999929405749,
+            "p95": 0.12964000125066377,
+            "max": 0.2472000014677178
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 0.9975490196078431,
+                "25": 0.9935294117647059,
+                "100": 0.955
+              },
+              "min_recall_at_k": {
+                "10": 0.8,
+                "25": 0.88,
+                "100": 0.85
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.06974411767527379,
+                "p50": 0.06899999971210491,
+                "p95": 0.08240999868576182,
+                "max": 0.11729999823728576
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        },
+        {
+          "n_vectors": 568,
+          "dim": 1536,
+          "n_queries": 204,
+          "leave_one_out": false,
+          "ks": [
+            10,
+            25,
+            100
+          ],
+          "effective_k": {
+            "10": 10,
+            "25": 25,
+            "100": 100
+          },
+          "hnsw": {
+            "index_type": "IndexHNSWFlat",
+            "metric": "inner_product",
+            "m": 48,
+            "ef_construction": 40,
+            "ef_search_grid": [
+              64
+            ]
+          },
+          "build_seconds": 0.027182199999515433,
+          "exact_latency_ms": {
+            "mean": 0.11558578428187449,
+            "p50": 0.11055000140913762,
+            "p95": 0.12855500026489608,
+            "max": 0.32419999843114056
+          },
+          "by_ef_search": [
+            {
+              "ef_search": 64,
+              "recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.9984313725490196
+              },
+              "min_recall_at_k": {
+                "10": 1.0,
+                "25": 1.0,
+                "100": 0.94
+              },
+              "k_exceeds_ef_search": {
+                "10": false,
+                "25": false,
+                "100": true
+              },
+              "latency_ms": {
+                "mean": 0.10099215677316761,
+                "p50": 0.09940000018104911,
+                "p95": 0.11777000181609765,
+                "max": 0.18900000213761814
+              }
+            }
+          ],
+          "caveat": "FAISS HNSW does not widen the beam to k: exploration stops after efSearch below-threshold distances even though the result heap holds max(efSearch, k). Recall@k for k > efSearch is therefore bounded by efSearch (storage survey probe, synthetic d=64 N=3000 M=32: recall@300 = 0.925 at efSearch=64 vs 1.0 at 300). Audit at the production candidate k (hybrid_ranker candidate_k >= 100, vector_search asks top_k*3 >= 300) plus tombstone fetch_k, not only k=10."
+        }
+      ]
+    }
+  ]
+}

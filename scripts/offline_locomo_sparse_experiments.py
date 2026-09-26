@@ -34,6 +34,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts.offline_locomo_sparse_baseline import (
+    CATEGORY,
     DEFAULT_DATASET,
     _TOKEN,
     _canonical_id,
@@ -47,13 +48,6 @@ SCHEMA = "hybridmind.offline-locomo-sparse-experiment/v2"
 SPLIT_SEED = "20260814"
 BOOTSTRAP_SEED = 20260814
 K_VALUES = (1, 5, 10, 25)
-CATEGORY = {
-    1: "single-hop",
-    2: "temporal",
-    3: "multi-hop",
-    4: "world-knowledge",
-    5: "adversarial",
-}
 SESSION_KEY = re.compile(r"^session_(\d+)$")
 VARIANTS = (
     "raw",

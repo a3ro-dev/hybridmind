@@ -11,7 +11,7 @@ The historical same-set ``--sweep`` is quarantined because selecting a
 configuration on evaluation questions is not held-out evidence.
 
 Optional filters:
-  --category single-hop|multi-hop|temporal|world-knowledge|adversarial
+  --category multi-hop|temporal|open-domain|single-hop|adversarial
   --n 5        samples per category (default 5)
 """
 import argparse
@@ -33,7 +33,8 @@ from engine.query_router import route_query
 BASE_URL = os.getenv("HYBRIDMIND_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
 LOCOMO_PATH = Path("memorybench/data/benchmarks/locomo/locomo10.json")
 
-CATEGORY_MAP = {1: "single-hop", 2: "temporal", 3: "multi-hop", 4: "world-knowledge", 5: "adversarial"}
+# Must equal scripts/offline_locomo_sparse_baseline.CATEGORY (tests/test_locomo_category_map.py).
+CATEGORY_MAP = {1: "multi-hop", 2: "temporal", 3: "open-domain", 4: "single-hop", 5: "adversarial"}
 
 
 class EvaluationRunError(RuntimeError):
@@ -88,7 +89,7 @@ def parse_args():
     )
     p.add_argument("--anchor-node-id", action="append", default=[])
     p.add_argument("--category",         type=str,   default=None,
-                   help="Filter to one category: single-hop, multi-hop, temporal, world-knowledge, adversarial")
+                   help="Filter to one category: multi-hop, temporal, open-domain, single-hop, adversarial")
     p.add_argument("--n",                type=int,   default=5,
                    help="Samples per category (default 5)")
     p.add_argument(

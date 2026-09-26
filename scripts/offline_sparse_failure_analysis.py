@@ -30,6 +30,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts.offline_locomo_sparse_baseline import (  # noqa: E402
+    CATEGORY,
     DEFAULT_DATASET,
     _TOKEN,
     _canonical_id,
@@ -153,10 +154,7 @@ def _question_metadata(data: list[dict], sample_ids: set[str]) -> dict[str, dict
                 continue
             metadata[question_id] = {
                 "question": question,
-                "category": {
-                    1: "single-hop", 2: "temporal", 3: "multi-hop",
-                    4: "world-knowledge", 5: "adversarial",
-                }.get(qa.get("category"), "unknown"),
+                "category": CATEGORY.get(qa.get("category"), "unknown"),
                 "sample_id": sample_id,
                 "gold": sorted(gold),
                 "records": record_by_id,

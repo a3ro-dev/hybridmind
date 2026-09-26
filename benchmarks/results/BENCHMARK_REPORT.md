@@ -15,6 +15,72 @@ unchanged for historical auditability and must not be relabelled as reruns.
 `benchmarks/kv_reduction_eval.py` now rejects those legacy sources rather than
 reproducing their old pass/fail statements.
 
+## Current Valid Tri-Signal Results (2026-09-26, zero provider calls)
+
+Produced by `eval_trisignal.py`, which runs the same engine code as
+`POST /retrieve`. Each result has a sealed ledger in
+`experiments/results/ledgers/` and a summary JSON. Every CI is a paired,
+conversation-clustered bootstrap against the baseline arm.
+
+### EMG reproduction and port parity (LoCoMo, reference track)
+
+`scripts/reproduce_emg_locomo.py` runs upstream EMG (`f020e855`) offline on
+its shipped artifacts. Results: `experiments/results/repro-emg-locomo-20260926.json`;
+analysis: `research/experiments/r1-emg-reproduction/analysis.md`.
+
+- **Metric check:** all 13 formal cells replayed to within 1e-16.
+- **Qualitative reproduction:** the entity-fusion gain B − A at k=25 is
+  +4.65 (published +4.74). Absolute values are 0.9–2.6 points low because
+  the shipped vectors are a legacy version.
+- **HybridMind port vs upstream on identical inputs:** 19,860/19,860 rankings
+  identical.
+
+### LoCoMo reference track: `trisignal-locomo-emg-reference-20260926.json`
+
+- **Scope:** 1,981 scored questions (non-empty resolved gold), channel_k 100.
+- **Inputs:** dense uses EMG's 1536-d `text-embedding-3-small` vectors. The
+  graph uses EMG's LLM entity graph and frozen question keys.
+- **Not runtime numbers:** the 4096-d runtime model was not used.
+
+| Arm | Recall@10 | Recall@25 | Δ@25 vs dense [95% CI] | recall_all@25 | complete @2k (propagate) |
+|---|---|---|---|---|---|
+| all, PPR seeded by dense ×0.05 | 0.703 | **0.824** | +0.037 [+0.023, +0.049] | 0.773 | 0.858 |
+| dense + graph (RRF) | 0.688 | 0.815 | +0.028 [+0.013, +0.041] | 0.764 | 0.838 |
+| all (DBSF) | 0.708 | 0.815 | +0.028 [+0.007, +0.046] | 0.761 | 0.849 |
+| all (RRF, equal weights) | 0.696 | 0.804 | +0.017 [−0.003, +0.036] | 0.750 | 0.843 |
+| all (z-score) | 0.691 | 0.800 | +0.013 [−0.012, +0.034] | 0.746 | 0.827 |
+| dense | 0.673 | 0.787 | — | 0.737 | 0.806 |
+| dense + sparse (RRF) | 0.670 | 0.759 | −0.029 [−0.051, −0.010] | 0.707 | 0.829 |
+| sparse + graph (RRF) | 0.616 | 0.733 | −0.054 | 0.681 | 0.788 |
+| sparse (BM25S) | 0.573 | 0.679 | −0.108 | 0.632 | 0.760 |
+| graph (EMG) | 0.530 | 0.662 | −0.125 | 0.610 | 0.700 |
+| graph (PPR) | 0.495 | 0.628 | −0.159 | 0.587 | 0.649 |
+
+Complementarity of the all-channel arm at k=25:
+- **Unique gold turns** (found only by that channel): dense 354, graph 126, sparse 70.
+- **Oracle-union recall_all:** 0.846.
+- **Fusion regret against the oracle union:** 0.093.
+
+### LongMemEval-S cleaned, offline arms: `trisignal-longmemeval-offline-20260926.json`
+
+- **Scope:** 470 scored questions (any-role `has_answer` turns; the 30
+  `_abs` questions are skipped). Each question's haystack is its own scope.
+- **Graph extraction:** `lexical-v1`.
+
+| Arm | recall_any@5 | recall_all@10 | Δ all@10 vs sparse [95% CI] | recall_all@50 | session recall_all@10 | complete @4k (turn) |
+|---|---|---|---|---|---|---|
+| sparse (BM25S) | **0.826** | **0.713** | — | 0.857 | 0.872 | 0.798 |
+| sparse + graph (RRF) | 0.764 | 0.632 | −0.081 [−0.119, −0.045] | 0.860 | 0.849 | 0.753 |
+| graph (PPR) | 0.570 | 0.409 | −0.304 | 0.681 | 0.602 | 0.547 |
+| graph (EMG) | 0.517 | 0.385 | −0.328 | 0.728 | 0.687 | 0.572 |
+
+**Consistency check.** Sparse complete coverage at 4,096 tokens (0.798) agrees
+with the independent E4 BM25S harness (0.791; slightly different index text).
+
+**Reading.** The graph channel helps fusion on LoCoMo but hurts it on
+LongMemEval-S with lexical extraction. No default weights are promoted from
+these runs. The 4096-d dense arm decides (`docs/DECISIONS.md`, 2026-09-26).
+
 ## Current Valid Offline Sparse Baseline
 
 Artifact: `offline_locomo_bm25s.json`

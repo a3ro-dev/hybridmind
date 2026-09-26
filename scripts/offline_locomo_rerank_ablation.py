@@ -35,7 +35,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.offline_locomo_sparse_baseline import (  # noqa: E402
+from scripts.offline_locomo_sparse_baseline import (
+    CATEGORY,  # noqa: E402
     DEFAULT_DATASET,
     _TOKEN,
     _canonical_id,
@@ -59,13 +60,6 @@ DEFAULT_POOL_SIZE = 25
 DEFAULT_TOP_K = 10
 SPLIT_SEED = "20260822-rerank-fixed-pool"
 BOOTSTRAP_SEED = 20260822
-CATEGORY = {
-    1: "single-hop",
-    2: "temporal",
-    3: "multi-hop",
-    4: "world-knowledge",
-    5: "adversarial",
-}
 CONDITIONS = ("raw", "speaker_prefix")
 
 
